@@ -1,0 +1,49 @@
+plugins {
+    id 'com.android.application'
+}
+
+// كل بناء على GitHub Actions بياخد رقم إصدار أكبر من اللي قبله، عشان التحديث يتثبّت فوق القديم
+def buildNumber = (System.getenv('GITHUB_RUN_NUMBER') ?: '1') as int
+
+android {
+    namespace 'com.ibtkar.app'
+    compileSdk 35
+
+    defaultConfig {
+        applicationId 'com.ibtkar.app'
+        minSdk 24
+        targetSdk 34
+        versionCode buildNumber
+        versionName "1.0.${buildNumber}"
+    }
+
+    // نفس مفتاح التوقيع في كل بناء — لازم عشان أي نسخة جديدة تتثبّت كتحديث من غير ما تمسح القديمة
+    signingConfigs {
+        release {
+            storeFile rootProject.file('ibtkar-release.keystore')
+            storePassword 'ibtkar2026'
+            keyAlias 'ibtkar'
+            keyPassword 'ibtkar2026'
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            signingConfig signingConfigs.release
+        }
+        debug {
+            signingConfig signingConfigs.release
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+dependencies {
+    implementation 'androidx.webkit:webkit:1.12.1'
+    implementation 'androidx.core:core:1.13.1'
+}

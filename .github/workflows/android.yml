@@ -1,0 +1,61 @@
+name: Build Android APK
+
+# بيبني ملف APK من index.html مع كل تعديل، وبيرفعه على صفحة الـ Releases
+# عشان يتنزّل مباشرة على الموبايل: .../releases/download/android-latest/ibtkar.apk
+on:
+  push:
+    branches: [main, claude/android-shared-data-app-t7j758]
+    paths:
+      - index.html
+      - manifest.json
+      - icon-*.png
+      - android/**
+      - .github/workflows/android.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: android-apk
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Prepare web assets
+        run: ./android/scripts/prepare-web.sh
+
+      - name: Build APK
+        working-directory: android
+        run: ./gradlew --no-daemon assembleRelease
+
+      - name: Rename APK
+        run: cp android/app/build/outputs/apk/release/app-release.apk ibtkar.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ibtkar-apk
+          path: ibtkar.apk
+
+      - name: Publish to "android-latest" release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete android-latest --yes --cleanup-tag || true
+          gh release create android-latest ibtkar.apk \
+            --target "$GITHUB_SHA" \
+            --title "إبتكار — تطبيق أندرويد (نسخة ${{ github.run_number }})" \
+            --notes "نزّل ibtkar.apk على الموبايل وثبّته. أي نسخة جديدة بتتثبّت فوق القديمة والبيانات بتفضل زي ما هي."
