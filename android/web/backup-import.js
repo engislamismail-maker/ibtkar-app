@@ -8,6 +8,9 @@
   'use strict';
   var FLAG = 'webBackupImported';
   var SNOOZE_KEY = 'ibtkar-web-backup-snooze';
+  var DONE_KEY = 'ibtkar-web-backup-done'; // على مستوى الجهاز كمان، عشان ميسألش تاني حتى لو المزامنة اتأخرت
+  function markDone() { try { localStorage.setItem(DONE_KEY, '1'); } catch (e) { /* ignore */ } }
+  function isDone() { try { return !!localStorage.getItem(DONE_KEY); } catch (e) { return false; } }
   var shown = false;
 
   function isPlainObj(v) { return v && typeof v === 'object' && !Array.isArray(v); }
@@ -91,6 +94,7 @@
     };
     ov.querySelector('#wbi-never').onclick = function () {
       state[FLAG] = 'skipped';
+      markDone();
       saveState();
       close();
     };
@@ -105,6 +109,7 @@
         if (!isPlainObj(bak)) throw new Error('bad');
         var added = mergeBackup(state, bak);
         state[FLAG] = new Date().toISOString();
+        markDone();
         renderEverything();
         saveState(); // بيحفظ على الموبايل فورًا، والرفع لـ Firebase بيكمل في الخلفية
         close();
@@ -119,6 +124,7 @@
 
   function check() {
     if (shown) return;
+    if (isDone()) { shown = true; return; }
     try {
       /* global state, fbReady, saveState, renderEverything, showToast */
       if (typeof fbReady === 'undefined' || !fbReady) return; // استنى أول مزامنة مع Firebase

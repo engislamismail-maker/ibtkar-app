@@ -2618,6 +2618,9 @@ const fbDB = firebase.database();
 // a distinct path from the old stand-alone board app's "/state", so the two never collide
 const fbStateRef = fbDB.ref('ibtkar_ops_state');
 const fbStorage = firebase.storage();
+// a failing upload must never hold up saving the data itself (the SDK default retries for 10 minutes)
+fbStorage.setMaxUploadRetryTime(15000);
+fbStorage.setMaxOperationRetryTime(15000);
 let fbReady = false; // becomes true after the first snapshot arrives
 </script>
 <script>
@@ -2904,17 +2907,22 @@ function renderEverything(){
    idea/choice attachments, notebook images...) sync across devices, without needing to touch
    each individual feature's code. Already-uploaded URLs (https://...) are skipped instantly. */
 function isDataUri(v){ return typeof v === 'string' && v.startsWith('data:') && v.includes(';base64,'); }
+let storageUploadsBroken = false; // set after the first failed upload, so later saves don't wait on Storage again
+function withTimeout(promise, ms){
+  return Promise.race([promise, new Promise((_, reject)=>setTimeout(()=>reject(new Error('timeout')), ms))]);
+}
 async function migrateDataUrisIn(node, pathHint){
-  if(!node || typeof node !== 'object') return;
+  if(!node || typeof node !== 'object' || storageUploadsBroken) return;
   const keys = Array.isArray(node) ? node.map((_,i)=>i) : Object.keys(node);
   for(const key of keys){
     const val = node[key];
     if(isDataUri(val)){
       try{
+        if(storageUploadsBroken) return;
         const ref = fbStorage.ref().child(`attachments/${pathHint}-${key}-${uid()}`);
-        const snap = await ref.putString(val, 'data_url');
-        node[key] = await snap.ref.getDownloadURL();
-      }catch(e){ /* offline or upload failed — leave as base64 for now, retried on next save */ }
+        const snap = await withTimeout(ref.putString(val, 'data_url'), 20000);
+        node[key] = await withTimeout(snap.ref.getDownloadURL(), 10000);
+      }catch(e){ storageUploadsBroken = true; /* offline or Storage not available — stays base64 (still syncs inside the database), retried next app start */ }
     } else if(val && typeof val === 'object'){
       await migrateDataUrisIn(val, `${pathHint}-${key}`);
     }
@@ -2941,11 +2949,14 @@ async function loadState(){
       // be allowed to silently erase newer local data. Each save stamps state._v with the time
       // it was written; only accept a remote snapshot if it's the same age or newer than what
       // we already have, so an out-of-date snapshot is ignored instead of overwriting the screen.
-      const remoteIsNewer = remote && (!state._v || !remote._v || remote._v >= state._v);
+      // a remote copy with no version stamp is older than any stamped local save.
+      const remoteIsNewer = remote && (!state._v || (remote._v && remote._v >= state._v));
       if(remote && remoteIsNewer){
         state = remote;
       } else if(!remote && !fbReady){
         fbStateRef.set(state); // database empty (first time ever) — seed it with what we have locally
+      } else if(remote && !fbReady){
+        fbStateRef.set(state); // this device has newer changes that never reached the server — send them now
       }
       const wasReady = fbReady;
       fbReady = true;
@@ -3001,13 +3012,22 @@ async function saveState(){
   }catch(e){
     showToast('حصلت مشكلة في الحفظ محليًا');
   }
+  // the data itself goes to the database FIRST — moving attachments to Storage is a slow,
+  // optional extra and must never delay (or block) syncing to the other devices
   try{
-    await migrateDataUrisIn(state, 'root');
     await fbStateRef.set(state);
-    try{ localStorage.setItem('ibtkar-inventory-v1', JSON.stringify(state)); }catch(e){}
   }catch(e){
     showToast('⚠️ البيانات محفوظة عندك بس، لسه مش وصلت للسحابة — غالبًا صلاحيات قاعدة البيانات محتاجة تتظبط');
+    return;
   }
+  if(storageUploadsBroken || !JSON.stringify(state).includes(';base64,')) return;
+  const v = state._v;
+  await migrateDataUrisIn(state, 'root');
+  if(state._v !== v) return; // a newer save already went out and carried the uploaded URLs with it
+  try{
+    await fbStateRef.set(state);
+    localStorage.setItem('ibtkar-inventory-v1', JSON.stringify(state));
+  }catch(e){ /* the data itself is already saved above */ }
 }
 
 function showToast(msg){
