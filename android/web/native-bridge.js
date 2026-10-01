@@ -214,6 +214,11 @@
       return true;
     }
 
+    // in-app navigation the page itself knows how to undo (e.g. back to the project it came from)
+    try {
+      if (typeof window.ibtkarHandleBack === 'function' && window.ibtkarHandleBack()) return true;
+    } catch (err) { /* ignore */ }
+
     try {
       /* global currentView, switchView */
       if (typeof currentView !== 'undefined' && currentView !== 'home' && typeof switchView === 'function') {

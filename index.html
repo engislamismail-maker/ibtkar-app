@@ -332,7 +332,10 @@ body{
   background:#FBF3EC;border:1.5px solid var(--gold);border-radius:12px;padding:10px 14px;margin-bottom:16px;
   font-size:13px;font-weight:700;color:var(--charcoal);
 }
+#warehouse-project-banner,#accounts-project-banner,#workers-project-banner{position:sticky;top:8px;z-index:50;}
+.project-context-banner{box-shadow:0 4px 12px rgba(46,42,44,0.10);}
 .project-context-banner button{background:none;border:none;color:var(--rose);font-size:12.5px;font-weight:700;cursor:pointer;}
+.project-context-banner button.project-back-btn{background:var(--gold);color:#fff;border-radius:20px;padding:6px 14px;}
 .project-dash-notes{font-size:13.5px;color:var(--charcoal);background:var(--cream);border-radius:10px;padding:12px;margin-top:6px;white-space:pre-wrap;}
 .project-quick-jump{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px;}
 
@@ -601,10 +604,22 @@ body{
 .bd-check-line{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700;margin-bottom:13px;}
 .bd-sheet-actions{display:flex;gap:10px;margin-top:16px;}
 .bd-empty{text-align:center;color:var(--muted);font-size:13px;padding:26px 10px;border:1.5px dashed var(--border);border-radius:12px;}
-.bd-notebook-toolbar{display:flex;gap:8px;margin-bottom:10px;}
-.bd-notebook-toolbar button{border:1.5px solid var(--gold);background:#fff;color:var(--charcoal);font-family:inherit;font-weight:700;font-size:13px;padding:8px 16px;border-radius:20px;cursor:pointer;}
-.bd-notebook-wrapper{position:relative;overflow:auto;border:1.5px solid var(--border);border-radius:14px;background:repeating-linear-gradient(0deg,#fff 0px,#fff 27px,rgba(46,42,44,0.06) 28px),repeating-linear-gradient(90deg,#fff 0px,#fff 27px,rgba(46,42,44,0.03) 28px);height:calc(100vh - 320px);min-height:400px;}
-.bd-notebook-canvas{position:relative;width:2200px;height:2200px;}
+.bd-nb{position:relative;}
+.bd-nb-toolbar{display:flex;gap:6px;align-items:center;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;margin-bottom:8px;padding:6px;background:#fff;border:1.5px solid var(--border);border-radius:14px;}
+.bd-nb-toolbar>*{flex-shrink:0;}
+.bd-nb-btn{white-space:nowrap;border:1.5px solid var(--border);background:#fff;color:var(--charcoal);font-family:inherit;font-weight:700;font-size:13px;min-width:34px;height:34px;padding:0 8px;border-radius:17px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;}
+.bd-nb-btn.on{background:var(--charcoal);color:#fff;border-color:var(--charcoal);}
+.bd-nb-size span{display:block;border-radius:50%;background:currentColor;}
+.bd-nb-color{width:24px;height:24px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 1.5px var(--border);cursor:pointer;padding:0;}
+.bd-nb-color.on{box-shadow:0 0 0 2.5px var(--charcoal);}
+.bd-nb-sep{width:1px;height:22px;background:var(--border);margin:0 2px;}
+.bd-nb-viewport{position:relative;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none;border:1.5px solid var(--border);border-radius:14px;height:calc(100vh - 330px);min-height:360px;background-color:#fff;background-image:linear-gradient(rgba(46,42,44,0.07) 1px,transparent 1px),linear-gradient(90deg,rgba(46,42,44,0.07) 1px,transparent 1px);}
+.bd-nb-world{position:absolute;left:0;top:0;width:0;height:0;transform-origin:0 0;}
+.bd-nb-ink{position:absolute;left:0;top:0;overflow:visible;pointer-events:none;}
+.bd-nb-zoom-label{position:absolute;bottom:8px;left:10px;font-size:11px;font-weight:700;color:var(--muted);background:rgba(255,255,255,0.85);padding:2px 8px;border-radius:10px;pointer-events:none;}
+.bd-nb-full{position:fixed;inset:0;z-index:90;background:var(--cream);padding:8px;padding-top:calc(8px + env(safe-area-inset-top));display:flex;flex-direction:column;}
+.bd-nb-full .bd-nb-viewport{flex:1;height:auto;min-height:0;}
+body.bd-nb-lock{overflow:hidden;}
 .bd-note-item{position:absolute;box-shadow:0 2px 8px rgba(46,42,44,0.15);border-radius:8px;touch-action:none;}
 .bd-note-item.bd-text{background:#FFF7E8;border:1px solid var(--gold);padding:10px;font-size:13px;line-height:1.5;overflow:auto;}
 .bd-note-item.bd-image{overflow:hidden;border:2px solid #fff;}
@@ -726,6 +741,7 @@ body{
   <div style="display:flex;gap:8px;margin-bottom:16px;">
     <button class="btn btn-primary btn-sm btn-full" onclick="openAddExpense()">⚡ تسجيل مصروف</button>
     <button class="btn btn-primary btn-sm btn-full" onclick="openAddIncome()">⚡ تسجيل قبض</button>
+    <button class="btn btn-primary btn-sm btn-full" onclick="openAddDeduction()">➖ خصم على عامل</button>
   </div>
 
   <div class="home-section-title">🏗️ تشيك ليست الجودة — البنود المحتاجة انتباه</div>
@@ -1477,6 +1493,40 @@ async function deleteReferenceSupplier(id){
 </div>
 
 <!-- Payment reminder prompt — "متى الدفعة الجاية؟" shown right after a contract/supplier payment -->
+<div class="overlay" id="overlay-add-deduction">
+  <div class="modal" style="max-width:440px;">
+    <button class="modal-close" onclick="closeModal('overlay-add-deduction')">×</button>
+    <h2>➖ خصم على عامل</h2>
+    <div class="sub" style="margin-bottom:12px;">الخصم بيتشال من حساب العامل — لو على مقاولة بيقلّل الفاضل منها، وبيظهر في الإيصال الجاي.</div>
+    <div class="field">
+      <label>العامل <span class="req-star">*</span></label>
+      <select id="dedWorkerSelect" onchange="populateDeductionContracts()"></select>
+    </div>
+    <div class="field">
+      <label>الخصم على إيه؟ <span class="req-star">*</span></label>
+      <select id="dedContractSelect"></select>
+    </div>
+    <div class="field">
+      <label>قيمة الخصم (جنيه) <span class="req-star">*</span></label>
+      <input type="number" id="dedAmount" min="0" inputmode="decimal" placeholder="مثلاً: 2000">
+    </div>
+    <div class="field">
+      <label>سبب الخصم</label>
+      <input type="text" id="dedReason" placeholder="مثلاً: تأخير في التسليم، خامة باظت">
+    </div>
+    <div class="field">
+      <label>مين اللي بيسجل <span class="req-star">*</span></label>
+      <div class="actor-toggle" id="deduction-actor-toggle">
+        <div class="actor-opt" data-name="بسنت" onclick="pickActor('deduction','بسنت')">بسنت</div>
+        <div class="actor-opt" data-name="إسلام" onclick="pickActor('deduction','إسلام')">إسلام</div>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-primary btn-full" onclick="addDeduction()">سجّل الخصم</button>
+    </div>
+  </div>
+</div>
+
 <div class="overlay" id="overlay-payment-reminder">
   <div class="modal" style="max-width:420px;">
     <button class="modal-close" onclick="closeModal('overlay-payment-reminder')">×</button>
@@ -1605,6 +1655,10 @@ async function deleteReferenceSupplier(id){
       </div>
     </div>
     <div id="worker-contract-list" style="margin-bottom:8px;"></div>
+
+    <div class="sub" style="margin-top:20px;">➖ الخصومات</div>
+    <button type="button" class="btn btn-ghost btn-sm btn-full" style="margin-bottom:8px;" onclick="openAddDeduction(activeWorkerId)">+ خصم على العامل ده</button>
+    <div id="worker-deduction-list" style="margin-bottom:8px;"></div>
 
     <div class="sub" style="margin-top:20px;">📅 يوميات العامل — يوم شغل بيتدفع لوحده</div>
     <div class="field">
@@ -2707,7 +2761,7 @@ let currentView = 'home';
 let saving = false;
 
 const ACTORS = ['بسنت','إسلام'];
-const selectedActor = { out:null, in:null, expense:null, income:null };
+const selectedActor = { out:null, in:null, expense:null, income:null, deduction:null };
 let selectedMethod = { income: null, expense: null }; // كاش / شيك / تحويل بنكي / مرتجع (income) — كاش / فيزا / تحويل بنكي / InstaPay (expense)
 let warehousePersonFilter = 'all';
 let expenseTypeFilter = 'all'; // all | expense | income
@@ -2806,6 +2860,7 @@ function normalizeState(){
   state.ideas = state.ideas || [];
   state.ideaCategories = state.ideaCategories || [...IDEA_CATEGORIES_DEFAULT];
   state.paymentReminders = state.paymentReminders || [];
+  state.deductions = state.deductions || [];
 }
 
 function getTrashRetentionDays(){
@@ -3946,18 +4001,22 @@ async function addExpense(){
         .slice().sort((a,b)=> new Date(a.date) - new Date(b.date))
         .map(e=> ({ date:e.date, amount:Number(e.amount)||0 }));
       const totalPaid = history.reduce((s,h)=>s+h.amount, 0);
-      const remaining = (c && c.totalValue) ? (c.totalValue - totalPaid) : null;
+      const deductions = getWorkerDeductions(w.id, workerContractId)
+        .slice().sort((a,b)=> new Date(a.date) - new Date(b.date))
+        .map(d=> ({ date:d.date, amount:Number(d.amount)||0, reason:d.reason||'' }));
+      const totalDeducted = deductions.reduce((s,d)=>s+d.amount, 0);
+      const remaining = (c && c.totalValue) ? (c.totalValue - totalPaid - totalDeducted) : null;
       receiptData = {
         recipientName: w.name, recipientRole: 'عامل — دفعة مقاولة', amount, project,
         contextLine: (c && c.totalValue) ? `دفعة من مقاولة "${c.name}" — إجمالي المقاولة ${fmtMoney(c.totalValue)}` : null,
-        paymentHistory: history, remaining,
+        paymentHistory: history, deductions, remaining,
         date: new Date().toISOString(), by: selectedActor.expense
       };
       reminderInfo = { type:'worker', personName: w.name };
     }
   } else if(isWorkerPay){
     const w = (state.workers||[]).find(x=>x.id===workerId);
-    if(w) receiptData = { recipientName: w.name, recipientRole: 'عامل — يومية', amount, project, contextLine: null, date: new Date().toISOString(), by: selectedActor.expense };
+    if(w) receiptData = { recipientName: w.name, recipientRole: isWorkerAdvance ? 'عامل — دفعة / سلفة' : 'عامل — يومية', amount, project, contextLine: null, date: new Date().toISOString(), by: selectedActor.expense };
   } else if(isSupplierPay){
     const s = (state.suppliers||[]).find(x=>x.id===supplierId);
     const p = s ? (s.projects||[]).find(x=>x.id===supplierProjectId) : null;
@@ -4193,6 +4252,22 @@ async function buildPaymentReceiptCanvas(){
       <div style="font-size:12px;color:#8C8177;margin-bottom:6px;">الدفعات اللي اتعملت على المقاولة دي لحد دلوقتي</div>
       <table style="width:100%;border-collapse:collapse;border-top:1px solid #E6DED2;">${historyRows}</table>
     </div>` : '';
+  const deductionRows = (data.deductions && data.deductions.length) ? data.deductions.map(d=>{
+    const dLabel = new Date(d.date).toLocaleDateString('ar-EG', {day:'numeric', month:'short', year:'numeric', numberingSystem:'latn'});
+    return `<tr>
+      <td style="padding:6px 4px;font-size:12.5px;color:#5B534B;">خصم — ${dLabel}${d.reason ? ' — ' + escapeHtml(d.reason) : ''}</td>
+      <td style="padding:6px 4px;font-size:12.5px;font-weight:700;text-align:left;color:#C2547A;">-${fmtMoney(d.amount)}</td>
+    </tr>`;
+  }).join('') : '';
+  const deductionTotal = (data.deductions||[]).reduce((s,d)=> s + d.amount, 0);
+  const deductionBlock = deductionRows ? `
+    <div style="margin-bottom:14px;">
+      <div style="font-size:12px;color:#8C8177;margin-bottom:6px;">الخصومات</div>
+      <table style="width:100%;border-collapse:collapse;border-top:1px solid #E6DED2;">${deductionRows}
+        <tr><td style="padding:6px 4px;font-size:12.5px;font-weight:900;border-top:1px solid #E6DED2;">إجمالي الخصومات</td>
+        <td style="padding:6px 4px;font-size:12.5px;font-weight:900;text-align:left;color:#C2547A;border-top:1px solid #E6DED2;">-${fmtMoney(deductionTotal)}</td></tr>
+      </table>
+    </div>` : '';
   const remainingBlock = (data.remaining !== null && data.remaining !== undefined) ? `
     <div style="background:${data.remaining>0?'#FBF0E4':'#EFF3EF'};border-radius:10px;padding:12px 16px;margin-bottom:18px;display:flex;justify-content:space-between;align-items:center;">
       <span style="font-size:13px;font-weight:700;">الفاضل من المقاولة</span>
@@ -4209,6 +4284,7 @@ async function buildPaymentReceiptCanvas(){
     </div>
     ${data.contextLine ? `<div style="font-size:13px;margin-bottom:14px;color:#5B534B;">${escapeHtml(data.contextLine)}</div>` : ''}
     ${historyBlock}
+    ${deductionBlock}
     ${remainingBlock}
     <div style="display:flex;gap:28px;margin-bottom:6px;flex-wrap:wrap;">
       ${data.project ? `<div><div style="font-size:12px;color:#8C8177;">المشروع</div><div style="font-size:14px;font-weight:700;">${escapeHtml(data.project)}</div></div>` : ''}
@@ -4563,6 +4639,7 @@ function openWorkerLog(id){
   document.getElementById('workerContractName').value = '';
   document.getElementById('workerContractTotalValue').value = '';
   renderWorkerContractsList();
+  renderWorkerDeductionsList();
   renderWorkerAssignedSnags(w.name);
   renderWorkerLogList();
   renderWorkerWorkOrders(id);
@@ -4592,8 +4669,16 @@ function renderWorkerContractsList(){
         </div>
         <div class="pd-row-val expense" style="font-size:13px;">${fmtMoney(e.amount)}</div>
       </div>`).join('');
-    const remaining = c.totalValue ? (c.totalValue - total) : null;
-    const totalValueLine = c.totalValue ? `<div class="pd-row-sub">قيمة المقاولة: <b>${fmtMoney(c.totalValue)}</b> — المتبقي: <b style="color:${remaining>0?'var(--rose)':'var(--green)'}">${fmtMoney(remaining)}</b></div>` : '';
+    const deductions = getWorkerDeductions(w.id, c.id);
+    const deductedTotal = deductions.reduce((sum,d)=> sum + (Number(d.amount)||0), 0);
+    const deductionRows = deductions.map(d=> `<div class="pd-row" style="padding-inline-start:12px;">
+        <div class="pd-row-main">
+          <div class="pd-row-sub">➖ خصم — ${fmtDateTime(d.date)}${d.reason ? ' · '+escapeHtml(d.reason) : ''}</div>
+        </div>
+        <div class="pd-row-val" style="font-size:13px;color:var(--rose);">-${fmtMoney(d.amount)}</div>
+      </div>`).join('');
+    const remaining = c.totalValue ? (c.totalValue - total - deductedTotal) : null;
+    const totalValueLine = c.totalValue ? `<div class="pd-row-sub">قيمة المقاولة: <b>${fmtMoney(c.totalValue)}</b>${deductedTotal ? ` — خصومات: <b style="color:var(--rose)">${fmtMoney(deductedTotal)}</b>` : ''} — المتبقي: <b style="color:${remaining>0?'var(--rose)':'var(--green)'}">${fmtMoney(remaining)}</b></div>` : '';
     return `<div style="border:1.5px solid var(--border);border-radius:12px;padding:10px 12px;margin-bottom:8px;">
       <div class="pd-row" style="border-bottom:1.5px solid var(--border);">
         <div class="pd-row-main">
@@ -4605,10 +4690,17 @@ function renderWorkerContractsList(){
         <button type="button" class="qe-row-del" style="margin-inline-start:6px;" onclick="deleteWorkerContract('${c.id}')">✕</button>
       </div>
       ${payments.length ? paymentRows : '<div class="no-hist" style="padding:6px 0;">لسه مفيش دفعات على المقاولة دي</div>'}
+      ${deductionRows}
     </div>`;
   }).join('');
 }
 
+function getWorkerDeductions(workerId, contractId){
+  return (state.deductions || []).filter(d=> d.workerId===workerId && (contractId===undefined || (d.contractId||'')===(contractId||'')));
+}
+function computeWorkerContractDeductions(workerId, contractId){
+  return getWorkerDeductions(workerId, contractId).reduce((s,d)=> s + (Number(d.amount)||0), 0);
+}
 function computeWorkerContractTotal(workerId, contractId){
   return (state.expenses || [])
     .filter(e=> e.workerId===workerId && e.workerContractId===contractId)
@@ -4640,6 +4732,88 @@ function toggleNewContractForm(forceState){
   const show = typeof forceState === 'boolean' ? forceState : (form.style.display === 'none');
   form.style.display = show ? '' : 'none';
   btn.style.display = show ? 'none' : '';
+}
+
+/* ===================== الخصومات (deductions) =====================
+   A deduction is money taken off what a worker is owed — it isn't an expense. On a contract it
+   lowers what's left to pay on it; either way it shows up on the worker's page and receipts. */
+function openAddDeduction(workerId){
+  const sel = document.getElementById('dedWorkerSelect');
+  const workers = state.workers || [];
+  sel.innerHTML = workers.length
+    ? '<option value="">-- اختار العامل --</option>' + workers.map(w=>`<option value="${w.id}">${escapeHtml(w.name)}${w.role ? ' ('+escapeHtml(w.role)+')' : ''}</option>`).join('')
+    : '<option value="">لسه مفيش عمال مسجلين</option>';
+  sel.value = (workerId && workers.some(w=>w.id===workerId)) ? workerId : '';
+  populateDeductionContracts();
+  document.getElementById('dedAmount').value = '';
+  document.getElementById('dedReason').value = '';
+  resetActorPicker('deduction');
+  document.getElementById('overlay-add-deduction').classList.add('show');
+}
+function populateDeductionContracts(){
+  const w = (state.workers||[]).find(x=>x.id===document.getElementById('dedWorkerSelect').value);
+  const sel = document.getElementById('dedContractSelect');
+  if(!w){ sel.innerHTML = '<option value="">-- اختار العامل الأول --</option>'; return; }
+  const contracts = w.contracts || [];
+  sel.innerHTML = contracts.map(c=>{
+    const left = c.totalValue ? c.totalValue - computeWorkerContractTotal(w.id, c.id) - computeWorkerContractDeductions(w.id, c.id) : null;
+    return `<option value="${c.id}">🏗️ مقاولة ${escapeHtml(c.code || c.name)}${left!==null ? ' — الفاضل ' + fmtMoney(left) : ''}</option>`;
+  }).join('') + '<option value="__general__">💵 خصم عام (مش على مقاولة)</option>';
+}
+async function addDeduction(){
+  const workerId = document.getElementById('dedWorkerSelect').value;
+  const contractSel = document.getElementById('dedContractSelect').value;
+  const amount = parseFloat(document.getElementById('dedAmount').value);
+  const reason = document.getElementById('dedReason').value.trim();
+  const w = (state.workers||[]).find(x=>x.id===workerId);
+  if(!w){ showToast('اختار العامل'); return; }
+  if(!contractSel){ showToast('اختار الخصم على إيه'); return; }
+  if(!amount || amount<=0){ showToast('اكتب قيمة الخصم'); return; }
+  if(!selectedActor.deduction){ showToast('اختار مين اللي بيسجل — بسنت ولا إسلام'); return; }
+  const contract = contractSel==='__general__' ? null : (w.contracts||[]).find(c=>c.id===contractSel);
+  state.deductions = state.deductions || [];
+  state.deductions.push({
+    id: uid(), workerId, contractId: contract ? contract.id : '', amount, reason,
+    project: contract ? contract.name : '', by: selectedActor.deduction, date: new Date().toISOString()
+  });
+  closeModal('overlay-add-deduction');
+  if(activeWorkerId===workerId){ renderWorkerContractsList(); renderWorkerDeductionsList(); }
+  renderWorkers();
+  renderHome();
+  await saveState();
+  showToast(`تم تسجيل خصم ${fmtMoney(amount)} على ${w.name}`);
+}
+function renderWorkerDeductionsList(){
+  const wrap = document.getElementById('worker-deduction-list');
+  const w = (state.workers || []).find(x=>x.id===activeWorkerId);
+  if(!wrap || !w) return;
+  const list = getWorkerDeductions(w.id).slice().sort((a,b)=> new Date(b.date) - new Date(a.date));
+  if(!list.length){ wrap.innerHTML = '<div class="no-hist">مفيش خصومات على العامل ده</div>'; return; }
+  wrap.innerHTML = list.map(d=>{
+    const c = d.contractId ? (w.contracts||[]).find(x=>x.id===d.contractId) : null;
+    const on = d.contractId ? `مقاولة ${escapeHtml(c ? (c.code||c.name) : 'اتمسحت')}` : 'خصم عام';
+    return `<div class="pd-row">
+      <div class="pd-row-main">
+        <div class="pd-row-title">${on}${d.reason ? ' — ' + escapeHtml(d.reason) : ''}</div>
+        <div class="pd-row-sub">${fmtDateTime(d.date)}${d.by ? ' · ' + escapeHtml(d.by) : ''}</div>
+      </div>
+      <div class="pd-row-val" style="color:var(--rose);">-${fmtMoney(d.amount)}</div>
+      <button type="button" class="qe-row-del" style="margin-inline-start:6px;" onclick="deleteDeduction('${d.id}')">✕</button>
+    </div>`;
+  }).join('');
+}
+async function deleteDeduction(id){
+  const idx = (state.deductions||[]).findIndex(d=>d.id===id);
+  if(idx===-1) return;
+  const removed = state.deductions[idx];
+  state.deductions.splice(idx,1);
+  renderWorkerContractsList(); renderWorkerDeductionsList(); renderWorkers();
+  await saveState();
+  showUndoToast('اتمسح الخصم', async ()=>{
+    state.deductions.splice(idx,0,removed);
+    renderWorkerContractsList(); renderWorkerDeductionsList(); renderWorkers();
+    await saveState();
+  });
 }
 
 async function deleteWorkerContract(contractId){
@@ -6290,9 +6464,30 @@ function renderProjectBanner(containerId){
   if(!activeProjectContext){ el.innerHTML = ''; return; }
   el.innerHTML = `<div class="project-context-banner">
     <span>🏗️ شغال دلوقتي على مشروع: <b>${escapeHtml(activeProjectContext.name)}</b> — 📍 ${escapeHtml(activeProjectContext.location || '')}</span>
-    <button type="button" onclick="clearProjectContext()">رجوع لعرض الكل</button>
+    <span style="display:flex;gap:6px;flex-wrap:wrap;">
+      <button type="button" class="project-back-btn" onclick="returnToProjectDashboard()">↩️ رجوع للمشروع</button>
+      <button type="button" onclick="clearProjectContext()">عرض الكل</button>
+    </span>
   </div>`;
 }
+
+/* Back to the project the user jumped from (button in the banner, or the phone's back button) */
+function returnToProjectDashboard(){
+  const p = activeProjectContext && (state.projects||[]).find(x=>x.id===activeProjectContext.id);
+  clearProjectContext();
+  if(!p) return;
+  switchView('projects');
+  openProjectDashboard(p.id);
+}
+// the Android app calls this on the phone's back button after closing any open window
+window.ibtkarHandleBack = function(){
+  if(typeof bdNbExitFullscreen==='function' && bdNbExitFullscreen()) return true;
+  if(activeProjectContext && ['warehouse','accounts','workers'].includes(currentView)){
+    returnToProjectDashboard();
+    return true;
+  }
+  return false;
+};
 
 function clearProjectContext(){
   activeProjectContext = null;
@@ -7367,7 +7562,7 @@ function computeDebts(){
     (w.contracts || []).forEach(c=>{
       if(c.totalValue && c.totalValue > 0){
         const paid = computeWorkerContractTotal(w.id, c.id);
-        const remaining = c.totalValue - paid;
+        const remaining = c.totalValue - paid - computeWorkerContractDeductions(w.id, c.id);
         if(remaining > 0){
           workerContractDebts.push({ worker: w, contract: c, totalValue: c.totalValue, paid, remaining });
         }
@@ -9067,12 +9262,17 @@ function bdSwitchTab(tab){
 }
 
 function bdRender(){
+  if(bdCurrentTab!=='notebook' || currentView!=='board'){ bdNbFull = false; document.body.classList.remove('bd-nb-lock'); }
   bdRenderWhoToggle();
   const el = document.getElementById('bd-content');
   if(!el) return;
   if(bdCurrentTab==='home') el.innerHTML = bdRenderHome();
   else if(bdCurrentTab==='general') el.innerHTML = bdRenderGeneral();
-  else if(bdCurrentTab==='notebook'){ el.innerHTML = bdRenderNotebook(); bdAttachNotebookHandlers(); }
+  else if(bdCurrentTab==='notebook'){
+    // never rebuild the board under a pen that's mid-stroke (e.g. a sync from the other phone) — do it right after
+    if(bdNbBusy && document.getElementById('bdNb')){ bdNbPendingRender = true; }
+    else { el.innerHTML = bdRenderNotebook(); bdAttachNotebookHandlers(); }
+  }
   else if(bdCurrentTab==='ideas'){ el.innerHTML = bdRenderIdeas(); bdAttachIdeasHandlers(); }
   else if(bdCurrentTab==='history') el.innerHTML = bdRenderHistory();
   bdAttachHandlers();
@@ -9259,10 +9459,85 @@ function bdRenderHistory(){
   `;
 }
 
-/* ---------- notebook ---------- */
+/* ---------- notebook (الدفتر) — infinite whiteboard with S Pen drawing ----------
+   Everything lives in "world" coordinates on an endless board; the viewport shows it through a
+   pan/zoom transform (screen = world*z + (x,y)), kept per device. Notes (text/image) keep their
+   x/y/w/h in world coordinates; ink strokes are stored as type:'stroke' with their points packed
+   into one string ("x y p x y p ...", p = pressure 0-100) so Firebase stores them compactly.
+   Input: the S Pen draws (pressure-sensitive; its side button or the eraser tool erases), a finger
+   moves the board and two fingers zoom — so a resting palm never draws. Finger drawing can be
+   switched on from the toolbar. */
+const BD_NB_COLORS = ['#2E2A2C','#C2547A','#D59663','#6E8B74','#2F6FD6','#E23B3B'];
+const BD_NB_SIZES = [2,4,8];
+let bdNbView = (()=>{ try{ return JSON.parse(localStorage.getItem('ibtkar-nb-view')) || {x:0,y:0,z:1}; }catch(e){ return {x:0,y:0,z:1}; } })();
+let bdNbTool = 'pen';        // 'pen' | 'eraser' | 'hand'
+let bdNbColor = BD_NB_COLORS[0];
+let bdNbSize = 4;
+let bdNbFingerDraws = false;
+let bdNbFull = false;
+let bdNbBusy = false;        // a stroke / gesture is in progress — don't re-render under the user's pen
+let bdNbPendingRender = false;
+let bdNbUndo = [];           // this session's ink actions: {type:'add', id} | {type:'erase', items:[{idx,item}]}
+let bdNbSaveTimer = null;
+
+function bdNbSaveSoon(){
+  clearTimeout(bdNbSaveTimer);
+  bdNbSaveTimer = setTimeout(()=>saveState(), 400);
+}
+function bdNbStoreView(){ try{ localStorage.setItem('ibtkar-nb-view', JSON.stringify(bdNbView)); }catch(e){} }
+
+function bdNbParsePoints(n){
+  if(n._pts && n._ptsSrc===n.d) return n._pts;
+  const a = String(n.d||'').trim().split(/\s+/).map(Number);
+  const pts = [];
+  for(let i=0;i+2<a.length;i+=3) pts.push([a[i], a[i+1], a[i+2]/100]);
+  let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
+  pts.forEach(p=>{ if(p[0]<minX)minX=p[0]; if(p[1]<minY)minY=p[1]; if(p[0]>maxX)maxX=p[0]; if(p[1]>maxY)maxY=p[1]; });
+  Object.defineProperty(n, '_pts', {value:pts, writable:true, configurable:true, enumerable:false});
+  Object.defineProperty(n, '_ptsSrc', {value:n.d, writable:true, configurable:true, enumerable:false});
+  Object.defineProperty(n, '_bbox', {value:{minX,minY,maxX,maxY}, writable:true, configurable:true, enumerable:false});
+  return pts;
+}
+function bdNbPackPoints(pts){
+  return pts.map(p=>`${Math.round(p[0]*10)/10} ${Math.round(p[1]*10)/10} ${Math.round(p[2]*100)}`).join(' ');
+}
+/* Filled outline of a pressure-sensitive stroke: offset each point by half its width along the
+   normal, walk out on one side and back on the other, and add round caps at both ends. */
+function bdNbStrokePath(pts, size){
+  if(!pts.length) return '';
+  const r = p => Math.max(0.35, size * (0.25 + 0.85*p[2]) / 2);
+  const f = v => Math.round(v*10)/10;
+  const circle = (p, rad) => `M${f(p[0]-rad)} ${f(p[1])}a${f(rad)} ${f(rad)} 0 1 0 ${f(rad*2)} 0a${f(rad)} ${f(rad)} 0 1 0 ${f(-rad*2)} 0`;
+  if(pts.length===1) return circle(pts[0], r(pts[0]));
+  // light smoothing so the pen's tiny jitters don't show
+  const sm = pts.map((p,i)=>{
+    if(i===0 || i===pts.length-1) return p;
+    const a = pts[i-1], c = pts[i+1];
+    return [(a[0]+2*p[0]+c[0])/4, (a[1]+2*p[1]+c[1])/4, (a[2]+2*p[2]+c[2])/4];
+  });
+  const left = [], right = [];
+  for(let i=0;i<sm.length;i++){
+    const a = sm[Math.max(0,i-1)], b = sm[Math.min(sm.length-1,i+1)];
+    let dx = b[0]-a[0], dy = b[1]-a[1];
+    const len = Math.hypot(dx,dy) || 1; dx/=len; dy/=len;
+    const w = r(sm[i]);
+    left.push([sm[i][0]-dy*w, sm[i][1]+dx*w]);
+    right.push([sm[i][0]+dy*w, sm[i][1]-dx*w]);
+  }
+  let d = `M${f(left[0][0])} ${f(left[0][1])}`;
+  for(let i=1;i<left.length;i++) d += `L${f(left[i][0])} ${f(left[i][1])}`;
+  for(let i=right.length-1;i>=0;i--) d += `L${f(right[i][0])} ${f(right[i][1])}`;
+  d += 'Z' + circle(sm[0], r(sm[0])) + circle(sm[sm.length-1], r(sm[sm.length-1]));
+  return d;
+}
+function bdNbStrokeSvg(n){
+  return `<path data-stroke-id="${n.id}" d="${bdNbStrokePath(bdNbParsePoints(n), n.size||4)}" fill="${escapeHtml(n.color||'#2E2A2C')}"/>`;
+}
+
 function bdRenderNotebook(){
   const items = state.notes||[];
-  const html = items.map(n=>{
+  const strokes = items.filter(n=>n.type==='stroke');
+  const html = items.filter(n=>n.type!=='stroke').map(n=>{
     if(n.type==='image'){
       return `<div class="bd-note-item bd-image" data-id="${n.id}" style="left:${n.x}px;top:${n.y}px;width:${n.w}px;height:${n.h}px;">
         <img src="${n.dataUrl}" draggable="false">
@@ -9279,22 +9554,49 @@ function bdRenderNotebook(){
       <div class="bd-note-resize" data-bd-note-resize="${n.id}"></div>
     </div>`;
   }).join('');
+  const toolBtn = (tool, label, title) => `<button class="bd-nb-btn ${bdNbTool===tool?'on':''}" data-nb-tool="${tool}" title="${title}">${label}</button>`;
   return `
-    <div style="font-weight:900;font-size:16px;margin-bottom:10px;">الدفتر</div>
-    <div class="bd-notebook-toolbar">
-      <button data-bd-action="add-note-text">+ نص</button>
-      <button data-bd-action="add-note-image">+ صورة</button>
-      <input type="file" id="bdNotebookImgInput" accept="image/*" style="display:none;">
-    </div>
-    <div class="bd-notebook-wrapper" id="bdNotebookWrapper">
-      <div class="bd-notebook-canvas" id="bdNotebookCanvas">${html}</div>
+    ${bdNbFull ? '' : '<div style="font-weight:900;font-size:16px;margin-bottom:10px;">الدفتر</div>'}
+    <div class="bd-nb ${bdNbFull?'bd-nb-full':''}" id="bdNb">
+      <div class="bd-nb-toolbar">
+        ${toolBtn('pen','✏️','قلم')}
+        ${toolBtn('eraser','🧽','ممحاة')}
+        ${toolBtn('hand','✋','تحريك')}
+        <span class="bd-nb-sep"></span>
+        ${BD_NB_COLORS.map(c=>`<button class="bd-nb-color ${bdNbColor===c?'on':''}" data-nb-color="${c}" style="background:${c};" title="لون"></button>`).join('')}
+        <span class="bd-nb-sep"></span>
+        ${BD_NB_SIZES.map(sz=>`<button class="bd-nb-btn bd-nb-size ${bdNbSize===sz?'on':''}" data-nb-size="${sz}" title="سُمك"><span style="width:${sz+3}px;height:${sz+3}px;"></span></button>`).join('')}
+        <span class="bd-nb-sep"></span>
+        <button class="bd-nb-btn" data-nb-act="undo" title="تراجع">↩️</button>
+        <button class="bd-nb-btn ${bdNbFingerDraws?'on':''}" data-nb-act="finger" title="الصباع يرسم">☝️</button>
+        <button class="bd-nb-btn" data-nb-act="zoom-in" title="تكبير">＋</button>
+        <button class="bd-nb-btn" data-nb-act="zoom-out" title="تصغير">－</button>
+        <button class="bd-nb-btn" data-nb-act="fit" title="اعرض كل حاجة">🎯</button>
+        <span class="bd-nb-sep"></span>
+        <button class="bd-nb-btn" data-bd-action="add-note-text" title="ورقة نص">+ نص</button>
+        <button class="bd-nb-btn" data-bd-action="add-note-image" title="صورة">+ صورة</button>
+        <button class="bd-nb-btn" data-nb-act="full" title="ملء الشاشة">${bdNbFull ? '✕ قفل' : '⛶'}</button>
+        <input type="file" id="bdNotebookImgInput" accept="image/*" style="display:none;">
+      </div>
+      <div class="bd-nb-viewport" id="bdNotebookWrapper">
+        <div class="bd-nb-world" id="bdNotebookCanvas">
+          ${html}
+          <svg class="bd-nb-ink" id="bdNbInk" width="1" height="1">${strokes.map(bdNbStrokeSvg).join('')}<path id="bdNbLive" d=""/></svg>
+        </div>
+        <div class="bd-nb-zoom-label" id="bdNbZoomLabel"></div>
+      </div>
     </div>
   `;
 }
+function bdNbViewportCenterWorld(){
+  const vp = document.getElementById('bdNotebookWrapper');
+  const w = vp ? vp.clientWidth : 360, h = vp ? vp.clientHeight : 400;
+  return { x:(w/2 - bdNbView.x)/bdNbView.z, y:(h/2 - bdNbView.y)/bdNbView.z };
+}
 function bdNextNotePos(){
-  const n = (state.notes||[]).length;
-  const col = n%6, row = Math.floor(n/6);
-  return {x:20+col*190, y:20+row*190};
+  const c = bdNbViewportCenterWorld();
+  const n = (state.notes||[]).filter(x=>x.type!=='stroke').length % 5;
+  return {x: Math.round(c.x - 85 + n*14), y: Math.round(c.y - 65 + n*14)};
 }
 function bdAddTextNote(){
   const pos = bdNextNotePos();
@@ -9321,11 +9623,81 @@ function bdDeleteNote(id){
 }
 function bdUpdateNoteText(id,text){ const n=(state.notes||[]).find(x=>x.id===id); if(!n) return; n.text=text; saveState(); }
 
-function bdAttachNotebookHandlers(){
-  const wrapper = document.getElementById('bdNotebookWrapper');
-  const canvas = document.getElementById('bdNotebookCanvas');
-  if(!wrapper || !canvas) return;
+function bdNbUndoLast(){
+  const a = bdNbUndo.pop();
+  if(!a){ showToast('مفيش حاجة ترجع فيها'); return; }
+  if(a.type==='add'){
+    state.notes = (state.notes||[]).filter(n=>n.id!==a.id);
+  } else if(a.type==='erase'){
+    a.items.slice().sort((x,y)=>x.idx-y.idx).forEach(({idx,item})=> state.notes.splice(Math.min(idx, state.notes.length), 0, item));
+  }
+  saveState(); bdRender();
+}
+function bdNbFitAll(){
+  const vp = document.getElementById('bdNotebookWrapper');
+  const items = state.notes||[];
+  if(!vp || !items.length){ bdNbView = {x:20,y:20,z:1}; return; }
+  let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
+  items.forEach(n=>{
+    let b;
+    if(n.type==='stroke'){ bdNbParsePoints(n); b = n._bbox; }
+    else b = {minX:n.x, minY:n.y, maxX:n.x+n.w, maxY:n.y+n.h};
+    if(!isFinite(b.minX)) return;
+    minX=Math.min(minX,b.minX); minY=Math.min(minY,b.minY); maxX=Math.max(maxX,b.maxX); maxY=Math.max(maxY,b.maxY);
+  });
+  if(!isFinite(minX)){ bdNbView = {x:20,y:20,z:1}; return; }
+  const pad = 30, w = vp.clientWidth, h = vp.clientHeight;
+  const z = Math.max(0.1, Math.min(2, Math.min((w-pad*2)/Math.max(1,maxX-minX), (h-pad*2)/Math.max(1,maxY-minY))));
+  bdNbView = { z, x: (w - (maxX-minX)*z)/2 - minX*z, y: (h - (maxY-minY)*z)/2 - minY*z };
+}
+// phone back button while the board is full screen → leave full screen first
+function bdNbExitFullscreen(){
+  if(!bdNbFull || currentView!=='board' || bdCurrentTab!=='notebook') return false;
+  bdNbFull = false; document.body.classList.remove('bd-nb-lock'); bdRender();
+  return true;
+}
 
+function bdAttachNotebookHandlers(){
+  const vp = document.getElementById('bdNotebookWrapper');
+  const world = document.getElementById('bdNotebookCanvas');
+  const ink = document.getElementById('bdNbInk');
+  const live = document.getElementById('bdNbLive');
+  const root = document.getElementById('bdNb');
+  if(!vp || !world || !ink || !root) return;
+  document.body.classList.toggle('bd-nb-lock', bdNbFull);
+
+  function applyView(){
+    const v = bdNbView;
+    world.style.transform = `translate(${v.x}px,${v.y}px) scale(${v.z})`;
+    const g = 28*v.z;
+    vp.style.backgroundSize = `${g}px ${g}px`;
+    vp.style.backgroundPosition = `${v.x}px ${v.y}px`;
+    const lbl = document.getElementById('bdNbZoomLabel');
+    if(lbl) lbl.textContent = Math.round(v.z*100) + '%';
+  }
+  applyView();
+  function zoomAt(sx, sy, newZ){
+    newZ = Math.max(0.1, Math.min(6, newZ));
+    const wx = (sx - bdNbView.x)/bdNbView.z, wy = (sy - bdNbView.y)/bdNbView.z;
+    bdNbView = { z:newZ, x: sx - wx*newZ, y: sy - wy*newZ };
+    applyView(); bdNbStoreView();
+  }
+  function toLocal(e){ const r = vp.getBoundingClientRect(); return {x:e.clientX-r.left, y:e.clientY-r.top}; }
+  function toWorld(e){ const l = toLocal(e); return {x:(l.x-bdNbView.x)/bdNbView.z, y:(l.y-bdNbView.y)/bdNbView.z}; }
+
+  // ---- toolbar
+  root.querySelectorAll('[data-nb-tool]').forEach(b=>b.addEventListener('click',()=>{ bdNbTool=b.dataset.nbTool; bdRender(); }));
+  root.querySelectorAll('[data-nb-color]').forEach(b=>b.addEventListener('click',()=>{ bdNbColor=b.dataset.nbColor; if(bdNbTool!=='pen') bdNbTool='pen'; bdRender(); }));
+  root.querySelectorAll('[data-nb-size]').forEach(b=>b.addEventListener('click',()=>{ bdNbSize=Number(b.dataset.nbSize); if(bdNbTool!=='pen') bdNbTool='pen'; bdRender(); }));
+  root.querySelectorAll('[data-nb-act]').forEach(b=>b.addEventListener('click',()=>{
+    const act = b.dataset.nbAct;
+    if(act==='undo') bdNbUndoLast();
+    else if(act==='finger'){ bdNbFingerDraws=!bdNbFingerDraws; showToast(bdNbFingerDraws ? '☝️ الصباع بقى بيرسم — صباعين للتحريك' : '☝️ الصباع بيحرّك الدفتر — القلم بس اللي بيرسم'); bdRender(); }
+    else if(act==='zoom-in') zoomAt(vp.clientWidth/2, vp.clientHeight/2, bdNbView.z*1.25);
+    else if(act==='zoom-out') zoomAt(vp.clientWidth/2, vp.clientHeight/2, bdNbView.z/1.25);
+    else if(act==='fit'){ bdNbFitAll(); applyView(); bdNbStoreView(); }
+    else if(act==='full'){ bdNbFull=!bdNbFull; bdRender(); }
+  }));
   const imgInput = document.getElementById('bdNotebookImgInput');
   if(imgInput){
     imgInput.addEventListener('change',(ev)=>{
@@ -9334,55 +9706,212 @@ function bdAttachNotebookHandlers(){
       ev.target.value='';
     });
   }
-  const addTextBtn = document.querySelector('[data-bd-action="add-note-text"]');
+  const addTextBtn = root.querySelector('[data-bd-action="add-note-text"]');
   if(addTextBtn) addTextBtn.addEventListener('click', bdAddTextNote);
-  const addImgBtn = document.querySelector('[data-bd-action="add-note-image"]');
+  const addImgBtn = root.querySelector('[data-bd-action="add-note-image"]');
   if(addImgBtn) addImgBtn.addEventListener('click', ()=>{ imgInput.click(); });
 
-  canvas.querySelectorAll('[data-bd-action="delete-note"]').forEach(el=>el.addEventListener('click',()=>bdDeleteNote(el.dataset.id)));
-  canvas.querySelectorAll('[data-bd-note-text]').forEach(el=>{
+  // ---- notes (text / image): delete, edit, drag, resize — all in world coordinates
+  world.querySelectorAll('[data-bd-action="delete-note"]').forEach(el=>el.addEventListener('click',()=>bdDeleteNote(el.dataset.id)));
+  world.querySelectorAll('[data-bd-note-text]').forEach(el=>{
     el.addEventListener('blur',()=>bdUpdateNoteText(el.dataset.bdNoteText, el.innerText));
   });
-
-  function getCanvasPoint(clientX, clientY){
-    const rect = canvas.getBoundingClientRect();
-    return { x: clientX-rect.left, y: clientY-rect.top };
-  }
-  canvas.querySelectorAll('[data-bd-note-drag]').forEach(handle=>{
+  world.querySelectorAll('[data-bd-note-drag]').forEach(handle=>{
     handle.addEventListener('pointerdown',(e)=>{
-      e.preventDefault();
+      if(e.pointerType==='pen' && bdNbTool!=='hand') return; // the pen keeps drawing over notes
+      e.preventDefault(); e.stopPropagation();
       const id = handle.dataset.bdNoteDrag;
       const n = state.notes.find(x=>x.id===id); if(!n) return;
-      const start = getCanvasPoint(e.clientX,e.clientY);
+      const start = toWorld(e);
       const offX = start.x-n.x, offY = start.y-n.y;
+      bdNbBusy = true;
       function move(ev){
-        const p = getCanvasPoint(ev.clientX,ev.clientY);
-        n.x = Math.max(0,p.x-offX); n.y = Math.max(0,p.y-offY);
-        const el = canvas.querySelector(`.bd-note-item[data-id="${id}"]`);
+        const p = toWorld(ev);
+        n.x = Math.round(p.x-offX); n.y = Math.round(p.y-offY);
+        const el = world.querySelector(`.bd-note-item[data-id="${id}"]`);
         if(el){ el.style.left=n.x+'px'; el.style.top=n.y+'px'; }
       }
-      function up(){ document.removeEventListener('pointermove',move); document.removeEventListener('pointerup',up); saveState(); }
+      function up(){ document.removeEventListener('pointermove',move); document.removeEventListener('pointerup',up); document.removeEventListener('pointercancel',up); bdNbEndBusy(); saveState(); }
       document.addEventListener('pointermove',move);
       document.addEventListener('pointerup',up);
+      document.addEventListener('pointercancel',up);
     });
   });
-  canvas.querySelectorAll('[data-bd-note-resize]').forEach(handle=>{
+  world.querySelectorAll('[data-bd-note-resize]').forEach(handle=>{
     handle.addEventListener('pointerdown',(e)=>{
+      if(e.pointerType==='pen' && bdNbTool!=='hand') return;
       e.preventDefault(); e.stopPropagation();
       const id = handle.dataset.bdNoteResize;
       const n = state.notes.find(x=>x.id===id); if(!n) return;
       const startX=e.clientX, startY=e.clientY, startW=n.w, startH=n.h;
+      bdNbBusy = true;
       function move(ev){
-        const dx = startX-ev.clientX, dy = ev.clientY-startY;
-        n.w = Math.max(80,startW+dx); n.h = Math.max(60,startH+dy);
-        const el = canvas.querySelector(`.bd-note-item[data-id="${id}"]`);
+        const dx = (startX-ev.clientX)/bdNbView.z, dy = (ev.clientY-startY)/bdNbView.z;
+        n.w = Math.round(Math.max(80,startW+dx)); n.h = Math.round(Math.max(60,startH+dy));
+        const el = world.querySelector(`.bd-note-item[data-id="${id}"]`);
         if(el){ el.style.width=n.w+'px'; el.style.height=n.h+'px'; }
       }
-      function up(){ document.removeEventListener('pointermove',move); document.removeEventListener('pointerup',up); saveState(); }
+      function up(){ document.removeEventListener('pointermove',move); document.removeEventListener('pointerup',up); document.removeEventListener('pointercancel',up); bdNbEndBusy(); saveState(); }
       document.addEventListener('pointermove',move);
       document.addEventListener('pointerup',up);
+      document.addEventListener('pointercancel',up);
     });
   });
+
+  // ---- drawing / erasing / panning / pinch-zoom on the board itself
+  const touches = new Map();   // active finger pointers (for pan & pinch)
+  let pinch = null;            // {d0, z0, wx, wy}
+  let pan = null;              // {id, sx, sy, x0, y0}
+  let stroke = null;           // {id(pointerId), pts:[[x,y,p]]}
+  let erase = null;            // {id, removed:[{idx,item}]}
+  let lastPenAt = 0;
+  let raf = 0;
+
+  function isEraseEvent(e){
+    return bdNbTool==='eraser' || (e.pointerType==='pen' && ((e.buttons & 2) || (e.buttons & 32) || e.button===5));
+  }
+  function drawsWith(e){
+    if(bdNbTool==='hand') return false;
+    if(e.pointerType==='pen' || e.pointerType==='mouse') return e.pointerType==='pen' || e.button===0;
+    return bdNbFingerDraws || bdNbTool==='eraser'; // touch
+  }
+  function addPoint(e){
+    const w = toWorld(e);
+    const p = e.pointerType==='pen' ? (e.pressure || 0.5) : 0.5;
+    const last = stroke.pts[stroke.pts.length-1];
+    if(last && Math.hypot(w.x-last[0], w.y-last[1]) < 0.6/bdNbView.z) return;
+    stroke.pts.push([w.x, w.y, p]);
+  }
+  function drawLive(){
+    raf = 0;
+    if(!stroke) return;
+    live.setAttribute('d', bdNbStrokePath(stroke.pts, bdNbSize));
+  }
+  function eraseAt(e){
+    const w = toWorld(e);
+    const rad = 10/bdNbView.z;
+    for(let i=(state.notes||[]).length-1;i>=0;i--){
+      const n = state.notes[i];
+      if(n.type!=='stroke') continue;
+      const pts = bdNbParsePoints(n), b = n._bbox, pad = rad + (n.size||4);
+      if(w.x < b.minX-pad || w.x > b.maxX+pad || w.y < b.minY-pad || w.y > b.maxY+pad) continue;
+      const hitR = rad + (n.size||4)/2;
+      let hit = false;
+      for(let k=0;k<pts.length && !hit;k++){
+        const a = pts[k], c = pts[Math.min(k+1, pts.length-1)];
+        const dx=c[0]-a[0], dy=c[1]-a[1], L=dx*dx+dy*dy;
+        const t = L ? Math.max(0, Math.min(1, ((w.x-a[0])*dx + (w.y-a[1])*dy)/L)) : 0;
+        if(Math.hypot(w.x-(a[0]+t*dx), w.y-(a[1]+t*dy)) <= hitR) hit = true;
+      }
+      if(hit){
+        erase.removed.push({idx:i, item:n});
+        state.notes.splice(i,1);
+        const el = ink.querySelector(`[data-stroke-id="${n.id}"]`);
+        if(el) el.remove();
+      }
+    }
+  }
+
+  vp.addEventListener('pointerdown',(e)=>{
+    if(e.target.closest('.bd-note-del, .bd-note-resize, .bd-note-drag-handle') && !(e.pointerType==='pen' && bdNbTool!=='hand')) return;
+    if(e.pointerType==='pen') lastPenAt = Date.now();
+    // palm rejection: a finger landing while the pen is in use never draws or moves anything
+    if(e.pointerType==='touch' && (stroke || erase || Date.now()-lastPenAt < 500)) return;
+    const onEditableNote = e.target.closest('[contenteditable="true"]');
+    if(e.pointerType==='touch'){
+      touches.set(e.pointerId, toLocal(e));
+      if(touches.size===2){
+        // second finger: switch whatever the first finger was doing into pinch-zoom
+        if(stroke && stroke.id!==undefined){ stroke = null; live.setAttribute('d',''); }
+        pan = null;
+        const [a,b] = [...touches.values()];
+        const mid = {x:(a.x+b.x)/2, y:(a.y+b.y)/2};
+        pinch = { d0: Math.hypot(a.x-b.x, a.y-b.y) || 1, z0: bdNbView.z, wx:(mid.x-bdNbView.x)/bdNbView.z, wy:(mid.y-bdNbView.y)/bdNbView.z };
+        bdNbBusy = true;
+        e.preventDefault();
+        return;
+      }
+      if(onEditableNote && !bdNbFingerDraws) return; // let the finger type in the note
+    }
+    if(onEditableNote && e.pointerType==='mouse' && bdNbTool!=='eraser') return;
+    if(touches.size>1) return;
+    e.preventDefault();
+    try{ vp.setPointerCapture(e.pointerId); }catch(err){}
+    bdNbBusy = true;
+    if(drawsWith(e) && isEraseEvent(e)){
+      erase = {id:e.pointerId, removed:[]};
+      eraseAt(e);
+    } else if(drawsWith(e)){
+      stroke = {id:e.pointerId, pts:[]};
+      live.setAttribute('fill', bdNbColor);
+      addPoint(e); drawLive();
+    } else {
+      const l = toLocal(e);
+      pan = {id:e.pointerId, sx:l.x, sy:l.y, x0:bdNbView.x, y0:bdNbView.y};
+    }
+  });
+  vp.addEventListener('pointermove',(e)=>{
+    if(e.pointerType==='touch' && touches.has(e.pointerId)) touches.set(e.pointerId, toLocal(e));
+    if(pinch && touches.size>=2){
+      const [a,b] = [...touches.values()];
+      const mid = {x:(a.x+b.x)/2, y:(a.y+b.y)/2};
+      const z = Math.max(0.1, Math.min(6, pinch.z0 * Math.hypot(a.x-b.x, a.y-b.y)/pinch.d0));
+      bdNbView = { z, x: mid.x - pinch.wx*z, y: mid.y - pinch.wy*z };
+      applyView();
+      return;
+    }
+    if(stroke && e.pointerId===stroke.id){
+      const evs = e.getCoalescedEvents ? e.getCoalescedEvents() : [e];
+      (evs.length ? evs : [e]).forEach(addPoint);
+      if(!raf) raf = requestAnimationFrame(drawLive);
+      if(e.pointerType==='pen') lastPenAt = Date.now();
+    } else if(erase && e.pointerId===erase.id){
+      eraseAt(e);
+      if(e.pointerType==='pen') lastPenAt = Date.now();
+    } else if(pan && e.pointerId===pan.id){
+      const l = toLocal(e);
+      bdNbView = { z:bdNbView.z, x: pan.x0 + (l.x-pan.sx), y: pan.y0 + (l.y-pan.sy) };
+      applyView();
+    }
+  });
+  function finish(e){
+    if(e.pointerType==='touch'){
+      touches.delete(e.pointerId);
+      if(pinch && touches.size<2){ pinch = null; bdNbStoreView(); if(!touches.size) bdNbEndBusy(); return; }
+    }
+    if(stroke && e.pointerId===stroke.id){
+      if(raf){ cancelAnimationFrame(raf); raf = 0; }
+      const pts = stroke.pts;
+      stroke = null;
+      if(pts.length){
+        const n = { id:uid(), type:'stroke', d:bdNbPackPoints(pts), color:bdNbColor, size:bdNbSize, createdBy:bdWhoami, createdAt:Date.now() };
+        state.notes.push(n);
+        bdNbUndo.push({type:'add', id:n.id});
+        live.insertAdjacentHTML('beforebegin', bdNbStrokeSvg(n));
+        bdNbSaveSoon();
+      }
+      live.setAttribute('d','');
+      lastPenAt = e.pointerType==='pen' ? Date.now() : lastPenAt;
+    } else if(erase && e.pointerId===erase.id){
+      if(erase.removed.length){ bdNbUndo.push({type:'erase', items:erase.removed}); bdNbSaveSoon(); }
+      erase = null;
+    } else if(pan && e.pointerId===pan.id){
+      pan = null; bdNbStoreView();
+    }
+    if(!stroke && !erase && !pan && !pinch) bdNbEndBusy();
+  }
+  vp.addEventListener('pointerup', finish);
+  vp.addEventListener('pointercancel', finish);
+  vp.addEventListener('wheel',(e)=>{
+    e.preventDefault();
+    const l = toLocal(e);
+    if(e.ctrlKey || e.metaKey) zoomAt(l.x, l.y, bdNbView.z * Math.exp(-e.deltaY*0.01));
+    else { bdNbView = { z:bdNbView.z, x:bdNbView.x - e.deltaX, y:bdNbView.y - e.deltaY }; applyView(); bdNbStoreView(); }
+  }, {passive:false});
+}
+function bdNbEndBusy(){
+  bdNbBusy = false;
+  if(bdNbPendingRender){ bdNbPendingRender = false; bdRender(); }
 }
 
 /* ---------- أفكار وإلهام (ideas / inspiration board) ---------- */
