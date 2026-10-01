@@ -153,7 +153,10 @@ public class MainActivity extends Activity {
                     }
                 }
             }
-            if (!mimes.isEmpty()) contentIntent.putExtra(Intent.EXTRA_MIME_TYPES, mimes.toArray(new String[0]));
+            // ملفات JSON (النسخة الاحتياطية) غالبًا بتتسجّل في أندرويد بنوع تاني، فمنفلترهاش
+            if (!mimes.isEmpty() && !mimes.contains("application/json")) {
+                contentIntent.putExtra(Intent.EXTRA_MIME_TYPES, mimes.toArray(new String[0]));
+            }
         }
         if (params.getMode() == WebChromeClient.FileChooserParams.MODE_OPEN_MULTIPLE) {
             contentIntent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);

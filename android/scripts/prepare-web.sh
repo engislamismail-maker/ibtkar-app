@@ -15,7 +15,9 @@ trap 'rm -rf "$TMP"' EXIT
 rm -rf "$WWW"
 mkdir -p "$WWW/vendor/fonts/files"
 cp "$ROOT/index.html" "$ROOT/manifest.json" "$ROOT"/icon-*.png "$WWW/"
-cp "$ANDROID_DIR/web/native-bridge.js" "$WWW/"
+cp "$ANDROID_DIR/web/native-bridge.js" "$ANDROID_DIR/web/backup-import.js" "$WWW/"
+# نسخة الويب الاحتياطية (متشفّرة) — بتترجّع مرة واحدة من جوّه التطبيق
+[ -f "$ANDROID_DIR/web/web-backup.enc.json" ] && cp "$ANDROID_DIR/web/web-backup.enc.json" "$WWW/"
 
 (
   cd "$TMP"
@@ -60,6 +62,9 @@ if (fontImport.test(html)) {
   html = html.replace('<style>', '<link rel="stylesheet" href="vendor/fonts/tajawal.css">\n<style>');
 }
 html = html.replace('<head>', '<head>\n<script src="native-bridge.js"></script>');
+const bodyEnd = html.lastIndexOf('</body>');
+if (bodyEnd < 0) { console.error('prepare-web: </body> not found'); process.exit(1); }
+html = html.slice(0, bodyEnd) + '<script src="backup-import.js"></script>\n' + html.slice(bodyEnd);
 fs.writeFileSync(file, html);
 console.log('prepare-web: OK');
 JS
