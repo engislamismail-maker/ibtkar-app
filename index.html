@@ -1325,6 +1325,7 @@ async function deleteReferenceSupplier(id){
     <div class="field">
       <label id="exp-project-label">صرفت في أي مشروع <span class="req-star">*</span></label>
       <input type="text" id="expProject" list="location-list" placeholder="مثلاً: مشروع القاهرة الجديدة" oninput="updateExpenseStatementHint()">
+      <select id="expProjectPick" style="margin-top:8px;" onchange="pickProjectInto('expProjectPick','expProject')"></select>
     </div>
     <div class="field">
       <label>صرفت إيه (البند)</label>
@@ -1398,6 +1399,7 @@ async function deleteReferenceSupplier(id){
     <div class="field">
       <label>لأي مشروع <span class="req-star">*</span></label>
       <input type="text" id="incProject" list="location-list" placeholder="مثلاً: مشروع القاهرة الجديدة" oninput="updateIncomeStatementHint()">
+      <select id="incProjectPick" style="margin-top:8px;" onchange="pickProjectInto('incProjectPick','incProject')"></select>
     </div>
     <div class="field">
       <label>ملاحظات (اختياري)</label>
@@ -3569,7 +3571,41 @@ function openAddExpense(){
   document.getElementById('expStatementType').value = 'مصنعية';
   updateExpenseStatementHint();
   document.getElementById('expense-now-label').textContent = 'هيتسجل بتاريخ ووقت دلوقتي: ' + fmtDateTime(new Date().toISOString());
+  fillProjectPicker('expProjectPick');
+  syncExpProjectPicker();
   document.getElementById('overlay-add-expense').classList.add('show');
+}
+
+/* Quick project picker under the project field — the typed <datalist> suggestions don't show up
+   on Android, so this dropdown is the reliable way to pick an existing project. */
+function fillProjectPicker(selId){
+  const sel = document.getElementById(selId);
+  if(!sel) return;
+  const projects = (state.projects||[]).filter(p=>!p.archived);
+  sel.innerHTML = projects.length
+    ? '<option value="">📁 اختار من المشاريع...</option>' + projects.map(p=>`<option value="${escapeHtml(p.name)}">${escapeHtml(p.name)}</option>`).join('')
+    : '<option value="">لسه مفيش مشاريع — اكتب اسم المشروع فوق</option>';
+  sel.value = '';
+}
+function pickProjectInto(selId, inputId){
+  const sel = document.getElementById(selId);
+  const input = document.getElementById(inputId);
+  if(!sel || !input || !sel.value || input.readOnly) return;
+  input.value = sel.value;
+  input.dispatchEvent(new Event('input'));
+  sel.value = '';
+}
+function syncExpProjectPicker(){
+  const input = document.getElementById('expProject');
+  const sel = document.getElementById('expProjectPick');
+  if(sel) sel.style.display = input.readOnly ? 'none' : '';
+}
+function lockExpProjectField(){
+  const projectField = document.getElementById('expProject');
+  projectField.value = '';
+  projectField.readOnly = true;
+  projectField.placeholder = 'هيتحدد أوتوماتيك لما تختار تحت';
+  syncExpProjectPicker();
 }
 
 function updateExpenseStatementHint(){
@@ -3617,6 +3653,7 @@ function setExpensePayType(type){
     projectLabel.innerHTML = 'صرفت في أي مشروع <span class="req-star">*</span>';
   }
   document.getElementById('exp-desc-autofill-hint').style.display = 'none';
+  syncExpProjectPicker();
 
   if(type==='worker') populateWorkerSelect();
   if(type==='supplier') populateSupplierSelectForExpense();
@@ -3649,7 +3686,9 @@ function populateWorkerSelect(){
   document.getElementById('expWorkerContractSelect').innerHTML = '<option value="">-- اختار العامل الأول --</option>';
   document.getElementById('expProject').value = '';
 }
+const EXP_WORKER_ADVANCE = '__advance__'; // daily-mode payment not tied to a recorded work day (سلفة / دفعة على الحساب)
 function onExpWorkerSelectChange(){
+  lockExpProjectField();
   if(expWorkerPayMode==='daily') populateWorkerUnpaidDays();
   else populateWorkerContractsForExpense();
 }
@@ -3660,14 +3699,33 @@ function populateWorkerUnpaidDays(){
   const w = (state.workers||[]).find(x=>x.id===workerId);
   if(!w){ logSel.innerHTML = '<option value="">-- اختار العامل الأول --</option>'; return; }
   const unpaid = (w.logs||[]).filter(l=>!l.paid).sort((a,b)=> new Date(b.date)-new Date(a.date));
-  logSel.innerHTML = unpaid.length
-    ? '<option value="">-- اختار اليوم --</option>' + unpaid.map(l=>`<option value="${l.id}">${escapeHtml(l.code || formatLogCode(l.project,l.date))}</option>`).join('')
-    : '<option value="">مفيش أيام غير مدفوعة لـ' + escapeHtml(w.name) + '</option>';
+  const advanceOpt = `<option value="${EXP_WORKER_ADVANCE}">💵 دفعة / سلفة من غير يوم محدد — اختار المشروع بنفسك</option>`;
+  if(unpaid.length){
+    logSel.innerHTML = '<option value="">-- اختار اليوم --</option>' + unpaid.map(l=>`<option value="${l.id}">${escapeHtml(l.code || formatLogCode(l.project,l.date))}</option>`).join('') + advanceOpt;
+  } else {
+    // nothing recorded to pay against — go straight to a free payment so the project can be picked
+    logSel.innerHTML = advanceOpt;
+    logSel.value = EXP_WORKER_ADVANCE;
+    applyWorkerLogToExpense();
+    showToast('مفيش أيام شغل مسجلة غير مدفوعة لـ' + w.name + ' — اختار المشروع بنفسك');
+  }
 }
 function applyWorkerLogToExpense(){
   const workerId = document.getElementById('expWorkerSelect').value;
   const logId = document.getElementById('expWorkerLogSelect').value;
   const w = (state.workers||[]).find(x=>x.id===workerId);
+  if(logId===EXP_WORKER_ADVANCE && w){
+    const projectField = document.getElementById('expProject');
+    projectField.readOnly = false;
+    projectField.value = '';
+    projectField.placeholder = 'اختار المشروع من القايمة تحت أو اكتبه';
+    syncExpProjectPicker();
+    updateExpenseStatementHint();
+    document.getElementById('expDesc').value = `دفعة لـ${w.name}`;
+    document.getElementById('exp-desc-autofill-hint').style.display = 'block';
+    return;
+  }
+  lockExpProjectField();
   if(!w || !logId){ document.getElementById('expProject').value = ''; return; }
   const log = (w.logs||[]).find(l=>l.id===logId);
   if(!log) return;
@@ -3758,17 +3816,17 @@ async function addExpense(){
   const project = document.getElementById('expProject').value.trim();
   const description = document.getElementById('expDesc').value.trim();
   if(!amount || amount<=0){ showToast('اكتب مبلغ صحيح'); return; }
-  if(!project){ showToast('اكتب اسم المشروع'); return; }
-  if(!selectedMethod.expense){ showToast('اختار طريقة الدفع — كاش، فيزا، تحويل، أو InstaPay'); return; }
-  if(!selectedActor.expense){ showToast('اختار مين اللي بيسجل — بسنت ولا إسلام'); return; }
 
   const isWorkerPay = expPayType==='worker';
   const isWorkerContractMode = isWorkerPay && expWorkerPayMode==='contract';
   const workerId = isWorkerPay ? document.getElementById('expWorkerSelect').value : '';
-  const workerLogId = (isWorkerPay && !isWorkerContractMode) ? document.getElementById('expWorkerLogSelect').value : '';
+  const workerLogIdRaw = (isWorkerPay && !isWorkerContractMode) ? document.getElementById('expWorkerLogSelect').value : '';
+  const isWorkerAdvance = workerLogIdRaw===EXP_WORKER_ADVANCE;
+  const workerLogId = isWorkerAdvance ? '' : workerLogIdRaw;
   const workerContractId = isWorkerContractMode ? document.getElementById('expWorkerContractSelect').value : '';
-  if(isWorkerPay && !isWorkerContractMode && (!workerId || !workerLogId)){ showToast('اختار العامل واليوم اللي هتدفع له'); return; }
-  if(isWorkerContractMode && (!workerId || !workerContractId)){ showToast('اختار العامل والمقاولة اللي هتدفع لها'); return; }
+  if(isWorkerPay && !workerId){ showToast('اختار العامل الأول'); return; }
+  if(isWorkerPay && !isWorkerContractMode && !workerLogIdRaw){ showToast('اختار اليوم اللي هتدفع له — أو "دفعة / سلفة من غير يوم محدد" عشان تختار المشروع بنفسك'); return; }
+  if(isWorkerContractMode && !workerContractId){ showToast('اختار المقاولة اللي هتدفع لها'); return; }
 
   const isSupplierPay = expPayType==='supplier';
   const supplierId = isSupplierPay ? document.getElementById('expSupplierSelect').value : '';
@@ -3779,8 +3837,12 @@ async function addExpense(){
   const refSupplierId = isRefSupplierPay ? document.getElementById('expRefSupplierSelect').value : '';
   if(isRefSupplierPay && !refSupplierId){ showToast('اختار المورد المرجعي'); return; }
 
+  if(!project){ showToast('اختار المشروع'); return; }
+  if(!selectedMethod.expense){ showToast('اختار طريقة الدفع — كاش، فيزا، تحويل، أو InstaPay'); return; }
+  if(!selectedActor.expense){ showToast('اختار مين اللي بيسجل — بسنت ولا إسلام'); return; }
+
   let logForPay = null;
-  if(isWorkerPay && !isWorkerContractMode){
+  if(isWorkerPay && !isWorkerContractMode && !isWorkerAdvance){
     const w = (state.workers||[]).find(x=>x.id===workerId);
     logForPay = w && (w.logs||[]).find(l=>l.id===workerLogId);
     if(!logForPay){ showToast('حصلت مشكلة في تحديد اليوم، اختار تاني'); return; }
@@ -3823,7 +3885,7 @@ async function addExpense(){
     id: uid(), amount, project, description, method: selectedMethod.expense, image: newExpenseImage, by: selectedActor.expense,
     date: new Date().toISOString()
   };
-  if(isWorkerPay && !isWorkerContractMode){ record.workerId = workerId; record.workerLogId = workerLogId; }
+  if(isWorkerPay && !isWorkerContractMode){ record.workerId = workerId; if(workerLogId) record.workerLogId = workerLogId; }
   if(isWorkerContractMode){ record.workerId = workerId; record.workerContractId = workerContractId; }
   if(isSupplierPay){ record.supplierId = supplierId; record.supplierProjectId = supplierProjectId; }
   if(isRefSupplierPay){ record.referenceSupplierId = refSupplierId; }
@@ -3841,7 +3903,7 @@ async function addExpense(){
     if(isWorkerPay){
       const w = (state.workers||[]).find(x=>x.id===workerId);
       const workerName = w ? w.name : '';
-      const kindLabel = isWorkerContractMode ? 'دفعة مقاولة' : 'دفعة يومية';
+      const kindLabel = isWorkerContractMode ? 'دفعة مقاولة' : (isWorkerAdvance ? 'دفعة / سلفة' : 'دفعة يومية');
       clearItem = `${kindLabel} — ${workerName}${description ? ' (' + description + ')' : ''}`;
     } else if(isSupplierPay){
       const s = (state.suppliers||[]).find(x=>x.id===supplierId);
@@ -3866,7 +3928,7 @@ async function addExpense(){
   renderWorkers();
   renderSuppliers();
   await saveState();
-  let msg = isWorkerPay ? 'تم تسجيل القبض وتحديث حالة اليوم لمدفوع' : (isSupplierPay ? 'تم تسجيل الدفعة للمورد' : 'تم تسجيل المصروف');
+  let msg = isWorkerAdvance ? 'تم تسجيل الدفعة للعامل' : isWorkerPay ? 'تم تسجيل القبض وتحديث حالة اليوم لمدفوع' : (isSupplierPay ? 'تم تسجيل الدفعة للمورد' : 'تم تسجيل المصروف');
   msg += statementLinked ? ' — واتحط في كشف حساب العميل' : ' — بس محصلش يترتبط بكشف حساب (محدش لقى مشروع بنفس الاسم)';
   showToast(msg);
 
@@ -3935,6 +3997,7 @@ function openAddIncome(){
   resetMethodPicker('income');
   updateIncomeStatementHint();
   document.getElementById('income-now-label').textContent = 'هيتسجل بتاريخ ووقت دلوقتي: ' + fmtDateTime(new Date().toISOString());
+  fillProjectPicker('incProjectPick');
   document.getElementById('overlay-add-income').classList.add('show');
 }
 
