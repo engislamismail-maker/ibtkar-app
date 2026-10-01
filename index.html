@@ -2754,19 +2754,30 @@ function updateCodePreview(){
 }
 
 function normalizeState(){
+  // Firebase Realtime Database never stores empty arrays/objects — an empty list saved from one
+  // device comes back as a MISSING field. Every list the app reads must be restored here, or the
+  // first render crashes and the whole app stays stuck on "جاري تحميل البيانات...".
+  if(!state || typeof state !== 'object') state = {};
   state.counters = state.counters || { tool: 0, material: 0 };
+  state.items = state.items || [];
+  state.items.forEach(it=>{ it.log = it.log || []; });
   state.expenses = state.expenses || [];
   state.income = state.income || [];
   state.workers = state.workers || [];
-  state.workers.forEach(w=>{ w.contracts = w.contracts || []; });
+  state.workers.forEach(w=>{ w.contracts = w.contracts || []; w.logs = w.logs || []; });
   state.workOrders = state.workOrders || [];
+  state.workOrders.forEach(o=>{ o.tools = o.tools || []; });
   state.projects = state.projects || [];
-  state.projects.forEach(p=>{ p.snagList = p.snagList || []; });
+  state.projects.forEach(p=>{
+    p.snagList = p.snagList || [];
+    if(p.clientStatement){ p.clientStatement.lineItems = p.clientStatement.lineItems || []; p.clientStatement.payments = p.clientStatement.payments || []; }
+  });
   state.materialPrices = state.materialPrices || {};
   getEffectiveCatalog().forEach(item=>{
     if(state.materialPrices[item.id] === undefined) state.materialPrices[item.id] = item.defaultPrice;
   });
   state.quickEstimates = state.quickEstimates || [];
+  state.quickEstimates.forEach(e=>{ e.rooms = e.rooms || []; });
   state.suppliers = state.suppliers || [];
   state.suppliers.forEach(s=>{ s.projects = s.projects || []; s.jobOrders = s.jobOrders || []; });
   state.boardTasks = state.boardTasks || [];
@@ -2782,6 +2793,7 @@ function normalizeState(){
   state.statementCategories = state.statementCategories || [...CLIENT_STATEMENT_CATEGORIES_DEFAULT];
   state.checklistTemplateOverrides = state.checklistTemplateOverrides || {};
   state.siteChecklists = state.siteChecklists || [];
+  state.siteChecklists.forEach(c=>{ c.items = c.items || []; });
   state.customCatalogItems = state.customCatalogItems || [];
   state.hiddenCatalogIds = state.hiddenCatalogIds || [];
   state.companyInfo = state.companyInfo || { name: 'IBTKAR Architecture Development', phone: '', email: '', logoDataUrl: '' };
@@ -2876,17 +2888,14 @@ function updateNavBadges(){
 
 function renderEverything(){
   normalizeState();
-  render();
-  renderExpenses();
-  renderWorkers();
-  renderProjects();
-  renderEstimatesList();
-  renderSuppliers();
-  renderReferenceSuppliers();
-  renderHome();
-  updateNavBadges();
-  if(currentView==='board') bdRender();
-  if(currentView==='weekcal') renderWeekCalendar();
+  // each section renders on its own, so a problem in one never leaves every screen stuck on "loading"
+  const steps = [render, renderExpenses, renderWorkers, renderProjects, renderEstimatesList,
+    renderSuppliers, renderReferenceSuppliers, renderHome, updateNavBadges];
+  if(currentView==='board') steps.push(bdRender);
+  if(currentView==='weekcal') steps.push(renderWeekCalendar);
+  steps.forEach(fn=>{
+    try{ fn(); }catch(e){ console.error('render failed: ' + fn.name, e); }
+  });
 }
 
 /* Walks the whole state tree and uploads any raw base64 attachment (data:...;base64,...) to
@@ -6705,6 +6714,7 @@ function renderPricingEditor(){
 async function saveEstimate(){
   if(!pricingDraft.name || !pricingDraft.name.trim()){ showToast('اكتب اسم التسعير الأول'); return; }
   state.quickEstimates = state.quickEstimates || [];
+  state.quickEstimates.forEach(e=>{ e.rooms = e.rooms || []; });
   if(editingEstimateId){
     const idx = state.quickEstimates.findIndex(e=>e.id===editingEstimateId);
     pricingDraft.id = editingEstimateId;
