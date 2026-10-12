@@ -52,6 +52,15 @@ body{
 }
 .nav-btn.active{opacity:1;color:var(--gold);}
 .nav-icon{font-size:18px;}
+/* phones: bigger icons in a bar that scrolls left/right instead of squeezing all 9 in */
+@media (max-width:760px){
+  .bottom-nav{overflow-x:auto;overflow-y:hidden;scroll-snap-type:x proximity;scrollbar-width:none;-webkit-overflow-scrolling:touch;padding:6px 4px calc(6px + env(safe-area-inset-bottom));}
+  .bottom-nav::-webkit-scrollbar{display:none;}
+  .nav-btn{flex:0 0 auto;min-width:84px;font-size:12px;gap:4px;padding:6px 6px;scroll-snap-align:center;position:relative;}
+  .nav-icon{font-size:28px;line-height:1.1;}
+  .nav-btn .nav-badge{left:calc(50% + 6px);top:0;}
+  .wrap{padding-bottom:110px;}
+}
 
 /* header */
 .topbar{
@@ -1371,10 +1380,7 @@ async function deleteReferenceSupplier(id){
       <label>البند</label>
       <select id="expStatementCategory"></select>
       <label style="margin-top:10px;">النوع</label>
-      <select id="expStatementType">
-        <option value="مصنعية">مصنعية</option>
-        <option value="توريد">توريد</option>
-      </select>
+      <select id="expStatementType"></select>
       <div class="hint" id="exp-statement-hint"></div>
     </div>
 
@@ -1452,8 +1458,9 @@ async function deleteReferenceSupplier(id){
     <h2 id="expense-detail-title">تفاصيل المصروف</h2>
     <div id="expense-detail-photo-wrap"></div>
     <div id="expense-detail-rows"></div>
-    <div class="modal-actions">
+    <div class="modal-actions" style="display:flex;gap:8px;">
       <button class="btn btn-gold btn-full" onclick="openEditTxnModal()">✏️ تعديل</button>
+      <button class="btn btn-primary btn-full" onclick="reissueTxnReceipt()">🧾 طلّع إيصال</button>
     </div>
     <div class="modal-actions">
       <button class="btn btn-ghost btn-full" id="expense-detail-delete-btn" onclick="deleteTxnConfirm()" style="color:var(--rose);">حذف</button>
@@ -1523,6 +1530,32 @@ async function deleteReferenceSupplier(id){
     </div>
     <div class="modal-actions">
       <button class="btn btn-primary btn-full" onclick="addDeduction()">سجّل الخصم</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="overlay-contract-value">
+  <div class="modal" style="max-width:420px;">
+    <button class="modal-close" onclick="closeModal('overlay-contract-value')">×</button>
+    <h2>✏️ تعديل قيمة المقاولة</h2>
+    <div class="sub" id="cv-subtitle" style="margin-bottom:12px;"></div>
+    <div class="field">
+      <label>القيمة الجديدة (جنيه) <span class="req-star">*</span></label>
+      <input type="number" id="cvNewValue" min="0" inputmode="decimal">
+    </div>
+    <div class="field">
+      <label>سبب التعديل <span class="req-star">*</span></label>
+      <input type="text" id="cvReason" placeholder="مثلاً: زيادة شغل في الحمام، اتفاق جديد">
+    </div>
+    <div class="field">
+      <label>مين اللي بيسجل <span class="req-star">*</span></label>
+      <div class="actor-toggle" id="contractvalue-actor-toggle">
+        <div class="actor-opt" data-name="بسنت" onclick="pickActor('contractvalue','بسنت')">بسنت</div>
+        <div class="actor-opt" data-name="إسلام" onclick="pickActor('contractvalue','إسلام')">إسلام</div>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-primary btn-full" onclick="saveContractValueChange()">حفظ التعديل</button>
     </div>
   </div>
 </div>
@@ -2179,10 +2212,7 @@ async function deleteReferenceSupplier(id){
       </div>
       <div style="flex:1;">
         <label>النوع</label>
-        <select id="csItemType">
-          <option value="مصنعية">مصنعية</option>
-          <option value="توريد">توريد</option>
-        </select>
+        <select id="csItemType"></select>
       </div>
     </div>
     <div class="field" style="display:flex;gap:10px;">
@@ -2456,6 +2486,8 @@ async function deleteReferenceSupplier(id){
     <h2>⚙️ الإعدادات</h2>
     <div class="modal-actions"><button class="btn btn-gold btn-full" onclick="openChecklistTemplateEditor()">🏗️ إدارة تشيك ليست الجودة</button></div>
     <div class="modal-actions"><button class="btn btn-gold btn-full" onclick="openStatementCategoriesEditor()">💰 بنود كشف حساب العميل</button></div>
+    <div class="modal-actions"><button class="btn btn-gold btn-full" onclick="openStatementTypesEditor()">🏷️ أنواع البنود (توريد / مصنعية / مقاولة...)</button></div>
+    <div class="modal-actions"><button class="btn btn-gold btn-full" onclick="openLocationsEditor()">📍 أسماء المشاريع في القوايم (إظهار / إخفاء)</button></div>
     <div class="modal-actions"><button class="btn btn-gold btn-full" onclick="openIdeaCategoriesEditor()">💡 تصنيفات الأفكار والإلهام</button></div>
     <div class="modal-actions"><button class="btn btn-gold btn-full" onclick="openCatalogEditor()">🧮 كتالوج التسعير السريع</button></div>
     <div class="modal-actions"><button class="btn btn-gold btn-full" onclick="openSecuritySettings()">🔐 الأمان والحسابات</button></div>
@@ -2501,6 +2533,31 @@ async function deleteReferenceSupplier(id){
       <input type="text" id="sceNewCategory" placeholder="مثلاً: مطابخ آلية">
       <button type="button" class="btn btn-gold btn-sm btn-full" style="margin-top:8px;" onclick="addStatementCategory()">+ إضافة</button>
     </div>
+  </div>
+</div>
+
+<!-- Settings: statement line types editor -->
+<div class="overlay" id="overlay-statement-types-editor">
+  <div class="modal" style="max-width:460px;">
+    <button class="modal-close" onclick="closeModal('overlay-statement-types-editor')">×</button>
+    <h2>🏷️ أنواع البنود</h2>
+    <div class="sub" style="margin-bottom:10px;">دي اختيارات "النوع" وإنت بتسجل مصروف أو بند في كشف حساب العميل.</div>
+    <div id="ste-list"></div>
+    <div class="field" style="margin-top:12px;">
+      <label>نوع جديد</label>
+      <input type="text" id="steNewType" placeholder="مثلاً: مقاولة، يومية">
+      <button type="button" class="btn btn-gold btn-sm btn-full" style="margin-top:8px;" onclick="addStatementType()">+ إضافة</button>
+    </div>
+  </div>
+</div>
+
+<!-- Settings: show / hide names in the project / location suggestion lists -->
+<div class="overlay" id="overlay-locations-editor">
+  <div class="modal" style="max-width:460px;">
+    <button class="modal-close" onclick="closeModal('overlay-locations-editor')">×</button>
+    <h2>📍 أسماء المشاريع في القوايم</h2>
+    <div class="sub" style="margin-bottom:10px;">دي كل الأسماء اللي بتظهر في اقتراحات "المشروع" وفي فلاتر الحسابات والمخزن والعمال. اللي تخفيه مش بيتمسح ولا بيأثر على أي حساب — بس مش هيظهر في القوايم. تقدر ترجّعه في أي وقت.</div>
+    <div id="loc-editor-list"></div>
   </div>
 </div>
 
@@ -2761,7 +2818,7 @@ let currentView = 'home';
 let saving = false;
 
 const ACTORS = ['بسنت','إسلام'];
-const selectedActor = { out:null, in:null, expense:null, income:null, deduction:null };
+const selectedActor = { out:null, in:null, expense:null, income:null, deduction:null, contractvalue:null };
 let selectedMethod = { income: null, expense: null }; // كاش / شيك / تحويل بنكي / مرتجع (income) — كاش / فيزا / تحويل بنكي / InstaPay (expense)
 let warehousePersonFilter = 'all';
 let expenseTypeFilter = 'all'; // all | expense | income
@@ -2861,6 +2918,8 @@ function normalizeState(){
   state.ideaCategories = state.ideaCategories || [...IDEA_CATEGORIES_DEFAULT];
   state.paymentReminders = state.paymentReminders || [];
   state.deductions = state.deductions || [];
+  state.statementTypes = state.statementTypes || [...STATEMENT_TYPES_DEFAULT];
+  state.hiddenLocations = state.hiddenLocations || [];
 }
 
 function getTrashRetentionDays(){
@@ -3047,6 +3106,8 @@ function switchView(view){
   document.getElementById('view-suppliers').style.display = view==='suppliers' ? '' : 'none';
   document.getElementById('view-board').style.display = view==='board' ? '' : 'none';
   document.getElementById('view-weekcal').style.display = view==='weekcal' ? '' : 'none';
+  const activeNav = document.getElementById('nav-' + view);
+  if(activeNav && activeNav.scrollIntoView) activeNav.scrollIntoView({inline:'center', block:'nearest', behavior:'smooth'});
   document.getElementById('nav-home').classList.toggle('active', view==='home');
   document.getElementById('nav-warehouse').classList.toggle('active', view==='warehouse');
   document.getElementById('nav-accounts').classList.toggle('active', view==='accounts');
@@ -3239,10 +3300,14 @@ function getAllLocations(){
   });
   return [...set].sort((a,b)=> a.localeCompare(b, 'ar'));
 }
+function getVisibleLocations(){
+  const hidden = new Set((state.hiddenLocations||[]).map(x=>x.trim()));
+  return getAllLocations().filter(loc=>!hidden.has(loc));
+}
 function populateLocationDatalist(){
   const dl = document.getElementById('location-list');
   if(!dl) return;
-  dl.innerHTML = getAllLocations().map(loc=>`<option value="${escapeHtml(loc)}">`).join('');
+  dl.innerHTML = getVisibleLocations().map(loc=>`<option value="${escapeHtml(loc)}">`).join('');
 }
 function jsStr(s){
   return String(s).replace(/\\/g,'\\\\').replace(/'/g,"\\'");
@@ -3250,7 +3315,7 @@ function jsStr(s){
 function renderLocationChips(containerId, inputId, renderFn){
   const el = document.getElementById(containerId);
   if(!el) return;
-  const locations = getAllLocations();
+  const locations = getVisibleLocations();
   const current = (document.getElementById(inputId).value || '').trim();
   if(locations.length===0){ el.innerHTML=''; return; }
   el.innerHTML = locations.map(loc=>{
@@ -3649,7 +3714,7 @@ function openAddExpense(){
     el.classList.toggle('selected', el.dataset.type==='normal');
   });
   document.getElementById('expStatementCategory').innerHTML = getStatementCategories().map(c=>`<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
-  document.getElementById('expStatementType').value = 'مصنعية';
+  fillStatementTypeSelect('expStatementType');
   updateExpenseStatementHint();
   document.getElementById('expense-now-label').textContent = 'هيتسجل بتاريخ ووقت دلوقتي: ' + fmtDateTime(new Date().toISOString());
   fillProjectPicker('expProjectPick');
@@ -3662,7 +3727,8 @@ function openAddExpense(){
 function fillProjectPicker(selId){
   const sel = document.getElementById(selId);
   if(!sel) return;
-  const projects = (state.projects||[]).filter(p=>!p.archived);
+  const hiddenLocs = new Set(state.hiddenLocations||[]);
+  const projects = (state.projects||[]).filter(p=>!p.archived && !hiddenLocs.has((p.name||'').trim()));
   sel.innerHTML = projects.length
     ? '<option value="">📁 اختار من المشاريع...</option>' + projects.map(p=>`<option value="${escapeHtml(p.name)}">${escapeHtml(p.name)}</option>`).join('')
     : '<option value="">لسه مفيش مشاريع — اكتب اسم المشروع فوق</option>';
@@ -4034,7 +4100,7 @@ async function addExpense(){
       const remaining = (c && c.totalValue) ? (c.totalValue - totalPaid - totalDeducted) : null;
       receiptData = {
         recipientName: w.name, recipientRole: 'عامل — دفعة مقاولة', amount, project,
-        contextLine: (c && c.totalValue) ? `دفعة من مقاولة "${c.name}" — إجمالي المقاولة ${fmtMoney(c.totalValue)}` : null,
+        contextLine: (c && c.totalValue) ? `دفعة من مقاولة "${c.name}" — إجمالي المقاولة ${fmtMoney(c.totalValue)}${contractValueNote(c)}` : null,
         paymentHistory: history, deductions, remaining,
         date: new Date().toISOString(), by: selectedActor.expense
       };
@@ -4171,6 +4237,51 @@ function openTxnDetail(id, kind){
   document.getElementById('overlay-expense-detail').classList.add('show');
 }
 
+/* Rebuild the receipt for an already-saved payment, as it stood at the time of that payment
+   (the payments before it on the same contract / supplier account, and what was left after it). */
+function buildReceiptDataForTxn(e, kind){
+  const base = { amount:Number(e.amount)||0, project:e.project, date:e.date, by:e.by, amountLabel:'المبلغ المدفوع', contextLine:null };
+  if(kind==='income'){
+    const p = findProjectByLocation(e.project || '');
+    return { ...base, recipientName: (p && p.client) || e.project || 'العميل', recipientRole: 'قبض من العميل' + (e.method ? ' — ' + e.method : ''), amountLabel:'المبلغ المقبوض' };
+  }
+  const upTo = x=> new Date(x.date) <= new Date(e.date);
+  const byDate = (a,b)=> new Date(a.date) - new Date(b.date);
+  const w = e.workerId ? (state.workers||[]).find(x=>x.id===e.workerId) : null;
+  if(w && e.workerContractId){
+    const c = (w.contracts||[]).find(x=>x.id===e.workerContractId);
+    const history = (state.expenses||[]).filter(x=> x.workerId===w.id && x.workerContractId===e.workerContractId && upTo(x))
+      .slice().sort(byDate).map(x=> ({ date:x.date, amount:Number(x.amount)||0 }));
+    const deductions = getWorkerDeductions(w.id, e.workerContractId).filter(upTo).slice().sort(byDate)
+      .map(d=> ({ date:d.date, amount:Number(d.amount)||0, reason:d.reason||'' }));
+    const paid = history.reduce((s,h)=>s+h.amount,0), deducted = deductions.reduce((s,d)=>s+d.amount,0);
+    return { ...base, recipientName:w.name, recipientRole:'عامل — دفعة مقاولة',
+      contextLine: (c && c.totalValue) ? `دفعة من مقاولة "${c.name}" — إجمالي المقاولة ${fmtMoney(c.totalValue)}${contractValueNote(c)}` : null,
+      paymentHistory:history, deductions, remaining: (c && c.totalValue) ? c.totalValue - paid - deducted : null };
+  }
+  if(w) return { ...base, recipientName:w.name, recipientRole: e.workerLogId ? 'عامل — يومية' : 'عامل — دفعة / سلفة' };
+  const sup = e.supplierId ? (state.suppliers||[]).find(x=>x.id===e.supplierId) : null;
+  if(sup){
+    const sp = (sup.projects||[]).find(x=>x.id===e.supplierProjectId);
+    const history = (state.expenses||[]).filter(x=> x.supplierId===sup.id && x.supplierProjectId===e.supplierProjectId && upTo(x))
+      .slice().sort(byDate).map(x=> ({ date:x.date, amount:Number(x.amount)||0 }));
+    const paid = history.reduce((s,h)=>s+h.amount,0);
+    return { ...base, recipientName:sup.name, recipientRole:'مورد',
+      contextLine: (sp && sp.totalValue) ? `دفعة من حساب "${sp.name}" — إجمالي المستحق ${fmtMoney(sp.totalValue)}` : null,
+      paymentHistory:history, remaining: (sp && sp.totalValue) ? sp.totalValue - paid : null };
+  }
+  const rs = e.referenceSupplierId ? (state.referenceSuppliers||[]).find(x=>x.id===e.referenceSupplierId) : null;
+  if(rs) return { ...base, recipientName:rs.name, recipientRole:'مورد مرجعي' };
+  return { ...base, recipientName: e.description || e.project || 'مصروف عام', recipientRole:'مصروف عام' };
+}
+function reissueTxnReceipt(){
+  const list = activeTxnKind==='income' ? (state.income||[]) : (state.expenses||[]);
+  const e = list.find(x=>x.id===activeExpenseId);
+  if(!e) return;
+  closeModal('overlay-expense-detail');
+  offerPaymentReceipt(buildReceiptDataForTxn(e, activeTxnKind), null);
+}
+
 function openEditTxnModal(){
   const isIncome = activeTxnKind==='income';
   const list = isIncome ? (state.income||[]) : (state.expenses||[]);
@@ -4305,7 +4416,7 @@ async function buildPaymentReceiptCanvas(){
       <div style="font-size:19px;font-weight:900;">${escapeHtml(data.recipientName)}</div>
     </div>
     <div style="background:#F5F1EC;border-radius:12px;padding:18px;margin-bottom:18px;text-align:center;">
-      <div style="font-size:12px;color:#8C8177;margin-bottom:4px;">المبلغ المدفوع دلوقتي</div>
+      <div style="font-size:12px;color:#8C8177;margin-bottom:4px;">${escapeHtml(data.amountLabel || 'المبلغ المدفوع دلوقتي')}</div>
       <div style="font-size:28px;font-weight:900;color:#2E2A2C;">${fmtMoney(data.amount)}</div>
     </div>
     ${data.contextLine ? `<div style="font-size:13px;margin-bottom:14px;color:#5B534B;">${escapeHtml(data.contextLine)}</div>` : ''}
@@ -4689,9 +4800,9 @@ function renderWorkerContractsList(){
       .slice()
       .sort((a,b)=> new Date(a.date) - new Date(b.date));
     const total = payments.reduce((sum,e)=> sum + (Number(e.amount)||0), 0);
-    const paymentRows = payments.map((e,idx)=> `<div class="pd-row" style="padding-inline-start:12px;">
+    const paymentRows = payments.map((e,idx)=> `<div class="pd-row" style="padding-inline-start:12px;cursor:pointer;" onclick="openTxnDetail('${e.id}','expense')" title="تفاصيل / إيصال">
         <div class="pd-row-main">
-          <div class="pd-row-sub">الدفعة ${idx+1} — ${fmtDateTime(e.date)}${e.method ? ' · '+escapeHtml(e.method) : ''}</div>
+          <div class="pd-row-sub">الدفعة ${idx+1} — ${fmtDateTime(e.date)}${e.method ? ' · '+escapeHtml(e.method) : ''} · 🧾</div>
         </div>
         <div class="pd-row-val expense" style="font-size:13px;">${fmtMoney(e.amount)}</div>
       </div>`).join('');
@@ -4704,7 +4815,9 @@ function renderWorkerContractsList(){
         <div class="pd-row-val" style="font-size:13px;color:var(--rose);">-${fmtMoney(d.amount)}</div>
       </div>`).join('');
     const remaining = c.totalValue ? (c.totalValue - total - deductedTotal) : null;
-    const totalValueLine = c.totalValue ? `<div class="pd-row-sub">قيمة المقاولة: <b>${fmtMoney(c.totalValue)}</b>${deductedTotal ? ` — خصومات: <b style="color:var(--rose)">${fmtMoney(deductedTotal)}</b>` : ''} — المتبقي: <b style="color:${remaining>0?'var(--rose)':'var(--green)'}">${fmtMoney(remaining)}</b></div>` : '';
+    const totalValueLine = (c.totalValue ? `<div class="pd-row-sub">قيمة المقاولة: <b>${fmtMoney(c.totalValue)}</b>${deductedTotal ? ` — خصومات: <b style="color:var(--rose)">${fmtMoney(deductedTotal)}</b>` : ''} — المتبقي: <b style="color:${remaining>0?'var(--rose)':'var(--green)'}">${fmtMoney(remaining)}</b></div>` : '')
+      + `<button type="button" class="btn btn-ghost btn-sm" style="margin-top:6px;" onclick="openContractValueEditor('worker','${w.id}','${c.id}')">✏️ ${c.totalValue ? 'تعديل قيمة المقاولة' : 'حدد قيمة المقاولة'}</button>`
+      + contractValueHistoryHtml(c);
     return `<div style="border:1.5px solid var(--border);border-radius:12px;padding:10px 12px;margin-bottom:8px;">
       <div class="pd-row" style="border-bottom:1.5px solid var(--border);">
         <div class="pd-row-main">
@@ -4758,6 +4871,74 @@ function toggleNewContractForm(forceState){
   const show = typeof forceState === 'boolean' ? forceState : (form.style.display === 'none');
   form.style.display = show ? '' : 'none';
   btn.style.display = show ? 'none' : '';
+}
+
+/* ===================== تعديل قيمة مقاولة / حساب مورد =====================
+   The agreed value of a worker contract or a supplier account can change later (extra work,
+   a new deal...). The current value stays in totalValue — so every "remaining" calculation keeps
+   working — and every change is logged in valueHistory with the old/new value and the reason. */
+let contractValueTarget = null; // {kind:'worker'|'supplier', ownerId, itemId}
+function findContractValueItem(t){
+  if(!t) return null;
+  if(t.kind==='worker'){
+    const w = (state.workers||[]).find(x=>x.id===t.ownerId);
+    const c = w && (w.contracts||[]).find(x=>x.id===t.itemId);
+    return c ? { owner:w, item:c } : null;
+  }
+  const sp = (state.suppliers||[]).find(x=>x.id===t.ownerId);
+  const p = sp && (sp.projects||[]).find(x=>x.id===t.itemId);
+  return p ? { owner:sp, item:p } : null;
+}
+function openContractValueEditor(kind, ownerId, itemId){
+  contractValueTarget = { kind, ownerId, itemId };
+  const f = findContractValueItem(contractValueTarget);
+  if(!f) return;
+  document.getElementById('cv-subtitle').textContent = `${f.owner.name} — ${f.item.code || f.item.name}` + (f.item.totalValue ? ` · القيمة الحالية ${fmtMoney(f.item.totalValue)}` : ' · لسه مالهاش قيمة');
+  document.getElementById('cvNewValue').value = f.item.totalValue || '';
+  document.getElementById('cvReason').value = '';
+  resetActorPicker('contractvalue');
+  document.getElementById('overlay-contract-value').classList.add('show');
+}
+async function saveContractValueChange(){
+  const f = findContractValueItem(contractValueTarget);
+  if(!f) return;
+  const val = parseFloat(document.getElementById('cvNewValue').value);
+  const reason = document.getElementById('cvReason').value.trim();
+  if(!val || val<=0){ showToast('اكتب القيمة الجديدة'); return; }
+  if(val === Number(f.item.totalValue||0)){ showToast('دي نفس القيمة الحالية'); return; }
+  if(!reason){ showToast('اكتب سبب التعديل — مهم عشان ترجعله بعدين'); return; }
+  if(!selectedActor.contractvalue){ showToast('اختار مين اللي بيسجل — بسنت ولا إسلام'); return; }
+  const from = Number(f.item.totalValue) || 0;
+  f.item.valueHistory = f.item.valueHistory || [];
+  f.item.valueHistory.push({ id:uid(), date:new Date().toISOString(), from, to:val, reason, by:selectedActor.contractvalue });
+  f.item.totalValue = val;
+  closeModal('overlay-contract-value');
+  if(contractValueTarget.kind==='worker'){ if(activeWorkerId===f.owner.id) renderWorkerContractsList(); renderWorkers(); }
+  else { if(activeSupplierId===f.owner.id) renderSupplierProjectsList(); renderSuppliers(); }
+  renderHome();
+  await saveState();
+  const diff = val - from;
+  showToast(from ? `القيمة اتغيرت من ${fmtMoney(from)} لـ ${fmtMoney(val)} (${diff>0?'+':''}${fmtMoney(diff)})` : `اتحددت القيمة ${fmtMoney(val)}`);
+}
+function contractValueNote(item){
+  const h = item.valueHistory||[];
+  const first = h.length ? h.slice().sort((a,b)=> new Date(a.date) - new Date(b.date))[0] : null;
+  return (first && first.from) ? ` (كانت ${fmtMoney(first.from)} واتعدلت ${h.length} مرة)` : '';
+}
+function contractValueHistoryHtml(item){
+  const h = (item.valueHistory||[]).slice().sort((a,b)=> new Date(a.date) - new Date(b.date));
+  if(!h.length) return '';
+  return `<div style="margin-top:8px;background:var(--cream);border-radius:10px;padding:8px 10px;">
+    <div style="font-size:12px;font-weight:900;margin-bottom:4px;">📝 تعديلات القيمة</div>
+    ${h.map(x=>{
+      const diff = (Number(x.to)||0) - (Number(x.from)||0);
+      return `<div style="font-size:12px;line-height:1.7;">
+        ${fmtDateTime(x.date)} — ${x.from ? `من <b>${fmtMoney(x.from)}</b> لـ ` : 'اتحددت '}<b>${fmtMoney(x.to)}</b>
+        ${x.from ? `<span style="color:${diff>0?'var(--rose)':'var(--green)'};font-weight:700;">(${diff>0?'+':''}${fmtMoney(diff)})</span>` : ''}
+        <br><span style="color:var(--muted);">السبب: ${escapeHtml(x.reason||'—')}${x.by ? ' · ' + escapeHtml(x.by) : ''}</span>
+      </div>`;
+    }).join('')}
+  </div>`;
 }
 
 /* ===================== الخصومات (deductions) =====================
@@ -6336,6 +6517,77 @@ async function deleteStatementCategory(idx){
   renderStatementCategoriesEditor();
   await saveState();
   showToast('اتحذف البند');
+}
+
+/* --- Statement line types editor (مصنعية / توريد / مقاولة / ...) --- */
+const STATEMENT_TYPES_DEFAULT = ['مصنعية','توريد'];
+function getStatementTypes(){
+  return (state.statementTypes && state.statementTypes.length) ? state.statementTypes : STATEMENT_TYPES_DEFAULT;
+}
+function fillStatementTypeSelect(selId){
+  const sel = document.getElementById(selId);
+  if(!sel) return;
+  sel.innerHTML = getStatementTypes().map(t=>`<option value="${escapeHtml(t)}">${escapeHtml(t)}</option>`).join('');
+}
+function openStatementTypesEditor(){
+  renderStatementTypesEditor();
+  document.getElementById('overlay-statement-types-editor').classList.add('show');
+}
+function renderStatementTypesEditor(){
+  document.getElementById('ste-list').innerHTML = getStatementTypes().map((t,idx)=>`
+    <div class="pd-row">
+      <div class="pd-row-main"><div class="pd-row-title">${escapeHtml(t)}</div></div>
+      <button type="button" class="qe-row-del" onclick="deleteStatementType(${idx})">✕</button>
+    </div>`).join('');
+}
+async function addStatementType(){
+  const val = document.getElementById('steNewType').value.trim();
+  if(!val) return;
+  if(getStatementTypes().includes(val)){ showToast('النوع ده موجود بالفعل'); return; }
+  state.statementTypes = [...getStatementTypes(), val];
+  document.getElementById('steNewType').value = '';
+  renderStatementTypesEditor();
+  await saveState();
+  showToast('اتضاف النوع');
+}
+async function deleteStatementType(idx){
+  const types = [...getStatementTypes()];
+  if(types.length<=1){ showToast('لازم يفضل نوع واحد على الأقل'); return; }
+  types.splice(idx,1);
+  state.statementTypes = types;
+  renderStatementTypesEditor();
+  await saveState();
+  showToast('اتحذف النوع — البنود القديمة اللي عليه زي ما هي');
+}
+
+/* --- Show / hide names in the project & location suggestion lists --- */
+function openLocationsEditor(){
+  renderLocationsEditor();
+  document.getElementById('overlay-locations-editor').classList.add('show');
+}
+function renderLocationsEditor(){
+  const hidden = new Set(state.hiddenLocations||[]);
+  const projectNames = new Set((state.projects||[]).map(p=>(p.name||'').trim()));
+  const all = getAllLocations();
+  document.getElementById('loc-editor-list').innerHTML = all.length ? all.map(loc=>{
+    const isHidden = hidden.has(loc);
+    return `<div class="pd-row" style="${isHidden ? 'opacity:0.5;' : ''}">
+      <div class="pd-row-main">
+        <div class="pd-row-title">${escapeHtml(loc)}</div>
+        <div class="pd-row-sub">${projectNames.has(loc) ? '📁 مشروع متسجل' : 'اسم اتكتب في حركة أو يوم شغل'}${isHidden ? ' · مخفي' : ''}</div>
+      </div>
+      <button type="button" class="btn btn-sm ${isHidden ? 'btn-gold' : 'btn-ghost'}" onclick="toggleLocationHidden('${jsStr(loc)}')">${isHidden ? '👁️ إظهار' : '🙈 إخفاء'}</button>
+    </div>`;
+  }).join('') : '<div class="no-hist">لسه مفيش أسماء</div>';
+}
+async function toggleLocationHidden(loc){
+  const hidden = new Set(state.hiddenLocations||[]);
+  if(hidden.has(loc)) hidden.delete(loc); else hidden.add(loc);
+  state.hiddenLocations = [...hidden];
+  renderLocationsEditor();
+  populateLocationDatalist();
+  renderEverything();
+  await saveState();
 }
 
 /* --- Idea/inspiration categories editor --- */
@@ -8103,14 +8355,16 @@ function renderSupplierProjectsList(){
       .slice()
       .sort((a,b)=> new Date(a.date) - new Date(b.date)); // oldest first so "الدفعة الأولى/الثانية..." reads naturally
     const total = payments.reduce((sum,e)=> sum + (Number(e.amount)||0), 0);
-    const paymentRows = payments.map((e,idx)=> `<div class="pd-row" style="padding-inline-start:12px;">
+    const paymentRows = payments.map((e,idx)=> `<div class="pd-row" style="padding-inline-start:12px;cursor:pointer;" onclick="openTxnDetail('${e.id}','expense')" title="تفاصيل / إيصال">
         <div class="pd-row-main">
-          <div class="pd-row-sub">الدفعة ${idx+1} — ${fmtDateTime(e.date)}${e.method ? ' · '+escapeHtml(e.method) : ''}</div>
+          <div class="pd-row-sub">الدفعة ${idx+1} — ${fmtDateTime(e.date)}${e.method ? ' · '+escapeHtml(e.method) : ''} · 🧾</div>
         </div>
         <div class="pd-row-val expense" style="font-size:13px;">${fmtMoney(e.amount)}</div>
       </div>`).join('');
     const remaining = p.totalValue ? (p.totalValue - total) : null;
-    const totalValueLine = p.totalValue ? `<div class="pd-row-sub">قيمة الشغلانة: <b>${fmtMoney(p.totalValue)}</b> — المتبقي: <b style="color:${remaining>0?'var(--rose)':'var(--green)'}">${fmtMoney(remaining)}</b></div>` : '';
+    const totalValueLine = (p.totalValue ? `<div class="pd-row-sub">قيمة الشغلانة: <b>${fmtMoney(p.totalValue)}</b> — المتبقي: <b style="color:${remaining>0?'var(--rose)':'var(--green)'}">${fmtMoney(remaining)}</b></div>` : '')
+      + `<button type="button" class="btn btn-ghost btn-sm" style="margin-top:6px;" onclick="openContractValueEditor('supplier','${s.id}','${p.id}')">✏️ ${p.totalValue ? 'تعديل القيمة' : 'حدد القيمة'}</button>`
+      + contractValueHistoryHtml(p);
     return `<div style="border:1.5px solid var(--border);border-radius:12px;padding:10px 12px;margin-bottom:8px;">
       <div class="pd-row" style="border-bottom:1.5px solid var(--border);">
         <div class="pd-row-main">
@@ -8731,7 +8985,7 @@ function openClientStatementModal(){
   const catSelect = document.getElementById('csItemCategory');
   catSelect.innerHTML = getStatementCategories().map(c=>`<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
   document.getElementById('csItemDesc').value = '';
-  document.getElementById('csItemType').value = 'مصنعية';
+  fillStatementTypeSelect('csItemType');
   document.getElementById('csItemDate').value = new Date().toISOString().slice(0,10);
   document.getElementById('csItemCost').value = '';
   document.getElementById('csPaymentDate').value = new Date().toISOString().slice(0,10);
