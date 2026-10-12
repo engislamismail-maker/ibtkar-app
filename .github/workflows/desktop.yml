@@ -1,0 +1,73 @@
+name: Build Windows app
+
+# بيبني برنامج الكمبيوتر (ويندوز) من نفس index.html، وبيرفعه على صفحة الـ Releases:
+# .../releases/download/desktop-latest/ibtkar-setup.exe
+on:
+  push:
+    branches: [main, claude/android-shared-data-app-t7j758]
+    paths:
+      - index.html
+      - icon-*.png
+      - desktop/**
+      - android/scripts/prepare-web.sh
+      - android/web/**
+      - .github/workflows/desktop.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: desktop-app
+  cancel-in-progress: false
+
+jobs:
+  web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Prepare web assets
+        run: ./android/scripts/prepare-web.sh "$GITHUB_WORKSPACE/desktop-www"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: desktop-www
+          path: desktop-www
+
+  windows:
+    needs: web
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/download-artifact@v4
+        with:
+          name: desktop-www
+          path: desktop/www
+      - name: Build installer
+        working-directory: desktop
+        run: |
+          mkdir -p build && cp ../icon-512.png build/icon.png
+          npm version "1.0.${{ github.run_number }}" --no-git-tag-version
+          npm install --no-audit --no-fund
+          npm run dist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ibtkar-windows
+          path: desktop/dist/ibtkar-setup.exe
+      - name: Publish to "desktop-latest" release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete desktop-latest --yes --cleanup-tag || true
+          gh release create desktop-latest desktop/dist/ibtkar-setup.exe \
+            --target "$GITHUB_SHA" \
+            --title "إبتكار — برنامج الكمبيوتر (نسخة ${{ github.run_number }})" \
+            --notes "نزّل ibtkar-setup.exe على الكمبيوتر (ويندوز) وافتحه — بيتثبت لوحده ويعمل أيقونة على سطح المكتب."

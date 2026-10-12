@@ -8,7 +8,9 @@ set -euo pipefail
 
 ANDROID_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 ROOT="$(cd "$ANDROID_DIR/.." && pwd)"
-WWW="$ANDROID_DIR/app/src/main/assets/www"
+# output folder: the Android app by default, or any folder passed as the first argument (desktop app)
+WWW="${1:-$ANDROID_DIR/app/src/main/assets/www}"
+mkdir -p "$WWW" && WWW="$(cd "$WWW" && pwd)"
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
 

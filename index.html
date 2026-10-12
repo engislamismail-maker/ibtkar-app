@@ -3127,7 +3127,7 @@ async function editOriginalQty(id){
   const it = state.items.find(i=>i.id===id);
   if(!it) return;
   const current = getOriginalQty(it);
-  const input = prompt(`هما أصلاً كانوا كام لما دخلوا أول مرة؟\n(الكمية المتاحة دلوقتي: ${it.qty} ${it.unit||''})`, current);
+  const input = await appPrompt(`هما أصلاً كانوا كام لما دخلوا أول مرة؟\n(الكمية المتاحة دلوقتي: ${it.qty} ${it.unit||''})`, current);
   if(input === null) return;
   const val = parseFloat(input);
   if(isNaN(val) || val < 0){ showToast('اكتب رقم صحيح'); return; }
@@ -3136,6 +3136,32 @@ async function editOriginalQty(id){
   openHistory(id);
   await saveState();
   showToast('اتحفظت الكمية الأصلية');
+}
+
+/* In-app replacement for window.prompt(), which the desktop (Electron) app doesn't support.
+   Resolves to the typed text, or null if cancelled — same contract as prompt(). */
+function appPrompt(message, defaultValue){
+  return new Promise(resolve=>{
+    const ov = document.createElement('div');
+    ov.className = 'overlay show';
+    ov.innerHTML = `<div class="modal" style="max-width:380px;">
+      <div class="app-prompt-msg" style="font-weight:700;font-size:14.5px;line-height:1.7;white-space:pre-line;margin-bottom:12px;"></div>
+      <div class="field"><input type="text" inputmode="decimal"></div>
+      <div class="modal-actions" style="display:flex;gap:8px;">
+        <button type="button" class="btn btn-ghost btn-full" data-act="cancel">إلغاء</button>
+        <button type="button" class="btn btn-primary btn-full" data-act="ok">تمام</button>
+      </div></div>`;
+    ov.querySelector('.app-prompt-msg').textContent = message;
+    const input = ov.querySelector('input');
+    input.value = defaultValue == null ? '' : String(defaultValue);
+    const done = val=>{ ov.remove(); resolve(val); };
+    ov.querySelector('[data-act="ok"]').onclick = ()=>done(input.value);
+    ov.querySelector('[data-act="cancel"]').onclick = ()=>done(null);
+    ov.addEventListener('click', e=>{ if(e.target===ov) done(null); });
+    input.addEventListener('keydown', e=>{ if(e.key==='Enter') done(input.value); if(e.key==='Escape') done(null); });
+    document.body.appendChild(ov);
+    setTimeout(()=>{ input.focus(); input.select(); }, 50);
+  });
 }
 
 function nowLocalInput(){
