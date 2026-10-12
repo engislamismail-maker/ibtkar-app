@@ -231,6 +231,18 @@ body{
   cursor:pointer;font-size:13px;font-weight:700;color:var(--muted);
 }
 .method-opt.selected{border-color:var(--green);background:#EEF3EC;color:var(--green);}
+.device-user-pick{display:flex;gap:10px;}
+.device-user-pick button{flex:1;padding:18px 8px;border-radius:16px;border:2px solid var(--border);background:#fff;font-family:inherit;font-size:17px;font-weight:900;line-height:1.8;cursor:pointer;color:var(--charcoal);}
+.device-user-pick button.on{border-color:var(--gold);background:#FBF3EC;box-shadow:0 0 0 3px rgba(213,150,99,0.25);}
+.activity-day{font-size:12px;font-weight:900;color:var(--muted);margin:12px 0 4px;}
+.method-toggle.compact-row{flex-wrap:nowrap;gap:5px;}
+.method-toggle.compact-row .method-opt{flex:1 1 0;min-width:0;padding:7px 2px;font-size:11px;line-height:1.3;display:flex;flex-direction:column;align-items:center;gap:2px;}
+.method-toggle.compact-row .method-opt span{font-size:17px;}
+/* payment method: one button, the options open under it */
+.method-pick-btn{width:100%;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:11px 14px;border-radius:12px;border:1.5px solid var(--border);background:#fff;font-family:inherit;font-size:14px;font-weight:700;color:var(--muted);cursor:pointer;}
+.method-pick-btn.chosen{border-color:var(--green);background:#EEF3EC;color:var(--green);}
+.method-toggle.collapsible{display:none;margin-top:8px;}
+.method-toggle.collapsible.open{display:flex;}
 
 /* actor badge shown on history / expense-income rows */
 .actor-badge{
@@ -645,6 +657,17 @@ body.bd-nb-lock{overflow:hidden;}
 .bd-link-row a{font-size:12px;color:var(--rose);font-weight:700;text-decoration:none;}
 .bd-link-row img{width:38px;height:38px;object-fit:cover;border-radius:6px;border:1px solid var(--border);}
 .numpad-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+.numpad-grid.calc-grid{grid-template-columns:repeat(4,1fr);direction:ltr;}
+.numpad-grid button.calc-op{background:var(--cream);color:var(--gold);}
+#calc-display{direction:ltr;text-align:right;background:var(--cream);border-radius:12px;padding:10px 14px;margin-bottom:10px;min-height:64px;}
+#calc-expr{font-size:26px;font-weight:900;color:var(--charcoal);word-break:break-all;}
+#calc-result{font-size:14px;font-weight:700;color:var(--muted);min-height:18px;}
+.calc-field{display:flex;gap:8px;align-items:stretch;}
+input[type="number"]::-webkit-inner-spin-button,input[type="number"]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0;}
+input[type="number"]{-moz-appearance:textfield;}
+.calc-field>input{flex:1;min-width:0;}
+.calc-btn{flex:0 0 46px;border:1.5px solid var(--border);border-radius:12px;background:#fff;font-size:20px;cursor:pointer;}
+.calc-btn:active{background:var(--gold);}
 .numpad-grid button{font-size:24px;font-weight:900;padding:18px 0;border-radius:12px;border:1.5px solid var(--border);background:#fff;cursor:pointer;color:var(--charcoal);}
 .numpad-grid button:active{background:var(--gold);color:#fff;}
 #numpad-overlay .modal{max-width:340px;padding:18px;}
@@ -1313,11 +1336,11 @@ async function deleteReferenceSupplier(id){
 
     <div class="sub" style="margin-top:14px;">١. الدفعة دي لمين؟</div>
     <div class="field">
-      <div class="method-toggle" id="expPayTypeToggle" style="flex-wrap:wrap;">
-        <div class="method-opt selected" data-type="normal" onclick="setExpensePayType('normal')">💰 مصروف عادي</div>
-        <div class="method-opt" data-type="worker" onclick="setExpensePayType('worker')">👷 عامل</div>
-        <div class="method-opt" data-type="supplier" onclick="setExpensePayType('supplier')">🔧 مورد</div>
-        <div class="method-opt" data-type="refsupplier" onclick="setExpensePayType('refsupplier')">📇 مورد مرجعي</div>
+      <div class="method-toggle compact-row" id="expPayTypeToggle">
+        <div class="method-opt selected" data-type="normal" onclick="setExpensePayType('normal')"><span>💰</span>مصاريف عامة</div>
+        <div class="method-opt" data-type="worker" onclick="setExpensePayType('worker')"><span>👷</span>عامل</div>
+        <div class="method-opt" data-type="supplier" onclick="setExpensePayType('supplier')"><span>🔧</span>مورد</div>
+        <div class="method-opt" data-type="refsupplier" onclick="setExpensePayType('refsupplier')"><span>📇</span>مورد مرجعي</div>
       </div>
     </div>
 
@@ -1350,7 +1373,6 @@ async function deleteReferenceSupplier(id){
     <div class="field">
       <label id="exp-project-label">صرفت في أي مشروع <span class="req-star">*</span></label>
       <input type="text" id="expProject" list="location-list" placeholder="مثلاً: مشروع القاهرة الجديدة" oninput="updateExpenseStatementHint()">
-      <select id="expProjectPick" style="margin-top:8px;" onchange="pickProjectInto('expProjectPick','expProject')"></select>
     </div>
     <div class="field">
       <label>صرفت إيه (البند)</label>
@@ -1359,7 +1381,8 @@ async function deleteReferenceSupplier(id){
     </div>
     <div class="field">
       <label>طريقة الدفع <span class="req-star">*</span></label>
-      <div class="method-toggle" id="expense-method-toggle">
+      <button type="button" class="method-pick-btn" id="expense-method-btn" onclick="toggleMethodOptions('expense')"><span id="expense-method-label">💳 اختار طريقة الدفع</span><span>▾</span></button>
+      <div class="method-toggle collapsible" id="expense-method-toggle">
         <div class="method-opt" data-name="كاش" onclick="pickMethod('expense','كاش')">💵 كاش</div>
         <div class="method-opt" data-name="فيزا" onclick="pickMethod('expense','فيزا')">💳 فيزا</div>
         <div class="method-opt" data-name="تحويل بنكي" onclick="pickMethod('expense','تحويل بنكي')">🏦 تحويل بنكي</div>
@@ -1411,7 +1434,8 @@ async function deleteReferenceSupplier(id){
     </div>
     <div class="field">
       <label>طريقة الدخول <span class="req-star">*</span></label>
-      <div class="method-toggle" id="income-method-toggle">
+      <button type="button" class="method-pick-btn" id="income-method-btn" onclick="toggleMethodOptions('income')"><span id="income-method-label">💳 اختار طريقة الدخول</span><span>▾</span></button>
+      <div class="method-toggle collapsible" id="income-method-toggle">
         <div class="method-opt" data-name="كاش" onclick="pickMethod('income','كاش')">💵 كاش</div>
         <div class="method-opt" data-name="شيك" onclick="pickMethod('income','شيك')">🧾 شيك</div>
         <div class="method-opt" data-name="تحويل بنكي" onclick="pickMethod('income','تحويل بنكي')">🏦 تحويل بنكي</div>
@@ -1421,7 +1445,6 @@ async function deleteReferenceSupplier(id){
     <div class="field">
       <label>لأي مشروع <span class="req-star">*</span></label>
       <input type="text" id="incProject" list="location-list" placeholder="مثلاً: مشروع القاهرة الجديدة" oninput="updateIncomeStatementHint()">
-      <select id="incProjectPick" style="margin-top:8px;" onchange="pickProjectInto('incProjectPick','incProject')"></select>
     </div>
     <div class="field">
       <label>ملاحظات (اختياري)</label>
@@ -2484,6 +2507,7 @@ async function deleteReferenceSupplier(id){
   <div class="modal" style="max-width:460px;">
     <button class="modal-close" onclick="closeModal('overlay-settings')">×</button>
     <h2>⚙️ الإعدادات</h2>
+    <div class="modal-actions"><button class="btn btn-primary btn-full" onclick="openDeviceUserSettings()" id="settings-device-user-btn">👤 أنا مين على الجهاز ده</button></div>
     <div class="modal-actions"><button class="btn btn-gold btn-full" onclick="openChecklistTemplateEditor()">🏗️ إدارة تشيك ليست الجودة</button></div>
     <div class="modal-actions"><button class="btn btn-gold btn-full" onclick="openStatementCategoriesEditor()">💰 بنود كشف حساب العميل</button></div>
     <div class="modal-actions"><button class="btn btn-gold btn-full" onclick="openStatementTypesEditor()">🏷️ أنواع البنود (توريد / مصنعية / مقاولة...)</button></div>
@@ -2533,6 +2557,32 @@ async function deleteReferenceSupplier(id){
       <input type="text" id="sceNewCategory" placeholder="مثلاً: مطابخ آلية">
       <button type="button" class="btn btn-gold btn-sm btn-full" style="margin-top:8px;" onclick="addStatementCategory()">+ إضافة</button>
     </div>
+  </div>
+</div>
+
+<!-- Settings: who uses this device + activity history -->
+<div class="overlay" id="overlay-device-user">
+  <div class="modal" style="max-width:420px;">
+    <button class="modal-close" onclick="closeModal('overlay-device-user')">×</button>
+    <h2>👤 أنا مين على الجهاز ده؟</h2>
+    <div class="sub" style="margin-bottom:14px;">اختار مرة واحدة بس — أي حاجة تتسجل من الجهاز ده بعد كده هتتكتب باسمك أوتوماتيك، من غير ما تختار "بواسطة" في كل مرة.</div>
+    <div class="device-user-pick">
+      <button type="button" data-user="إسلام" onclick="setDeviceUser('إسلام')">👷‍♂️<br>إسلام</button>
+      <button type="button" data-user="بسنت" onclick="setDeviceUser('بسنت')">👩‍💼<br>بسنت</button>
+    </div>
+    <div class="sub" style="margin:18px 0 8px;">📜 سجل النشاط</div>
+    <div style="display:flex;gap:8px;">
+      <button type="button" class="btn btn-ghost btn-full" onclick="openActivityHistory('إسلام')">كل اللي عمله إسلام</button>
+      <button type="button" class="btn btn-ghost btn-full" onclick="openActivityHistory('بسنت')">كل اللي عملته بسنت</button>
+    </div>
+  </div>
+</div>
+<div class="overlay" id="overlay-activity">
+  <div class="modal" style="max-width:560px;">
+    <button class="modal-close" onclick="closeModal('overlay-activity')">×</button>
+    <h2 id="activity-title">📜 سجل النشاط</h2>
+    <div class="bd-filter-row" id="activity-filters" style="margin-bottom:10px;"></div>
+    <div id="activity-list"></div>
   </div>
 </div>
 
@@ -2684,25 +2734,37 @@ async function deleteReferenceSupplier(id){
   </button>
 </div>
 
-<!-- Custom numeric keypad — shown for every number input so amounts are entered by touch -->
+<!-- Calculator — opened from the 🧮 button next to any number field -->
 <div class="overlay" id="numpad-overlay">
   <div class="modal">
     <div id="numpad-target-label"></div>
-    <div class="numpad-grid">
-      <button type="button" onclick="numpadPress('1')">1</button>
-      <button type="button" onclick="numpadPress('2')">2</button>
-      <button type="button" onclick="numpadPress('3')">3</button>
-      <button type="button" onclick="numpadPress('4')">4</button>
-      <button type="button" onclick="numpadPress('5')">5</button>
-      <button type="button" onclick="numpadPress('6')">6</button>
+    <div id="calc-display"><div id="calc-expr">0</div><div id="calc-result"></div></div>
+    <div class="numpad-grid calc-grid">
+      <button type="button" class="calc-op" onclick="numpadPress('C')">C</button>
+      <button type="button" class="calc-op" onclick="numpadPress('back')">⌫</button>
+      <button type="button" class="calc-op" onclick="numpadPress('%')">%</button>
+      <button type="button" class="calc-op" onclick="numpadPress('/')">÷</button>
       <button type="button" onclick="numpadPress('7')">7</button>
       <button type="button" onclick="numpadPress('8')">8</button>
       <button type="button" onclick="numpadPress('9')">9</button>
-      <button type="button" onclick="numpadPress('.')">.</button>
+      <button type="button" class="calc-op" onclick="numpadPress('*')">×</button>
+      <button type="button" onclick="numpadPress('4')">4</button>
+      <button type="button" onclick="numpadPress('5')">5</button>
+      <button type="button" onclick="numpadPress('6')">6</button>
+      <button type="button" class="calc-op" onclick="numpadPress('-')">−</button>
+      <button type="button" onclick="numpadPress('1')">1</button>
+      <button type="button" onclick="numpadPress('2')">2</button>
+      <button type="button" onclick="numpadPress('3')">3</button>
+      <button type="button" class="calc-op" onclick="numpadPress('+')">+</button>
+      <button type="button" onclick="numpadPress('00')">00</button>
       <button type="button" onclick="numpadPress('0')">0</button>
-      <button type="button" onclick="numpadPress('back')">⌫</button>
+      <button type="button" onclick="numpadPress('.')">.</button>
+      <button type="button" class="calc-op" onclick="numpadPress('=')">=</button>
     </div>
-    <button type="button" class="btn btn-gold btn-full" style="margin-top:10px;" onclick="numpadClose()">✓ تم (Enter)</button>
+    <div style="display:flex;gap:8px;margin-top:10px;">
+      <button type="button" class="btn btn-ghost btn-full" onclick="numpadCancel()">إلغاء</button>
+      <button type="button" class="btn btn-gold btn-full" onclick="numpadClose()">✓ حط الرقم</button>
+    </div>
   </div>
 </div>
 
@@ -2837,20 +2899,176 @@ function resetActorPicker(key){
   selectedActor[key] = null;
   const toggle = document.getElementById(key+'-actor-toggle');
   if(toggle) toggle.querySelectorAll('.actor-opt').forEach(el=>el.classList.remove('selected'));
+  const me = getDeviceUser();
+  if(me) pickActor(key, me); // this device belongs to one person — everything is recorded under their name
+}
+
+/* ===================== مين بيستخدم الجهاز ده (device user) =====================
+   Each phone / computer belongs to one person, chosen once in the settings and kept on the device.
+   Every "بواسطة" field is filled with that name automatically (and hidden), the board's who-toggle
+   follows it, and new records created from this device are stamped with addedBy. */
+const DEVICE_USER_KEY = 'ibtkar-device-user';
+const PERSON_CODE = { 'إسلام':'islam', 'بسنت':'basant' };
+function getDeviceUser(){ try{ return localStorage.getItem(DEVICE_USER_KEY) || ''; }catch(e){ return ''; } }
+function applyDeviceUser(){
+  const me = getDeviceUser();
+  document.querySelectorAll('.actor-toggle').forEach(t=>{
+    const f = t.closest('.field');
+    if(f) f.style.display = me ? 'none' : '';
+  });
+  document.querySelectorAll('.bd-who-toggle').forEach(t=>{ t.style.display = me ? 'none' : ''; });
+  if(me){
+    Object.keys(selectedActor).forEach(k=> pickActor(k, me));
+    if(typeof bdWhoami !== 'undefined'){ bdWhoami = PERSON_CODE[me]; try{ localStorage.setItem('bd-whoami', bdWhoami); }catch(e){} }
+  }
+  const btn = document.getElementById('settings-device-user-btn');
+  if(btn) btn.textContent = me ? `👤 الجهاز ده بتاع: ${me} — وسجل النشاط` : '👤 أنا مين على الجهاز ده';
+  document.querySelectorAll('.device-user-pick button').forEach(b=> b.classList.toggle('on', b.dataset.user===me));
+}
+function setDeviceUser(name){
+  try{ localStorage.setItem(DEVICE_USER_KEY, name); }catch(e){}
+  applyDeviceUser();
+  showToast(`تمام — أي حاجة تتسجل من الجهاز ده هتبقى باسم ${name}`);
+  setTimeout(()=> closeModal('overlay-device-user'), 500);
+}
+function openDeviceUserSettings(){
+  applyDeviceUser();
+  document.getElementById('overlay-device-user').classList.add('show');
+}
+
+/* New records made on this device get addedBy / addedAt, so the activity history can show them even
+   where a screen doesn't ask "بواسطة". Ids already present (loaded, or synced from the other device)
+   are remembered as known so they're never claimed by this device. */
+const knownRecordIds = new Set();
+function forEachRecord(fn){
+  const visit = (node, key, parent)=>{
+    if(Array.isArray(node)){ node.forEach(x=> visit(x, key, parent)); return; }
+    if(!node || typeof node!=='object') return;
+    const isRec = !!node.id || (!!node.by && !!node.date);
+    if(isRec) fn(node, key, parent);
+    Object.keys(node).forEach(k=>{ const v = node[k]; if(v && typeof v==='object') visit(v, k, isRec ? node : parent); });
+  };
+  Object.keys(state||{}).forEach(k=>{ const v = state[k]; if(v && typeof v==='object' && k!=='trash') visit(v, k, null); });
+}
+function markAllRecordsKnown(){ forEachRecord(r=>{ if(r.id) knownRecordIds.add(r.id); }); }
+function stampNewRecords(){
+  const me = getDeviceUser();
+  forEachRecord(r=>{
+    if(!r.id || knownRecordIds.has(r.id)) return;
+    knownRecordIds.add(r.id);
+    if(me && !r.addedBy){ r.addedBy = me; r.addedAt = new Date().toISOString(); }
+  });
+}
+
+const ACTIVITY_GROUPS = [
+  {key:'all', label:'الكل'},
+  {key:'money', label:'💰 حسابات'},
+  {key:'workers', label:'👷 عمال'},
+  {key:'stock', label:'📦 مخزن'},
+  {key:'projects', label:'📁 مشاريع'},
+  {key:'suppliers', label:'🔧 موردين'},
+  {key:'tasks', label:'🗒️ مهام وأفكار'}
+];
+function describeRecord(r, key, parent){
+  const pn = parent && parent.name ? parent.name : '';
+  const money = v => fmtMoney(Number(v)||0);
+  switch(key){
+    case 'expenses': return ['money', `💸 مصروف ${money(r.amount)} — ${r.project||''}${r.description ? ' — '+r.description : ''}`];
+    case 'income': return ['money', `💰 قبض ${money(r.amount)} — ${r.project||''}${r.method ? ' ('+r.method+')' : ''}`];
+    case 'deductions': return ['workers', `➖ خصم ${money(r.amount)}${r.reason ? ' — '+r.reason : ''}${(()=>{ const w=(state.workers||[]).find(x=>x.id===r.workerId); return w ? ' على '+w.name : ''; })()}`];
+    case 'valueHistory': return [parent && parent.code && (state.suppliers||[]).some(s=>(s.projects||[]).includes(parent)) ? 'suppliers' : 'workers', `✏️ تعديل قيمة ${parent ? (parent.code||parent.name) : ''} من ${money(r.from)} لـ ${money(r.to)} — ${r.reason||''}`];
+    case 'items': return ['stock', `📦 صنف جديد: ${r.name||''}${r.code ? ' ('+r.code+')' : ''}`];
+    case 'log': return ['stock', `📦 ${r.type==='out' ? 'صرف' : 'استلام'} ${r.qty||''} — ${pn}${r.destination ? ' ← '+r.destination : ''}${r.source ? ' → '+r.source : ''}`];
+    case 'workers': return ['workers', `👷 عامل جديد: ${r.name||''}`];
+    case 'logs': return ['workers', `📅 يوم شغل ${pn} — ${r.project||''} (${r.date||''})`];
+    case 'contracts': return ['workers', `🏗️ مقاولة ${r.code||r.name||''} لـ${pn}${r.totalValue ? ' — '+money(r.totalValue) : ''}`];
+    case 'workOrders': return ['workers', `📋 أمر عمل — ${r.workerName||''} ${r.project||''}`];
+    case 'projects': return (parent && (state.suppliers||[]).includes(parent))
+      ? ['suppliers', `🔧 حساب مورد ${r.code||r.name||''} لـ${pn}`]
+      : ['projects', `📁 مشروع جديد: ${r.name||''}`];
+    case 'suppliers': return ['suppliers', `🔧 مورد جديد: ${r.name||''}`];
+    case 'referenceSuppliers': return ['suppliers', `📇 مورد مرجعي: ${r.name||''}`];
+    case 'jobOrders': return ['suppliers', `🔧 زيارة/شغلانة مورد ${pn}`];
+    case 'snagList': return ['projects', `🏁 استلام نهائي: ${r.item||r.text||''}`];
+    case 'warranties': return ['projects', `🛡️ ضمان: ${r.item||r.name||''}`];
+    case 'clientChoices': return ['projects', `🎯 اختيار عميل: ${r.name||r.choice||''}`];
+    case 'archiveEntries': return ['projects', `🗄️ أرشيف: ${r.name||r.title||''}`];
+    case 'siteChecklists': return ['projects', `🏗️ تشيك ليست: ${r.trade||r.specialty||''}`];
+    case 'lineItems': return ['money', `🧾 بند في كشف حساب: ${r.item||''} — ${money(r.cost)}`];
+    case 'payments': return ['money', `🧾 دفعة عميل في كشف حساب — ${money(r.amount)}`];
+    case 'quickEstimates': return ['projects', `🧮 تسعير: ${r.name||''}`];
+    case 'paymentReminders': return ['money', `⏰ تذكير دفعة ${r.personName||''}${r.amount ? ' — '+money(r.amount) : ''}`];
+    case 'boardTasks': return ['tasks', `🗒️ مهمة: ${r.text||''}${r.done ? ' ✅' : ''}`];
+    case 'socialMedia': return ['tasks', `📱 سوشيال ميديا: ${r.text||r.title||''}`];
+    case 'notes': return ['tasks', r.type==='stroke' ? '✏️ كتابة في الدفتر' : (r.type==='image' ? '🖼️ صورة في الدفتر' : `📝 ورقة في الدفتر: ${(r.text||'').slice(0,40)}`)];
+    case 'ideas': return ['tasks', `💡 فكرة: ${r.note ? r.note.slice(0,50) : (r.link||'')}`];
+    default: return ['all', `• ${key}`];
+  }
+}
+function recordTime(r){
+  const t = r.addedAt || r.createdAt || r.date || r.completedAt;
+  const d = typeof t==='number' ? new Date(t) : new Date(t || 0);
+  return isNaN(d) ? new Date(0) : d;
+}
+let activityPerson = '', activityGroup = 'all';
+function openActivityHistory(person){
+  activityPerson = person; activityGroup = 'all';
+  renderActivityHistory();
+  document.getElementById('overlay-activity').classList.add('show');
+}
+function renderActivityHistory(){
+  const code = PERSON_CODE[activityPerson];
+  const rows = [];
+  forEachRecord((r, key, parent)=>{
+    if(!(r.by===activityPerson || r.addedBy===activityPerson || (code && r.createdBy===code))) return;
+    if(key==='notes' && r.type==='stroke') return; // single pen strokes would flood the list
+    const [group, text] = describeRecord(r, key, parent);
+    rows.push({ group, text, at: recordTime(r) });
+  });
+  rows.sort((a,b)=> b.at - a.at);
+  document.getElementById('activity-title').textContent = `📜 كل اللي ${activityPerson==='بسنت' ? 'عملته بسنت' : 'عمله إسلام'} (${rows.length})`;
+  document.getElementById('activity-filters').innerHTML = ACTIVITY_GROUPS.map(g=>`<button type="button" class="${activityGroup===g.key?'bd-active':''}" onclick="activityGroup='${g.key}';renderActivityHistory()">${g.label}</button>`).join('');
+  const shown = rows.filter(x=> activityGroup==='all' || x.group===activityGroup).slice(0, 400);
+  let lastDay = '';
+  document.getElementById('activity-list').innerHTML = shown.length ? shown.map(x=>{
+    const day = x.at.getTime() ? x.at.toLocaleDateString('ar-EG', {weekday:'long', day:'numeric', month:'long', year:'numeric', numberingSystem:'latn'}) : 'من غير تاريخ';
+    const head = day!==lastDay ? `<div class="activity-day">${day}</div>` : '';
+    lastDay = day;
+    const time = x.at.getTime() ? x.at.toLocaleTimeString('ar-EG', {hour:'2-digit', minute:'2-digit'}) : '';
+    return `${head}<div class="pd-row"><div class="pd-row-main"><div class="pd-row-title" style="font-size:13.5px;">${escapeHtml(x.text)}</div></div><div class="pd-row-sub" style="white-space:nowrap;">${time}</div></div>`;
+  }).join('') : '<div class="no-hist">مفيش حاجة متسجلة هنا</div>';
 }
 function pickMethod(key, name){
   selectedMethod[key] = name;
   const toggle = document.getElementById(key+'-method-toggle');
   if(toggle){
+    let chosenLabel = name;
     toggle.querySelectorAll('.method-opt').forEach(el=>{
       el.classList.toggle('selected', el.dataset.name===name);
+      if(el.dataset.name===name) chosenLabel = el.textContent.trim();
     });
+    toggle.classList.remove('open');
+    const btn = document.getElementById(key+'-method-btn');
+    const label = document.getElementById(key+'-method-label');
+    if(btn) btn.classList.add('chosen');
+    if(label) label.textContent = chosenLabel;
   }
+}
+function toggleMethodOptions(key){
+  const toggle = document.getElementById(key+'-method-toggle');
+  if(toggle) toggle.classList.toggle('open');
 }
 function resetMethodPicker(key){
   selectedMethod[key] = null;
   const toggle = document.getElementById(key+'-method-toggle');
-  if(toggle) toggle.querySelectorAll('.method-opt').forEach(el=>el.classList.remove('selected'));
+  if(toggle){
+    toggle.querySelectorAll('.method-opt').forEach(el=>el.classList.remove('selected'));
+    toggle.classList.remove('open');
+  }
+  const btn = document.getElementById(key+'-method-btn');
+  const label = document.getElementById(key+'-method-label');
+  if(btn) btn.classList.remove('chosen');
+  if(label) label.textContent = key==='income' ? '💳 اختار طريقة الدخول' : '💳 اختار طريقة الدفع';
 }
 
 /* Coding system: tools => T001, T002...  materials => 001, 002... (no letter) */
@@ -3051,6 +3269,7 @@ async function loadState(){
     const raw = localStorage.getItem('ibtkar-inventory-v1');
     if(raw) state = JSON.parse(raw);
   }catch(e){ /* ignore, Firebase will fill it in next */ }
+  try{ markAllRecordsKnown(); }catch(e){}
   renderEverything();
 
   // 2) live sync: this listener fires once immediately with whatever's on the server, then
@@ -3069,6 +3288,7 @@ async function loadState(){
       const remoteIsNewer = remote && (!state._v || (remote._v && remote._v >= state._v));
       if(remote && remoteIsNewer){
         state = remote;
+        try{ markAllRecordsKnown(); }catch(e){}
       } else if(!remote && !fbReady){
         fbStateRef.set(state); // database empty (first time ever) — seed it with what we have locally
       } else if(remote && !fbReady){
@@ -3124,6 +3344,7 @@ function switchView(view){
 }
 
 async function saveState(){
+  try{ stampNewRecords(); }catch(e){}
   state._v = Date.now(); // stamps this as the newest version of the data — see loadState()
   try{
     localStorage.setItem('ibtkar-inventory-v1', JSON.stringify(state));
@@ -8864,6 +9085,7 @@ async function handleRestoreBackup(evt){
     const parsed = JSON.parse(text);
     if(typeof parsed !== 'object' || parsed===null) throw new Error('invalid backup file');
     state = parsed;
+    try{ markAllRecordsKnown(); }catch(e){} // restored records keep their original authors
     await saveState();
     closeModal('overlay-backup');
     showToast('تم استرجاع النسخة الاحتياطية');
@@ -10838,37 +11060,71 @@ function bdOpenAddArchiveForm(){
   });
 }
 
-/* ---------- Custom numeric keypad (touch-friendly, for every number input) ---------- */
+/* ---------- Calculator for number fields ----------
+   Tapping a number field just types normally (phone number keyboard). The 🧮 button next to it
+   opens this calculator — handy for adding up amounts — and "حط الرقم" puts the result back. */
 let numpadTarget = null;
+let calcExpr = '';
+function calcEvaluate(expr){
+  const e = String(expr||'').replace(/[+\-*/.]+$/,'');
+  if(!e) return null;
+  if(!/^[0-9+\-*/.%() ]+$/.test(e)) return null;
+  try{
+    const v = Function('"use strict";return (' + e.replace(/(\d+(?:\.\d+)?)%/g,'($1/100)') + ')')();
+    return (typeof v==='number' && isFinite(v)) ? Math.round(v*100)/100 : null;
+  }catch(err){ return null; }
+}
+function calcRender(){
+  const pretty = calcExpr.replace(/\*/g,' × ').replace(/\//g,' ÷ ').replace(/\+/g,' + ').replace(/(?!^)-/g,' − ');
+  document.getElementById('calc-expr').textContent = pretty || '0';
+  const r = calcEvaluate(calcExpr);
+  document.getElementById('calc-result').textContent = (r!==null && /[+\-*/%]/.test(calcExpr.slice(1))) ? '= ' + r.toLocaleString('en-US') : '';
+}
 function numpadOpen(input){
   numpadTarget = input;
+  calcExpr = input.value ? String(input.value) : '';
   const labelEl = document.getElementById('numpad-target-label');
   const fieldLabel = input.closest('.field') ? input.closest('.field').querySelector('label') : null;
   labelEl.textContent = fieldLabel ? fieldLabel.textContent.replace('*','').trim() : '';
+  calcRender();
   document.getElementById('numpad-overlay').classList.add('show');
 }
-function numpadClose(){
+function numpadCancel(){
   document.getElementById('numpad-overlay').classList.remove('show');
-  if(numpadTarget){ numpadTarget.dispatchEvent(new Event('change', {bubbles:true})); numpadTarget.blur(); }
   numpadTarget = null;
 }
-function numpadPress(val){
-  if(!numpadTarget) return;
-  let v = numpadTarget.value || '';
-  if(val==='back'){
-    v = v.slice(0,-1);
-  } else if(val==='.'){
-    if(!v.includes('.')) v += '.';
-  } else {
-    v += val;
+function numpadClose(){
+  if(numpadTarget){
+    const r = calcEvaluate(calcExpr);
+    numpadTarget.value = r===null ? '' : String(r);
+    numpadTarget.dispatchEvent(new Event('input', {bubbles:true}));
+    numpadTarget.dispatchEvent(new Event('change', {bubbles:true}));
   }
-  numpadTarget.value = v;
-  numpadTarget.dispatchEvent(new Event('input', {bubbles:true}));
+  numpadCancel();
 }
-document.addEventListener('focusin', (e)=>{
-  if(e.target && e.target.tagName==='INPUT' && e.target.type==='number'){
-    numpadOpen(e.target);
+function numpadPress(val){
+  if(val==='C') calcExpr = '';
+  else if(val==='back') calcExpr = calcExpr.slice(0,-1);
+  else if(val==='='){ const r = calcEvaluate(calcExpr); calcExpr = r===null ? calcExpr : String(r); }
+  else if('+-*/'.includes(val)){
+    if(!calcExpr && val!=='-') return;
+    calcExpr = calcExpr.replace(/[+\-*/]$/,'') + val;
+  } else if(val==='.'){
+    const lastNum = calcExpr.split(/[+\-*/]/).pop();
+    if(!lastNum.includes('.')) calcExpr += (lastNum ? '' : '0') + '.';
+  } else if(val==='%'){
+    if(/\d$/.test(calcExpr)) calcExpr += '%';
+  } else {
+    calcExpr += val;
   }
+  calcRender();
+}
+document.addEventListener('keydown', (e)=>{
+  if(!document.getElementById('numpad-overlay').classList.contains('show')) return;
+  if(/^[0-9.+\-*/%]$/.test(e.key)){ numpadPress(e.key); e.preventDefault(); }
+  else if(e.key==='Backspace'){ numpadPress('back'); e.preventDefault(); }
+  else if(e.key==='Enter'){ numpadClose(); e.preventDefault(); }
+  else if(e.key==='Escape'){ numpadCancel(); e.preventDefault(); }
 });
 
 /* proactively suppress the native keyboard on number fields, and offer the camera
@@ -10876,8 +11132,18 @@ document.addEventListener('focusin', (e)=>{
    get injected into the page later */
 function enhanceTouchInputsIn(root){
   if(!root || !root.querySelectorAll) return;
-  root.querySelectorAll('input[type="number"]').forEach(el=>{
-    el.setAttribute('inputmode','none');
+  root.querySelectorAll('.field input[type="number"]').forEach(el=>{
+    el.setAttribute('inputmode','decimal');
+    if(el.dataset.calc || !el.parentNode || el.closest('.calc-field')) return;
+    el.dataset.calc = '1';
+    const wrap = document.createElement('div');
+    wrap.className = 'calc-field';
+    el.parentNode.insertBefore(wrap, el);
+    wrap.appendChild(el);
+    const btn = document.createElement('button');
+    btn.type = 'button'; btn.className = 'calc-btn'; btn.title = 'آلة حاسبة'; btn.textContent = '🧮';
+    btn.addEventListener('click', ()=>numpadOpen(el));
+    wrap.appendChild(btn);
   });
   // NOTE: file inputs are intentionally left untouched here. Toggling the "capture" attribute
   // live via a MutationObserver (which fires on almost every re-render in this app) turned out
@@ -11037,6 +11303,8 @@ function lockForgotPin(){
 function unlockApp(){
   document.getElementById('app-lock-screen').style.display = 'none';
   loadState();
+  applyDeviceUser();
+  if(!getDeviceUser()) setTimeout(openDeviceUserSettings, 600);
 }
 function changeAppPin(){
   if(!confirm('هتعمل رقم سري جديد بدل الحالي. متأكد؟')) return;
