@@ -706,6 +706,9 @@ input[type="number"]{-moz-appearance:textfield;}
 .ws-dot.ws-yellow{background:#E0A72E;}
 .ws-dot.ws-red{background:#C2547A;}
 .ws-current-label{font-size:11px;font-weight:800;opacity:0.7;margin-inline-start:2px;}
+.fav-star{margin-inline-start:auto;border:none;background:none;font-size:24px;line-height:1;cursor:pointer;color:#C9BFB3;padding:0 4px;}
+.fav-star.on{color:#E0A72E;text-shadow:0 1px 4px rgba(224,167,46,0.45);}
+.card.is-fav{box-shadow:0 0 0 3px rgba(224,167,46,0.35), 0 6px 18px rgba(224,167,46,0.18);}
 .ws-framed{border-width:2.5px !important;border-style:solid !important;}
 .ws-framed.ws-border-active{border-color:#6E8B74 !important;}
 .ws-framed.ws-border-idle{border-color:#E0A72E !important;}
@@ -1701,7 +1704,11 @@ async function deleteReferenceSupplier(id){
     <button type="button" class="btn btn-gold btn-sm btn-full" id="toggle-new-contract-btn" onclick="toggleNewContractForm()" style="margin-bottom:10px;">+ إنشاء مقاولة</button>
     <div id="new-contract-form" style="display:none;">
       <div class="field">
-        <label>اسم مقاولة جديدة للعامل ده</label>
+        <label>اسم المقاولة <span class="req-star">*</span></label>
+        <input type="text" id="workerContractTitle" placeholder="مثلاً: محارة الحمام، كهرباء الدور الأرضي">
+      </div>
+      <div class="field">
+        <label>في أي مشروع <span class="req-star">*</span></label>
         <input type="text" id="workerContractName" list="location-list" placeholder="مثلاً: New Giza">
       </div>
       <div class="field">
@@ -1941,7 +1948,11 @@ async function deleteReferenceSupplier(id){
 
     <div class="sub" style="margin-top:16px;">🏗️ مشاريع المورد — الكود اللي بيتسجل بيه الدفع</div>
     <div class="field">
-      <label>اسم مشروع جديد للمورد ده</label>
+      <label>اسم الشغلانة / المقاولة</label>
+      <input type="text" id="supplierProjectTitle" placeholder="مثلاً: سيراميك الحمامات، ألوميتال الشبابيك">
+    </div>
+    <div class="field">
+      <label>في أي مشروع <span class="req-star">*</span></label>
       <input type="text" id="supplierProjectName" list="location-list" placeholder="مثلاً: New Giza">
     </div>
     <div class="field">
@@ -2843,11 +2854,29 @@ const WORK_STATUS_META = {
 const WORK_STATUS_RANK = { active:0, idle:1, stopped:2 };
 function getWorkStatus(entity){ return entity.workStatus || 'active'; }
 function workStatusRank(entity){ return WORK_STATUS_RANK[getWorkStatus(entity)] ?? 0; }
+// ⭐ favourites always come first, before the green / yellow / red ordering
+function favRank(entity){ return entity && entity.favorite ? 0 : 1; }
+async function toggleFavorite(entityType, id){
+  const arr = entityType==='worker' ? state.workers : (entityType==='supplier' ? state.suppliers : null);
+  const entity = (arr||[]).find(x=>x.id===id);
+  if(!entity) return;
+  entity.favorite = !entity.favorite;
+  if(entityType==='worker'){ renderWorkers(); if(activeWorkerId===id) updateWorkerLogStatusDots(); }
+  else { renderSuppliers(); if(activeSupplierId===id) updateSupplierLogStatusDots(); }
+  showToast(entity.favorite ? `⭐ ${entity.name} في المفضلة — هيفضل فوق` : `اتشال ${entity.name} من المفضلة`);
+  await saveState();
+}
 function workStatusDotsHtml(entityType, id, current){
   current = current || 'active';
   return `<div class="ws-dots" onclick="event.stopPropagation();">
     ${['active','idle','stopped'].map(s=>`<div class="ws-dot ${s==='active'?'ws-green':s==='idle'?'ws-yellow':'ws-red'} ${current===s?'ws-selected':''}" title="${WORK_STATUS_META[s].label}" onclick="setWorkStatus('${entityType}','${id}','${s}')"></div>`).join('')}
     <span class="ws-current-label">${WORK_STATUS_META[current].label}</span>
+    ${(entityType==='worker' || entityType==='supplier') ? (()=>{
+      const arr = entityType==='worker' ? state.workers : state.suppliers;
+      const ent = (arr||[]).find(x=>x.id===id);
+      const on = !!(ent && ent.favorite);
+      return `<button type="button" class="fav-star ${on?'on':''}" title="${on?'شيله من المفضلة':'حطه في المفضلة'}" onclick="event.stopPropagation();toggleFavorite('${entityType}','${id}')">${on?'★':'☆'}</button>`;
+    })() : ''}
   </div>`;
 }
 async function setWorkStatus(entityType, id, status){
@@ -2981,10 +3010,10 @@ function describeRecord(r, key, parent){
     case 'log': return ['stock', `📦 ${r.type==='out' ? 'صرف' : 'استلام'} ${r.qty||''} — ${pn}${r.destination ? ' ← '+r.destination : ''}${r.source ? ' → '+r.source : ''}`];
     case 'workers': return ['workers', `👷 عامل جديد: ${r.name||''}`];
     case 'logs': return ['workers', `📅 يوم شغل ${pn} — ${r.project||''} (${r.date||''})`];
-    case 'contracts': return ['workers', `🏗️ مقاولة ${r.code||r.name||''} لـ${pn}${r.totalValue ? ' — '+money(r.totalValue) : ''}`];
+    case 'contracts': return ['workers', `🏗️ مقاولة ${contractLabel(r)} لـ${pn}${r.totalValue ? ' — '+money(r.totalValue) : ''}`];
     case 'workOrders': return ['workers', `📋 أمر عمل — ${r.workerName||''} ${r.project||''}`];
     case 'projects': return (parent && (state.suppliers||[]).includes(parent))
-      ? ['suppliers', `🔧 حساب مورد ${r.code||r.name||''} لـ${pn}`]
+      ? ['suppliers', `🔧 حساب مورد ${contractLabel(r)} لـ${pn}`]
       : ['projects', `📁 مشروع جديد: ${r.name||''}`];
     case 'suppliers': return ['suppliers', `🔧 مورد جديد: ${r.name||''}`];
     case 'referenceSuppliers': return ['suppliers', `📇 مورد مرجعي: ${r.name||''}`];
@@ -4110,7 +4139,7 @@ function populateWorkerContractsForExpense(){
   if(!w){ contractSel.innerHTML = '<option value="">-- اختار العامل الأول --</option>'; return; }
   const contracts = w.contracts || [];
   contractSel.innerHTML = contracts.length
-    ? '<option value="">-- اختار المقاولة --</option>' + contracts.map(c=>`<option value="${c.id}">${escapeHtml(c.code)}</option>`).join('')
+    ? '<option value="">-- اختار المقاولة --</option>' + contracts.map(c=>`<option value="${c.id}">${escapeHtml(contractLabel(c))}</option>`).join('')
     : '<option value="">لسه مفيش مقاولات مسجلة لـ' + escapeHtml(w.name) + ' — ضيفها من سجل العامل الأول</option>';
 }
 function applyWorkerContractToExpense(){
@@ -4145,7 +4174,7 @@ function populateSupplierProjectsForExpense(){
   if(!s){ projSel.innerHTML = '<option value="">-- اختار المورد الأول --</option>'; return; }
   const projects = s.projects || [];
   projSel.innerHTML = projects.length
-    ? '<option value="">-- اختار المشروع --</option>' + projects.map(p=>`<option value="${p.id}">${escapeHtml(p.code)}</option>`).join('')
+    ? '<option value="">-- اختار المشروع --</option>' + projects.map(p=>`<option value="${p.id}">${escapeHtml(contractLabel(p))}</option>`).join('')
     : '<option value="">لسه مفيش مشاريع مسجلة لـ' + escapeHtml(s.name) + ' — ضيفها من سجل المورد الأول</option>';
 }
 function applySupplierProjectToExpense(){
@@ -4321,7 +4350,7 @@ async function addExpense(){
       const remaining = (c && c.totalValue) ? (c.totalValue - totalPaid - totalDeducted) : null;
       receiptData = {
         recipientName: w.name, recipientRole: 'عامل — دفعة مقاولة', amount, project,
-        contextLine: (c && c.totalValue) ? `دفعة من مقاولة "${c.name}" — إجمالي المقاولة ${fmtMoney(c.totalValue)}${contractValueNote(c)}` : null,
+        contextLine: (c && c.totalValue) ? `دفعة من مقاولة "${contractLabel(c)}" — إجمالي المقاولة ${fmtMoney(c.totalValue)}${contractValueNote(c)}` : null,
         paymentHistory: history, deductions, remaining,
         date: new Date().toISOString(), by: selectedActor.expense
       };
@@ -4342,7 +4371,7 @@ async function addExpense(){
       const remaining = (p && p.totalValue) ? (p.totalValue - totalPaid) : null;
       receiptData = {
         recipientName: s.name, recipientRole: 'مورد', amount, project,
-        contextLine: (p && p.totalValue) ? `دفعة من حساب "${p.name}" — إجمالي المستحق ${fmtMoney(p.totalValue)}` : null,
+        contextLine: (p && p.totalValue) ? `دفعة من حساب "${contractLabel(p)}" — إجمالي المستحق ${fmtMoney(p.totalValue)}` : null,
         paymentHistory: history, remaining,
         date: new Date().toISOString(), by: selectedActor.expense
       };
@@ -4450,8 +4479,8 @@ function openTxnDetail(id, kind){
     <div class="detail-row"><span>المشروع</span><b>${escapeHtml(e.project)}</b></div>
     <div class="detail-row"><span>${isIncome ? 'ملاحظات' : 'البند'}</span><b>${escapeHtml(e.description || '—')}</b></div>
     ${linkedLog ? `<div class="detail-row"><span>قبض لـ</span><b>${escapeHtml(linkedWorker.name)} — ${escapeHtml(linkedLog.code || '')}</b></div>` : ''}
-    ${linkedContract ? `<div class="detail-row"><span>دفعة مقاولة لـ</span><b>${escapeHtml(linkedWorker.name)} — ${escapeHtml(linkedContract.code || '')}</b></div>` : ''}
-    ${linkedSupplier ? `<div class="detail-row"><span>دفعة لـ</span><b>${escapeHtml(linkedSupplier.name)}${linkedSupplierProject ? ' — '+escapeHtml(linkedSupplierProject.code || '') : ''}</b></div>` : ''}
+    ${linkedContract ? `<div class="detail-row"><span>دفعة مقاولة لـ</span><b>${escapeHtml(linkedWorker.name)} — ${escapeHtml(contractLabel(linkedContract))}</b></div>` : ''}
+    ${linkedSupplier ? `<div class="detail-row"><span>دفعة لـ</span><b>${escapeHtml(linkedSupplier.name)}${linkedSupplierProject ?  ' — '+escapeHtml(contractLabel(linkedSupplierProject)) : ''}</b></div>` : ''}
     <div class="detail-row"><span>التاريخ والوقت</span><b>${fmtDateTime(e.date)}</b></div>
     <div class="detail-row"><span>بواسطة</span><b>${escapeHtml(e.by || '—')}</b></div>
   `;
@@ -4477,7 +4506,7 @@ function buildReceiptDataForTxn(e, kind){
       .map(d=> ({ date:d.date, amount:Number(d.amount)||0, reason:d.reason||'' }));
     const paid = history.reduce((s,h)=>s+h.amount,0), deducted = deductions.reduce((s,d)=>s+d.amount,0);
     return { ...base, recipientName:w.name, recipientRole:'عامل — دفعة مقاولة',
-      contextLine: (c && c.totalValue) ? `دفعة من مقاولة "${c.name}" — إجمالي المقاولة ${fmtMoney(c.totalValue)}${contractValueNote(c)}` : null,
+      contextLine: (c && c.totalValue) ? `دفعة من مقاولة "${contractLabel(c)}" — إجمالي المقاولة ${fmtMoney(c.totalValue)}${contractValueNote(c)}` : null,
       paymentHistory:history, deductions, remaining: (c && c.totalValue) ? c.totalValue - paid - deducted : null };
   }
   if(w) return { ...base, recipientName:w.name, recipientRole: e.workerLogId ? 'عامل — يومية' : 'عامل — دفعة / سلفة' };
@@ -4488,7 +4517,7 @@ function buildReceiptDataForTxn(e, kind){
       .slice().sort(byDate).map(x=> ({ date:x.date, amount:Number(x.amount)||0 }));
     const paid = history.reduce((s,h)=>s+h.amount,0);
     return { ...base, recipientName:sup.name, recipientRole:'مورد',
-      contextLine: (sp && sp.totalValue) ? `دفعة من حساب "${sp.name}" — إجمالي المستحق ${fmtMoney(sp.totalValue)}` : null,
+      contextLine: (sp && sp.totalValue) ? `دفعة من حساب "${contractLabel(sp)}" — إجمالي المستحق ${fmtMoney(sp.totalValue)}` : null,
       paymentHistory:history, remaining: (sp && sp.totalValue) ? sp.totalValue - paid : null };
   }
   const rs = e.referenceSupplierId ? (state.referenceSuppliers||[]).find(x=>x.id===e.referenceSupplierId) : null;
@@ -4762,7 +4791,7 @@ function renderWorkers(){
     const workedThere = (w.logs||[]).some(l=> l.project && l.project.toLowerCase().includes(q));
     return workedThere;
   });
-  workers = workers.slice().sort((a,b)=> workStatusRank(a)-workStatusRank(b) || (a.name||'').localeCompare(b.name||'', 'ar'));
+  workers = workers.slice().sort((a,b)=> favRank(a)-favRank(b) || workStatusRank(a)-workStatusRank(b) || (a.name||'').localeCompare(b.name||'', 'ar'));
 
   renderWorkerStats();
   populateLocationDatalist();
@@ -4786,7 +4815,7 @@ function renderWorkers(){
     const lastLog = logs.slice().sort((a,b)=> new Date(b.date) - new Date(a.date))[0];
     const dobLabel = w.dob ? new Date(w.dob + 'T00:00:00').toLocaleDateString('ar-EG', {day:'numeric', month:'short', year:'numeric', numberingSystem:'latn'}) : null;
     const startLabel = w.startDate ? new Date(w.startDate + 'T00:00:00').toLocaleDateString('ar-EG', {day:'numeric', month:'short', year:'numeric', numberingSystem:'latn'}) : null;
-    return `<div class="card ws-framed ws-border-${getWorkStatus(w)}" onclick="openWorkerLog('${w.id}')" style="cursor:pointer;">
+    return `<div class="card ws-framed ws-border-${getWorkStatus(w)} ${w.favorite?'is-fav':''}" onclick="openWorkerLog('${w.id}')" style="cursor:pointer;">
       <div class="worker-role-ribbon">${escapeHtml(w.role || 'عامل')}</div>
       <div class="card-body">
         ${workStatusDotsHtml('worker', w.id, getWorkStatus(w))}
@@ -5037,12 +5066,13 @@ function renderWorkerContractsList(){
       </div>`).join('');
     const remaining = c.totalValue ? (c.totalValue - total - deductedTotal) : null;
     const totalValueLine = (c.totalValue ? `<div class="pd-row-sub">قيمة المقاولة: <b>${fmtMoney(c.totalValue)}</b>${deductedTotal ? ` — خصومات: <b style="color:var(--rose)">${fmtMoney(deductedTotal)}</b>` : ''} — المتبقي: <b style="color:${remaining>0?'var(--rose)':'var(--green)'}">${fmtMoney(remaining)}</b></div>` : '')
+      + `<button type="button" class="btn btn-ghost btn-sm" style="margin-top:6px;margin-inline-end:6px;" onclick="renameContract('worker','${w.id}','${c.id}')">🏷️ ${c.title ? 'تغيير الاسم' : 'سمّي المقاولة'}</button>`
       + `<button type="button" class="btn btn-ghost btn-sm" style="margin-top:6px;" onclick="openContractValueEditor('worker','${w.id}','${c.id}')">✏️ ${c.totalValue ? 'تعديل قيمة المقاولة' : 'حدد قيمة المقاولة'}</button>`
       + contractValueHistoryHtml(c);
     return `<div style="border:1.5px solid var(--border);border-radius:12px;padding:10px 12px;margin-bottom:8px;">
       <div class="pd-row" style="border-bottom:1.5px solid var(--border);">
         <div class="pd-row-main">
-          <div class="pd-row-title">${escapeHtml(c.code)}</div>
+          <div class="pd-row-title">${c.title ? `🏗️ ${escapeHtml(c.title)} <span style="font-weight:600;opacity:0.6;font-size:12px;">— ${escapeHtml(c.code)}</span>` : escapeHtml(c.code)}</div>
           <div class="pd-row-sub">${payments.length} دفعة${payments.length===1 ? '' : (payments.length>=2 && payments.length<=10 ? 'ات' : '')}</div>
           ${totalValueLine}
         </div>
@@ -5071,20 +5101,23 @@ async function addWorkerContract(){
   const w = (state.workers || []).find(x=>x.id===activeWorkerId);
   if(!w) return;
   const name = document.getElementById('workerContractName').value.trim();
+  const title = document.getElementById('workerContractTitle').value.trim();
   const totalValueRaw = document.getElementById('workerContractTotalValue').value;
   const totalValue = totalValueRaw ? parseFloat(totalValueRaw) : null;
-  if(!name){ showToast('اكتب اسم المقاولة'); return; }
+  if(!title){ showToast('اكتب اسم المقاولة — مثلاً: محارة الحمام'); return; }
+  if(!name){ showToast('اكتب المقاولة في أي مشروع'); return; }
   w.contracts = w.contracts || [];
   const sameNameCount = w.contracts.filter(c=> (c.name||'').trim().toLowerCase() === name.toLowerCase()).length;
   const code = sameNameCount>0 ? `${name} #${sameNameCount+1}` : name;
-  w.contracts.unshift({ id: uid(), name, code, totalValue: (totalValue && totalValue>0) ? totalValue : null, createdAt: new Date().toISOString() });
+  w.contracts.unshift({ id: uid(), name, code, title, totalValue: (totalValue && totalValue>0) ? totalValue : null, createdAt: new Date().toISOString() });
   document.getElementById('workerContractName').value = '';
+  document.getElementById('workerContractTitle').value = '';
   document.getElementById('workerContractTotalValue').value = '';
   toggleNewContractForm(false);
   renderWorkerContractsList();
   renderWorkers();
   await saveState();
-  showToast(`تم إضافة المقاولة — الكود: ${code}`);
+  showToast(`تم إضافة المقاولة: ${title} — ${code}`);
 }
 function toggleNewContractForm(forceState){
   const form = document.getElementById('new-contract-form');
@@ -5110,11 +5143,28 @@ function findContractValueItem(t){
   const p = sp && (sp.projects||[]).find(x=>x.id===t.itemId);
   return p ? { owner:sp, item:p } : null;
 }
+// "محارة الحمام — New Giza #2": the contract's own name first, then its project code
+function contractLabel(c){
+  if(!c) return '';
+  const code = c.code || c.name || '';
+  return c.title ? `${c.title} — ${code}` : code;
+}
+async function renameContract(kind, ownerId, itemId){
+  const f = findContractValueItem({kind, ownerId, itemId});
+  if(!f) return;
+  const val = await appPrompt(`اسم ${kind==='worker' ? 'المقاولة' : 'الشغلانة'} (${f.item.code || f.item.name})\nمثلاً: محارة الحمام`, f.item.title || '');
+  if(val===null) return;
+  f.item.title = val.trim();
+  if(kind==='worker'){ if(activeWorkerId===ownerId) renderWorkerContractsList(); renderWorkers(); }
+  else { if(activeSupplierId===ownerId) renderSupplierProjectsList(); renderSuppliers(); }
+  await saveState();
+  showToast(f.item.title ? `اتسمّت: ${f.item.title}` : 'اتشال الاسم');
+}
 function openContractValueEditor(kind, ownerId, itemId){
   contractValueTarget = { kind, ownerId, itemId };
   const f = findContractValueItem(contractValueTarget);
   if(!f) return;
-  document.getElementById('cv-subtitle').textContent = `${f.owner.name} — ${f.item.code || f.item.name}` + (f.item.totalValue ? ` · القيمة الحالية ${fmtMoney(f.item.totalValue)}` : ' · لسه مالهاش قيمة');
+  document.getElementById('cv-subtitle').textContent = `${f.owner.name} — ${contractLabel(f.item)}` + (f.item.totalValue ? ` · القيمة الحالية ${fmtMoney(f.item.totalValue)}` : ' · لسه مالهاش قيمة');
   document.getElementById('cvNewValue').value = f.item.totalValue || '';
   document.getElementById('cvReason').value = '';
   resetActorPicker('contractvalue');
@@ -5185,7 +5235,7 @@ function populateDeductionContracts(){
   const contracts = w.contracts || [];
   sel.innerHTML = contracts.map(c=>{
     const left = c.totalValue ? c.totalValue - computeWorkerContractTotal(w.id, c.id) - computeWorkerContractDeductions(w.id, c.id) : null;
-    return `<option value="${c.id}">🏗️ مقاولة ${escapeHtml(c.code || c.name)}${left!==null ? ' — الفاضل ' + fmtMoney(left) : ''}</option>`;
+    return `<option value="${c.id}">🏗️ ${escapeHtml(contractLabel(c))}${left!==null ? ' — الفاضل ' + fmtMoney(left) : ''}</option>`;
   }).join('') + '<option value="__general__">💵 خصم عام (مش على مقاولة)</option>';
 }
 async function addDeduction(){
@@ -5219,7 +5269,7 @@ function renderWorkerDeductionsList(){
   if(!list.length){ wrap.innerHTML = '<div class="no-hist">مفيش خصومات على العامل ده</div>'; return; }
   wrap.innerHTML = list.map(d=>{
     const c = d.contractId ? (w.contracts||[]).find(x=>x.id===d.contractId) : null;
-    const on = d.contractId ? `مقاولة ${escapeHtml(c ? (c.code||c.name) : 'اتمسحت')}` : 'خصم عام';
+    const on = d.contractId ? `مقاولة ${escapeHtml(c ? contractLabel(c) : 'اتمسحت')}` : 'خصم عام';
     return `<div class="pd-row">
       <div class="pd-row-main">
         <div class="pd-row-title">${on}${d.reason ? ' — ' + escapeHtml(d.reason) : ''}</div>
@@ -8106,7 +8156,7 @@ function openDebtsModal(){
   contractsEl.innerHTML = workerContractDebts.length ? workerContractDebts.map(d=>`
     <div class="pd-row">
       <div class="pd-row-main">
-        <div class="pd-row-title">${escapeHtml(d.worker.name)} — ${escapeHtml(d.contract.code)}</div>
+        <div class="pd-row-title">${escapeHtml(d.worker.name)} — ${escapeHtml(contractLabel(d.contract))}</div>
         <div class="pd-row-sub">الإجمالي: ${fmtMoney(d.totalValue)} · المدفوع: ${fmtMoney(d.paid)}</div>
       </div>
       <div class="pd-row-val expense">${fmtMoney(d.remaining)}</div>
@@ -8117,7 +8167,7 @@ function openDebtsModal(){
   suppliersEl.innerHTML = supplierDebts.length ? supplierDebts.map(d=>`
     <div class="pd-row">
       <div class="pd-row-main">
-        <div class="pd-row-title">${escapeHtml(d.supplier.name)} — ${escapeHtml(d.project.code)}</div>
+        <div class="pd-row-title">${escapeHtml(d.supplier.name)} — ${escapeHtml(contractLabel(d.project))}</div>
         <div class="pd-row-sub">الإجمالي: ${fmtMoney(d.totalValue)} · المدفوع: ${fmtMoney(d.paid)}</div>
       </div>
       <div class="pd-row-val expense">${fmtMoney(d.remaining)}</div>
@@ -8388,7 +8438,7 @@ function renderSuppliers(){
     const workedThere = (s.jobOrders||[]).some(j=> j.project && j.project.toLowerCase().includes(q));
     return workedThere;
   });
-  suppliers = suppliers.slice().sort((a,b)=> workStatusRank(a)-workStatusRank(b) || (a.name||'').localeCompare(b.name||'', 'ar'));
+  suppliers = suppliers.slice().sort((a,b)=> favRank(a)-favRank(b) || workStatusRank(a)-workStatusRank(b) || (a.name||'').localeCompare(b.name||'', 'ar'));
 
   renderSupplierStats();
   populateLocationDatalist();
@@ -8405,7 +8455,7 @@ function renderSuppliers(){
   content.innerHTML = `<div class="grid">` + suppliers.map(s=>{
     const jobs = s.jobOrders || [];
     const lastJob = jobs.slice().sort((a,b)=> new Date(b.date) - new Date(a.date))[0];
-    return `<div class="card ws-framed ws-border-${getWorkStatus(s)}" onclick="openSupplierLog('${s.id}')" style="cursor:pointer;">
+    return `<div class="card ws-framed ws-border-${getWorkStatus(s)} ${s.favorite?'is-fav':''}" onclick="openSupplierLog('${s.id}')" style="cursor:pointer;">
       <div class="worker-role-ribbon">${escapeHtml(s.specialty || 'مورد')}</div>
       <div class="card-body">
         ${workStatusDotsHtml('supplier', s.id, getWorkStatus(s))}
@@ -8584,12 +8634,13 @@ function renderSupplierProjectsList(){
       </div>`).join('');
     const remaining = p.totalValue ? (p.totalValue - total) : null;
     const totalValueLine = (p.totalValue ? `<div class="pd-row-sub">قيمة الشغلانة: <b>${fmtMoney(p.totalValue)}</b> — المتبقي: <b style="color:${remaining>0?'var(--rose)':'var(--green)'}">${fmtMoney(remaining)}</b></div>` : '')
+      + `<button type="button" class="btn btn-ghost btn-sm" style="margin-top:6px;margin-inline-end:6px;" onclick="renameContract('supplier','${s.id}','${p.id}')">🏷️ ${p.title ? 'تغيير الاسم' : 'سمّي الشغلانة'}</button>`
       + `<button type="button" class="btn btn-ghost btn-sm" style="margin-top:6px;" onclick="openContractValueEditor('supplier','${s.id}','${p.id}')">✏️ ${p.totalValue ? 'تعديل القيمة' : 'حدد القيمة'}</button>`
       + contractValueHistoryHtml(p);
     return `<div style="border:1.5px solid var(--border);border-radius:12px;padding:10px 12px;margin-bottom:8px;">
       <div class="pd-row" style="border-bottom:1.5px solid var(--border);">
         <div class="pd-row-main">
-          <div class="pd-row-title">${escapeHtml(p.code)}</div>
+          <div class="pd-row-title">${p.title ? `🏗️ ${escapeHtml(p.title)} <span style="font-weight:600;opacity:0.6;font-size:12px;">— ${escapeHtml(p.code)}</span>` : escapeHtml(p.code)}</div>
           <div class="pd-row-sub">${payments.length} دفعة${payments.length===1 ? '' : (payments.length>=2 && payments.length<=10 ? 'ات' : '')}</div>
           ${totalValueLine}
         </div>
@@ -8611,6 +8662,7 @@ async function addSupplierProject(){
   const s = (state.suppliers || []).find(x=>x.id===activeSupplierId);
   if(!s) return;
   const name = document.getElementById('supplierProjectName').value.trim();
+  const title = document.getElementById('supplierProjectTitle').value.trim();
   const totalValueRaw = document.getElementById('supplierProjectTotalValue').value;
   const totalValue = totalValueRaw ? parseFloat(totalValueRaw) : null;
   if(!name){ showToast('اكتب اسم المشروع'); return; }
@@ -8618,8 +8670,9 @@ async function addSupplierProject(){
   // if the same project name already exists for this supplier, number the code so it stays unique
   const sameNameCount = s.projects.filter(p=> (p.name||'').trim().toLowerCase() === name.toLowerCase()).length;
   const code = sameNameCount>0 ? `${name} #${sameNameCount+1}` : name;
-  s.projects.unshift({ id: uid(), name, code, totalValue: (totalValue && totalValue>0) ? totalValue : null, createdAt: new Date().toISOString() });
+  s.projects.unshift({ id: uid(), name, code, title, totalValue: (totalValue && totalValue>0) ? totalValue : null, createdAt: new Date().toISOString() });
   document.getElementById('supplierProjectName').value = '';
+  document.getElementById('supplierProjectTitle').value = '';
   document.getElementById('supplierProjectTotalValue').value = '';
   renderSupplierProjectsList();
   renderSuppliers();
