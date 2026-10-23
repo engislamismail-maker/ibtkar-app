@@ -882,7 +882,7 @@ input[type="number"]{-moz-appearance:textfield;}
     <div class="field" style="margin-top:18px;">
       <label>استرجاع من ملف نسخة احتياطية</label>
       <input type="file" id="restoreBackupInput" accept="application/json" onchange="handleRestoreBackup(event)">
-      <div class="hint" style="color:var(--rose);">⚠️ الاسترجاع هيستبدل كل البيانات الحالية بالكامل — تأكد إنك عايز تعمل كده</div>
+      <div class="hint">الاسترجاع بيدمج الملف مع البيانات الحالية: اللي ناقص بيرجع، ومفيش حاجة بتتمسح.</div>
     </div>
     <div class="modal-actions">
       <button class="btn btn-ghost btn-full" onclick="closeModal('overlay-backup'); openChangeBackupPassword();">🔑 تغيير كلمة السر</button>
@@ -907,6 +907,7 @@ input[type="number"]{-moz-appearance:textfield;}
     <div class="modal-actions">
       <button class="btn btn-primary btn-full" onclick="submitBackupPassword()">تأكيد</button>
     </div>
+    <button type="button" class="btn btn-ghost btn-sm btn-full" id="backup-forgot-btn" style="margin-top:8px;" onclick="backupForgotPassword()">نسيت كلمة السر؟ افتح بالرقم السري بتاع التطبيق</button>
   </div>
 </div>
 
@@ -2801,13 +2802,373 @@ const firebaseConfig = {
 };
 firebase.initializeApp(firebaseConfig);
 const fbDB = firebase.database();
-// a distinct path from the old stand-alone board app's "/state", so the two never collide
-const fbStateRef = fbDB.ref('ibtkar_ops_state');
 const fbStorage = firebase.storage();
 // a failing upload must never hold up saving the data itself (the SDK default retries for 10 minutes)
 fbStorage.setMaxUploadRetryTime(15000);
 fbStorage.setMaxOperationRetryTime(15000);
 let fbReady = false; // becomes true after the first snapshot arrives
+</script>
+<script>
+/* ===================== Safe sync engine =====================
+   Why: saving used to upload the WHOLE data and the last device to write won. A device that had
+   been offline for days (stale copy) could make one change and overwrite everything the others did
+   in the meantime. Now:
+   - every record (anything with an id: expense, worker, work day, contract, task...) is merged on
+     its own, comparing each device's copy with the last server copy this device had seen ("base");
+   - writes are Firebase transactions, so they always merge into what's REALLY on the server, even
+     after coming back online;
+   - nothing another device deleted is removed silently while this device had its own unsynced
+     changes — the user gets a list and decides; a sudden mass deletion can be undone the same way;
+   - data lives at a new path, so a phone/PC still running an old version can't overwrite it. */
+const SYNC_PATH = 'ibtkar_sync_v2';
+const LEGACY_SYNC_PATH = 'ibtkar_ops_state';
+const SYNC_META_KEY = 'ibtkar-sync-meta';
+
+// canonical text of a value, the way Firebase stores it (no nulls / empty lists, sorted keys)
+function syncStable(v){
+  if(v===null || v===undefined) return undefined;
+  if(Array.isArray(v)){
+    const a = v.map(syncStable).filter(x=>x!==undefined);
+    return a.length ? '[' + a.join(',') + ']' : undefined;
+  }
+  if(typeof v==='object'){
+    const parts = [];
+    Object.keys(v).filter(k=>k!=='_v').sort().forEach(k=>{
+      const s = syncStable(v[k]);
+      if(s!==undefined) parts.push(JSON.stringify(k) + ':' + s);
+    });
+    return parts.length ? '{' + parts.join(',') + '}' : undefined;
+  }
+  if(typeof v==='number' && !isFinite(v)) return undefined;
+  return JSON.stringify(v);
+}
+function syncHash(v){
+  const s = syncStable(v) || '';
+  let h = 0x811c9dc5;
+  for(let i=0;i<s.length;i++){ h ^= s.charCodeAt(i); h = Math.imul(h, 0x01000193); }
+  return (h>>>0).toString(36) + '.' + s.length.toString(36);
+}
+function syncIsPlain(o){ return !!o && typeof o==='object' && !Array.isArray(o); }
+function syncIsRecordArray(a){ return Array.isArray(a) && a.some(x=> syncIsPlain(x) && x.id); }
+// every record in the data: id -> {h: hash, rec, key (list it sits in), parent (record that holds that list)}
+function syncCollect(st){
+  const out = {};
+  const walk = (node, key, parent)=>{
+    if(Array.isArray(node)){ node.forEach(x=> walk(x, key, parent)); return; }
+    if(!syncIsPlain(node)) return;
+    const isRec = !!node.id;
+    if(isRec) out[node.id] = { h: syncHash(node), rec: node, key, parent };
+    Object.keys(node).forEach(k=>{ const v = node[k]; if(v && typeof v==='object') walk(v, k, isRec ? node : parent); });
+  };
+  walk(st || {}, null, null);
+  return out;
+}
+// base index: record hashes (h) + per-field hashes (f) so two devices editing different fields of
+// the same record both keep their change
+function syncIndex(st){
+  const c = syncCollect(st), idx = { h:{}, f:{} };
+  Object.keys(c).forEach(id=>{
+    idx.h[id] = c[id].h;
+    const rec = c[id].rec, fh = {};
+    Object.keys(rec).forEach(k=>{ const v = rec[k]; if(!(Array.isArray(v) && syncIsRecordArray(v))) fh[k] = syncHash(v); });
+    idx.f[id] = fh;
+  });
+  return idx;
+}
+
+/* Three-way merge. base = {id: hash} of the last server copy this device knew.
+   L = this device's data, R = the server's. localWins decides plain-field conflicts.
+   Returns the merged data and the records the OTHER side deleted that are still here unchanged
+   (kept for now — the user confirms). */
+function syncMerge(base, L, R, localWins){
+  const baseIdx = (base && base.h) || {}, baseF = (base && base.f) || {};
+  const removedByOther = [];
+  function mergeVal(l, r, key, parent){
+    if(l===undefined || l===null) return r;
+    if(r===undefined || r===null) return l;
+    if(Array.isArray(l) || Array.isArray(r)){
+      const la = Array.isArray(l) ? l : [], ra = Array.isArray(r) ? r : [];
+      if(syncIsRecordArray(la) || syncIsRecordArray(ra)) return mergeRecords(la, ra, key, parent);
+      return syncStable(la)===syncStable(ra) ? la : (localWins ? la : ra);
+    }
+    if(syncIsPlain(l) && syncIsPlain(r)){
+      if(key==='counters'){
+        const o = Object.assign({}, r);
+        Object.keys(l).forEach(k=>{ o[k] = Math.max(Number(l[k])||0, Number(r[k])||0); });
+        return o;
+      }
+      return mergeObj(l, r, parent);
+    }
+    return syncStable(l)===syncStable(r) ? l : (localWins ? l : r);
+  }
+  function mergeObj(l, r, parent){
+    const out = {};
+    const bf = l.id ? baseF[l.id] : null; // field hashes of this record as last synced
+    const keys = new Set(Object.keys(l).concat(Object.keys(r)));
+    keys.forEach(k=>{
+      if(k==='_v') return;
+      let v;
+      const lv = l[k], rv = r[k];
+      const isList = Array.isArray(lv) || Array.isArray(rv);
+      if(bf && !(isList && (syncIsRecordArray(lv) || syncIsRecordArray(rv)))){
+        const hl = syncHash(lv), hr = syncHash(rv), hb = bf[k] || syncHash(undefined);
+        if(hl===hr) v = lv;
+        else if(hl===hb) v = rv;        // only the other side changed this field
+        else if(hr===hb) v = lv;        // only this side changed it
+        else v = mergeVal(lv, rv, k, l.id ? l : parent);
+      } else {
+        v = mergeVal(lv, rv, k, l.id ? l : parent);
+      }
+      if(v!==undefined && v!==null) out[k] = v;
+    });
+    return out;
+  }
+  function mergeRecord(l, r, parent){
+    const hl = syncHash(l), hr = syncHash(r);
+    if(hl===hr) return l;
+    const hb = baseIdx[l.id];
+    if(hb===hl) return r;   // only the other side changed it
+    if(hb===hr) return l;   // only this side changed it
+    return mergeObj(l, r, parent); // both changed: merge field by field
+  }
+  function mergeRecords(la, ra, key, parent){
+    const lmap = new Map();
+    la.forEach(x=>{ if(syncIsPlain(x) && x.id) lmap.set(x.id, x); });
+    const rIds = new Set(ra.filter(x=> syncIsPlain(x) && x.id).map(x=>x.id));
+    const out = [];
+    ra.forEach(r=>{
+      if(!syncIsPlain(r) || !r.id){ if(r!==undefined && r!==null) out.push(r); return; }
+      const l = lmap.get(r.id);
+      if(l){ out.push(mergeRecord(l, r, parent)); return; }
+      // only on the other side: if it was in base and is unchanged there, THIS side deleted it
+      if(baseIdx[r.id]!==undefined && baseIdx[r.id]===syncHash(r)) return;
+      out.push(r);
+    });
+    la.forEach((l, i)=>{
+      if(!syncIsPlain(l) || !l.id || rIds.has(l.id)) return;
+      // only on this side: new here, or deleted by the other side
+      if(baseIdx[l.id]!==undefined && baseIdx[l.id]===syncHash(l)) removedByOther.push({ rec:l, key, parent });
+      let pos = 0;
+      for(let j=i-1;j>=0;j--){
+        const p = la[j];
+        if(syncIsPlain(p) && p.id){ const at = out.findIndex(x=> x && x.id===p.id); if(at>=0){ pos = at+1; break; } }
+      }
+      out.splice(pos, 0, l);
+    });
+    return out;
+  }
+  const merged = mergeObj(L || {}, R || {}, null);
+  return { state: merged, removedByOther };
+}
+function syncRemoveIds(st, ids){
+  const walk = node=>{
+    if(Array.isArray(node)){
+      for(let i=node.length-1;i>=0;i--){ const x = node[i]; if(syncIsPlain(x) && x.id && ids.has(x.id)) node.splice(i,1); else walk(x); }
+      return;
+    }
+    if(syncIsPlain(node)) Object.keys(node).forEach(k=>{ const v = node[k]; if(v && typeof v==='object') walk(v); });
+  };
+  walk(st);
+}
+// records in `before` that are gone from `after`, counting a removed worker (with its days) once
+function syncTopRemoved(before, after){
+  const a = syncCollect(after), b = syncCollect(before);
+  const gone = Object.keys(b).filter(id=> !a[id]);
+  const goneSet = new Set(gone);
+  return gone.filter(id=>{ const p = b[id].parent; return !(p && p.id && goneSet.has(p.id)); }).map(id=> b[id]);
+}
+
+const syncRef = fbDB.ref(SYNC_PATH);
+const syncLegacyRef = fbDB.ref(LEGACY_SYNC_PATH);
+// what this device knows about the server: base index of the last server copy it synced with,
+// that copy's version, and whether this device has changes the server hasn't confirmed yet
+let syncMeta = (()=>{ try{ return JSON.parse(localStorage.getItem(SYNC_META_KEY)) || null; }catch(e){ return null; } })();
+function syncSaveMeta(){ try{ localStorage.setItem(SYNC_META_KEY, JSON.stringify(syncMeta)); }catch(e){} }
+function syncAdoptBase(remote){
+  syncMeta = { base: syncIndex(remote), baseV: (remote && remote._v) || 0, dirty: false };
+  syncSaveMeta();
+}
+function syncMarkDirty(){
+  if(!syncMeta) syncMeta = { base: { h:{}, f:{} }, baseV: 0, dirty: true };
+  syncMeta.dirty = true;
+  syncSaveMeta();
+}
+function syncPersistLocal(){ try{ localStorage.setItem('ibtkar-inventory-v1', JSON.stringify(state)); }catch(e){} }
+function syncRecordText(x){
+  try{ return describeRecord(x.rec, x.key, x.parent)[1]; }catch(e){ return x.rec && (x.rec.name || x.rec.text || x.rec.id) || ''; }
+}
+
+let syncChain = Promise.resolve();
+let syncAskedFor = new Set(); // deletions already asked about in this session
+function syncPush(){
+  syncChain = syncChain.then(syncPushNow, syncPushNow);
+  return syncChain;
+}
+async function syncPushNow(){
+  if(!fbReady || !syncMeta || !syncMeta.dirty) return;
+  const local = JSON.parse(JSON.stringify(state));
+  const base = syncMeta.base, baseV = syncMeta.baseV;
+  let removed = [];
+  const res = await syncRef.transaction(cur=>{
+    removed = [];
+    if(cur===null || cur===undefined) return local;            // nothing on the server yet
+    if(baseV && cur._v===baseV) return local;                 // server unchanged since we last synced
+    const m = syncMerge(base, local, cur, true);               // someone else wrote meanwhile → merge
+    removed = m.removedByOther;
+    m.state._v = Date.now();
+    return JSON.parse(JSON.stringify(m.state));
+  }, undefined, false);
+  if(!res || !res.committed) return;
+  const committed = res.snapshot.val();
+  // keep anything changed on this device while the write was in flight: the common ancestor is the
+  // copy we SENT (local) — the server side adds whatever the merge brought in from other devices
+  const m2 = syncMerge(syncIndex(local), state, committed, true);
+  const pendingAgain = syncStable(m2.state)!==syncStable(committed);
+  state = m2.state; state._v = committed._v;
+  syncAdoptBase(committed);
+  if(pendingAgain){ syncMarkDirty(); }
+  syncPersistLocal();
+  renderEverything();
+  if(pendingAgain) syncPush();
+  const fresh = removed.filter(x=> !syncAskedFor.has(x.rec.id));
+  if(fresh.length) syncAskDeletions(fresh);
+}
+
+/* First contact and every later update from the server */
+function syncHandleRemote(remote){
+  const first = !fbReady;
+  if(remote===null || remote===undefined){
+    if(first) syncSeed();
+    return;
+  }
+  if(!syncMeta){
+    // this device meets the new sync for the first time: take the server, but ask about anything
+    // that exists only here (could be work done offline… or things the others already deleted)
+    const prev = state;
+    state = remote; syncAdoptBase(remote);
+    const onlyHere = syncTopRemoved(prev, remote);
+    if(onlyHere.length) syncAskLocalOnly(prev, onlyHere);
+  } else if(syncMeta.dirty){
+    // this device has unsynced changes: merge them into what's on the server, then push
+    const m = syncMerge(syncMeta.base, state, remote, true);
+    state = m.state; state._v = remote._v;
+  } else {
+    // nothing pending here: the server copy is the truth — but a sudden mass deletion is confirmed
+    const prev = state;
+    state = remote; syncAdoptBase(remote);
+    const gone = syncTopRemoved(prev, remote).filter(x=> !syncAskedFor.has(x.rec.id));
+    if(gone.length >= 3) syncAskBulkDeletion(prev, gone);
+  }
+  if(first){ fbReady = true; }
+  try{ markAllRecordsKnown(); }catch(e){}
+  syncPersistLocal();
+  renderEverything();
+  if(syncMeta && syncMeta.dirty) syncPush();
+}
+async function syncSeed(){
+  // the new place on the server is empty: start it from this device + whatever the old place has
+  let legacy = null;
+  try{ legacy = (await syncLegacyRef.once('value')).val(); }catch(e){}
+  if(legacy) state = syncMerge(null, state, legacy, true).state;
+  fbReady = true;
+  syncMeta = { base: { h:{}, f:{} }, baseV: 0, dirty: true };
+  syncSaveMeta();
+  try{ markAllRecordsKnown(); }catch(e){}
+  syncPersistLocal();
+  renderEverything();
+  syncPush();
+}
+
+/* ---------- asking the user ---------- */
+function syncAskList(opts){
+  return new Promise(resolve=>{
+    const ov = document.createElement('div');
+    ov.className = 'overlay show';
+    ov.innerHTML = `<div class="modal" style="max-width:520px;">
+      <h2 style="margin-bottom:6px;"></h2>
+      <div class="sub sync-ask-sub" style="margin-bottom:12px;line-height:1.7;"></div>
+      ${opts.checkable ? '<label style="display:flex;gap:8px;align-items:center;font-size:13px;font-weight:700;margin-bottom:6px;"><input type="checkbox" class="sync-all" checked> الكل</label>' : ''}
+      <div class="sync-ask-list" style="max-height:46vh;overflow:auto;border:1.5px solid var(--border);border-radius:12px;padding:4px 10px;"></div>
+      <div style="display:flex;gap:8px;margin-top:14px;">
+        <button type="button" class="btn btn-ghost btn-full" data-act="no"></button>
+        <button type="button" class="btn btn-primary btn-full" data-act="yes"></button>
+      </div></div>`;
+    ov.querySelector('h2').textContent = opts.title;
+    ov.querySelector('.sync-ask-sub').textContent = opts.sub;
+    ov.querySelector('[data-act="yes"]').textContent = opts.yes;
+    ov.querySelector('[data-act="no"]').textContent = opts.no;
+    const list = ov.querySelector('.sync-ask-list');
+    opts.items.forEach(x=>{
+      const row = document.createElement('label');
+      row.style.cssText = 'display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--border);font-size:13.5px;line-height:1.6;';
+      row.innerHTML = opts.checkable ? '<input type="checkbox" checked style="margin-top:4px;">' : '<span>•</span>';
+      const t = document.createElement('span'); t.textContent = syncRecordText(x); row.appendChild(t);
+      row.dataset.id = x.rec.id;
+      list.appendChild(row);
+    });
+    const all = ov.querySelector('.sync-all');
+    if(all) all.addEventListener('change', ()=> list.querySelectorAll('input').forEach(c=>{ c.checked = all.checked; }));
+    const done = yes=>{
+      const ids = new Set();
+      list.querySelectorAll('label').forEach(r=>{ const c = r.querySelector('input'); if(!c || c.checked) ids.add(r.dataset.id); });
+      ov.remove();
+      resolve({ yes, ids });
+    };
+    ov.querySelector('[data-act="yes"]').onclick = ()=>done(true);
+    ov.querySelector('[data-act="no"]').onclick = ()=>done(false);
+    document.body.appendChild(ov);
+  });
+}
+async function syncAskDeletions(items){
+  items.forEach(x=> syncAskedFor.add(x.rec.id));
+  const r = await syncAskList({
+    title: '🗑️ حاجات اتمسحت من جهاز تاني',
+    sub: `الجهاز ده كان فاصل عن المزامنة، وفي الوقت ده الحاجات دي (${items.length}) اتمسحت من موبايل أو كمبيوتر تاني. هي لسه موجودة لحد ما تقرر — اتمسحت فعلًا؟ علّم على اللي عايز تمسحه.`,
+    items, checkable: true, yes: '🗑️ امسح المتعلّم عليه', no: 'سيبهم كلهم'
+  });
+  if(r.yes && r.ids.size){
+    syncRemoveIds(state, r.ids);
+    renderEverything();
+    await saveState();
+    showToast(`اتمسح ${r.ids.size} حاجة`);
+  } else {
+    showToast('اتسابوا زي ما هما');
+  }
+}
+async function syncAskBulkDeletion(prev, gone){
+  gone.forEach(x=> syncAskedFor.add(x.rec.id));
+  const r = await syncAskList({
+    title: '⚠️ حاجات كتير اتمسحت مرة واحدة',
+    sub: `آخر تحديث جه من جهاز تاني مسح ${gone.length} حاجة مرة واحدة. لو ده مش مقصود (مثلًا جهاز كان عليه بيانات قديمة)، اختار "رجّعهم".`,
+    items: gone, checkable: true, yes: '↩️ رجّع المتعلّم عليه', no: 'تمام، اتمسحوا'
+  });
+  if(r.yes && r.ids.size){
+    const keep = JSON.parse(JSON.stringify(prev));
+    const drop = new Set(Object.keys(syncCollect(prev)).filter(id=> !syncCollect(state)[id] && !r.ids.has(id)));
+    syncRemoveIds(keep, drop);
+    state = syncMerge(null, keep, state, false).state;
+    renderEverything();
+    await saveState();
+    showToast(`رجعت ${r.ids.size} حاجة`);
+  }
+}
+async function syncAskLocalOnly(prev, onlyHere){
+  onlyHere.forEach(x=> syncAskedFor.add(x.rec.id));
+  const r = await syncAskList({
+    title: '📱 حاجات موجودة على الجهاز ده بس',
+    sub: `الحاجات دي (${onlyHere.length}) موجودة على الجهاز ده ومش موجودة على السيرفر. ممكن تكون اتعملت والجهاز فاصل، أو تكون اتمسحت من جهاز تاني. علّم على اللي عايز تضيفه للكل.`,
+    items: onlyHere, checkable: true, yes: '➕ ضيف المتعلّم عليه', no: 'متضيفش حاجة'
+  });
+  if(r.yes && r.ids.size){
+    const add = JSON.parse(JSON.stringify(prev));
+    const prevIds = syncCollect(prev), cur = syncCollect(state);
+    syncRemoveIds(add, new Set(Object.keys(prevIds).filter(id=> !cur[id] && !r.ids.has(id))));
+    state = syncMerge(null, add, state, false).state;
+    renderEverything();
+    await saveState();
+    showToast(`اتضاف ${r.ids.size} حاجة`);
+  }
+}
 </script>
 <script>
 /* Fixed catalog for Quick Pricing (تسعير سريع) — mirrors the "دفتر التشطيب" Excel exactly.
@@ -3292,6 +3653,7 @@ async function migrateDataUrisIn(node, pathHint){
   }
 }
 
+let syncListening = false;
 async function loadState(){
   // 1) instant render from the local cache (works offline, feels fast)
   try{
@@ -3305,29 +3667,14 @@ async function loadState(){
   // again every time ANY device (including this one) writes. Everything that can WRITE (like
   // the migration below) must wait for this first snapshot — otherwise a stale local copy can
   // race ahead and stomp over data another device already saved.
+  if(syncListening) return; // already connected (e.g. the app was re-locked and unlocked)
+  syncListening = true;
   const firstSnapshot = new Promise((resolve)=>{
-    fbStateRef.on('value', (snapshot)=>{
-      const remote = snapshot.val();
-      // a stale or empty remote snapshot (e.g. because an earlier write from THIS device never
-      // actually reached the server — wrong database rules, briefly offline, etc.) must never
-      // be allowed to silently erase newer local data. Each save stamps state._v with the time
-      // it was written; only accept a remote snapshot if it's the same age or newer than what
-      // we already have, so an out-of-date snapshot is ignored instead of overwriting the screen.
-      // a remote copy with no version stamp is older than any stamped local save.
-      const remoteIsNewer = remote && (!state._v || (remote._v && remote._v >= state._v));
-      if(remote && remoteIsNewer){
-        state = remote;
-        try{ markAllRecordsKnown(); }catch(e){}
-      } else if(!remote && !fbReady){
-        fbStateRef.set(state); // database empty (first time ever) — seed it with what we have locally
-      } else if(remote && !fbReady){
-        fbStateRef.set(state); // this device has newer changes that never reached the server — send them now
-      }
-      const wasReady = fbReady;
-      fbReady = true;
-      try{ localStorage.setItem('ibtkar-inventory-v1', JSON.stringify(state)); }catch(e){}
-      renderEverything();
-      if(!wasReady) resolve();
+    let resolved = false;
+    syncRef.on('value', (snapshot)=>{
+      try{ syncHandleRemote(snapshot.val()); }catch(e){ console.error('sync', e); }
+      if(fbReady && !resolved){ resolved = true; resolve(); }
+      else if(!resolved && snapshot.val()===null){ const t = setInterval(()=>{ if(fbReady){ clearInterval(t); if(!resolved){ resolved = true; resolve(); } } }, 200); }
     }, ()=>{
       showToast('⚠️ المزامنة مش شغالة — غالبًا صلاحيات قاعدة البيانات لسه مقفولة. البيانات هتفضل محفوظة على الجهاز ده بس لحد ما تتظبط');
       resolve();
@@ -3380,23 +3727,20 @@ async function saveState(){
   }catch(e){
     showToast('حصلت مشكلة في الحفظ محليًا');
   }
-  // the data itself goes to the database FIRST — moving attachments to Storage is a slow,
-  // optional extra and must never delay (or block) syncing to the other devices
-  try{
-    await fbStateRef.set(state);
-  }catch(e){
-    showToast('⚠️ البيانات محفوظة عندك بس، لسه مش وصلت للسحابة — غالبًا صلاحيات قاعدة البيانات محتاجة تتظبط');
-    return;
+  // send it in the background (merge-safe, see the sync engine) — the screen never waits for the
+  // network, and if this device is offline the change goes up as soon as it's back online
+  syncMarkDirty();
+  syncPush().catch(()=> showToast('⚠️ البيانات محفوظة عندك بس، لسه مش وصلت للسحابة'));
+  // moving attachments to Storage is a slow, optional extra
+  if(!syncMigratingAttachments && !storageUploadsBroken && JSON.stringify(state).includes(';base64,')){
+    syncMigratingAttachments = true;
+    migrateDataUrisIn(state, 'root').then(()=>{
+      syncMigratingAttachments = false;
+      if(!storageUploadsBroken) saveState();
+    }, ()=>{ syncMigratingAttachments = false; });
   }
-  if(storageUploadsBroken || !JSON.stringify(state).includes(';base64,')) return;
-  const v = state._v;
-  await migrateDataUrisIn(state, 'root');
-  if(state._v !== v) return; // a newer save already went out and carried the uploaded URLs with it
-  try{
-    await fbStateRef.set(state);
-    localStorage.setItem('ibtkar-inventory-v1', JSON.stringify(state));
-  }catch(e){ /* the data itself is already saved above */ }
 }
+let syncMigratingAttachments = false;
 
 function showToast(msg){
   const t = document.getElementById('toast');
@@ -9104,6 +9448,13 @@ async function submitBackupPassword(){
   }
 }
 
+async function backupForgotPassword(){
+  const pin = await appPrompt('اكتب الرقم السري بتاع فتح التطبيق', '');
+  if(pin===null) return;
+  if(simpleHash(String(pin).trim()) !== localStorage.getItem('ibtkar-app-pin-hash')){ showToast('الرقم السري غلط'); return; }
+  closeModal('overlay-backup-password');
+  openBackupModal();
+}
 function openBackupModal(){
   document.getElementById('restoreBackupInput').value = '';
   document.getElementById('overlay-backup').classList.add('show');
@@ -9129,7 +9480,7 @@ function downloadBackup(){
 async function handleRestoreBackup(evt){
   const file = evt.target.files && evt.target.files[0];
   if(!file) return;
-  if(!(await confirmDelete('متأكد؟ هيتم استبدال كل البيانات الحالية بالبيانات اللي في الملف ده نهائيًا.'))){
+  if(!(await confirmDelete('هندمج النسخة دي مع البيانات الحالية: أي حاجة ناقصة هترجع، واللي موجود في الاتنين هياخد نسخة الملف. مفيش حاجة هتتمسح. متأكد؟'))){
     document.getElementById('restoreBackupInput').value = '';
     return;
   }
@@ -9137,12 +9488,15 @@ async function handleRestoreBackup(evt){
     const text = await file.text();
     const parsed = JSON.parse(text);
     if(typeof parsed !== 'object' || parsed===null) throw new Error('invalid backup file');
-    state = parsed;
+    const before = Object.keys(syncCollect(state)).length;
+    state = syncMerge(null, parsed, state, true).state;
+    state.backupPassword = state.backupPassword || parsed.backupPassword;
     try{ markAllRecordsKnown(); }catch(e){} // restored records keep their original authors
     await saveState();
     closeModal('overlay-backup');
-    showToast('تم استرجاع النسخة الاحتياطية');
-    await loadState();
+    renderEverything();
+    const added = Object.keys(syncCollect(state)).length - before;
+    showToast(`تم دمج النسخة الاحتياطية — رجع ${Math.max(0, added)} عنصر ناقص`);
   }catch(e){
     showToast('الملف ده مش نسخة احتياطية صحيحة');
   }
