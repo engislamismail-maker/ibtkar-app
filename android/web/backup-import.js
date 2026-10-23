@@ -1,14 +1,23 @@
 /* ============================================================
-   استرجاع نسخة الويب جوّه تطبيق الأندرويد — مرة واحدة بس.
+   استرجاع نسخة احتياطية مدموجة جوّه التطبيق — مرة واحدة بس لكل نسخة (حسب pkg.id).
    النسخة الاحتياطية متشفّرة (web-backup.enc.json) لأن الريبو عام، وبتتفك بكود من ١٢ رقم.
    البيانات بتتضاف على اللي موجود (دمج حسب الـ id) — مفيش أي حاجة موجودة بتتمسح أو تتغيّر.
    بعد الاسترجاع بيتسجّل state.webBackupImported فالموبايل التاني مش هيسأل تاني.
    ============================================================ */
 (function () {
   'use strict';
+  // each bundled backup has its own id, so a new one is offered even where an older one was restored
   var FLAG = 'webBackupImported';
   var SNOOZE_KEY = 'ibtkar-web-backup-snooze';
   var DONE_KEY = 'ibtkar-web-backup-done'; // على مستوى الجهاز كمان، عشان ميسألش تاني حتى لو المزامنة اتأخرت
+  var pkgCache = null;
+  function useKeysFor(pkg) {
+    if (pkg && pkg.id) {
+      FLAG = 'bundledBackup_' + pkg.id;
+      SNOOZE_KEY = 'ibtkar-bundled-backup-snooze-' + pkg.id;
+      DONE_KEY = 'ibtkar-bundled-backup-done-' + pkg.id;
+    }
+  }
   function markDone() { try { localStorage.setItem(DONE_KEY, '1'); } catch (e) { /* ignore */ } }
   function isDone() { try { return !!localStorage.getItem(DONE_KEY); } catch (e) { return false; } }
   var shown = false;
@@ -69,7 +78,7 @@
     ov.id = 'overlay-web-backup-import';
     ov.innerHTML =
       '<div class="modal">' +
-      '<h2>📥 ترجيع بيانات نسخة الويب</h2>' +
+      '<h2>📥 ترجيع النسخة الاحتياطية</h2>' +
       '<p style="color:var(--muted);font-size:14px;line-height:1.7;margin:6px 0 14px;">' +
       'فيه نسخة احتياطية جاهزة جوّه التطبيق (' + pkg.label + '). اكتب الكود اللي عندك (١٢ رقم) ' +
       'والبيانات هتتضاف على اللي موجود من غير ما يتمسح أي حاجة، وهتوصل للموبايل التاني لوحدها.</p>' +
@@ -107,7 +116,16 @@
       msg.textContent = 'جاري فك النسخة...';
       decrypt(pkg, code).then(function (bak) {
         if (!isPlainObj(bak)) throw new Error('bad');
-        var added = mergeBackup(state, bak);
+        var added;
+        if (typeof syncMerge === 'function' && typeof syncCollect === 'function') {
+          // deep merge: brings back every missing record (also inside workers, projects...), and for
+          // records in both, the backup's copy wins — nothing on the server is deleted
+          var before = Object.keys(syncCollect(state)).length;
+          state = syncMerge(null, bak, state, true).state;
+          added = Math.max(0, Object.keys(syncCollect(state)).length - before);
+        } else {
+          added = mergeBackup(state, bak);
+        }
         state[FLAG] = new Date().toISOString();
         markDone();
         renderEverything();
@@ -124,6 +142,14 @@
 
   function check() {
     if (shown) return;
+    if (!pkgCache) {
+      if (pkgCache === false) return;
+      pkgCache = false;
+      fetch('web-backup.enc.json').then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (pkg) { pkgCache = pkg || false; if (pkg) useKeysFor(pkg); else shown = true; })
+        .catch(function () { shown = true; });
+      return;
+    }
     if (isDone()) { shown = true; return; }
     try {
       /* global state, fbReady, saveState, renderEverything, showToast */
@@ -134,9 +160,7 @@
       try { if (sessionStorage.getItem(SNOOZE_KEY)) return; } catch (e) { /* ignore */ }
     } catch (e) { return; }
     shown = true;
-    fetch('web-backup.enc.json').then(function (r) { return r.ok ? r.json() : null; })
-      .then(function (pkg) { if (pkg && !state[FLAG]) showPrompt(pkg); })
-      .catch(function () { /* no bundled backup */ });
+    if (!state[FLAG]) showPrompt(pkgCache);
   }
 
   setInterval(check, 1500);

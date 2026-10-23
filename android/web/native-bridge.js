@@ -196,6 +196,7 @@
   }
   window.__ibtkarBack = function () {
     if (closeViewer()) return true;
+    try { if (typeof window.closePhotoViewer === 'function' && window.closePhotoViewer()) return true; } catch (err) { /* ignore */ }
     if (visible(document.getElementById('app-lock-screen'))) return false;
 
     var bd = document.getElementById('bd-modal-root');

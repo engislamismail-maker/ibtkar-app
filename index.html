@@ -518,9 +518,19 @@ body{
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .expense-date{font-size:11.5px;color:var(--muted);white-space:nowrap;}
 .expense-detail-photo{
-  width:100%;max-height:260px;object-fit:cover;border-radius:12px;
-  margin-bottom:14px;border:1.5px solid var(--border);
+  display:block;width:100%;max-height:420px;object-fit:contain;background:var(--cream);border-radius:12px;
+  margin-bottom:6px;border:1.5px solid var(--border);cursor:zoom-in;
 }
+.photo-hint{font-size:11.5px;color:var(--muted);text-align:center;margin-bottom:12px;}
+/* full-screen photo viewer */
+#photo-viewer{position:fixed;inset:0;z-index:2147482000;background:rgba(20,18,19,0.97);display:none;flex-direction:column;}
+#photo-viewer.show{display:flex;}
+#photo-viewer .pv-bar{display:flex;gap:8px;justify-content:space-between;padding:12px;padding-top:calc(12px + env(safe-area-inset-top));}
+#photo-viewer .pv-bar button{border:none;border-radius:20px;padding:9px 16px;font:700 14px Tajawal,sans-serif;background:var(--gold);color:#fff;cursor:pointer;}
+#photo-viewer .pv-stage{flex:1;overflow:auto;display:flex;align-items:center;justify-content:center;touch-action:pan-x pan-y pinch-zoom;}
+#photo-viewer img{max-width:100%;max-height:100%;object-fit:contain;cursor:zoom-in;}
+#photo-viewer.zoomed .pv-stage{display:block;}
+#photo-viewer.zoomed img{max-width:none;max-height:none;width:220%;cursor:zoom-out;}
 .detail-row{display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--border);font-size:14px;}
 .detail-row:last-child{border-bottom:none;}
 .detail-row b{color:var(--charcoal);}
@@ -3742,6 +3752,45 @@ async function saveState(){
 }
 let syncMigratingAttachments = false;
 
+/* Full-screen photo viewer (invoices, transfers, any attachment): tap the photo to zoom in/out */
+function openPhotoViewer(src){
+  let v = document.getElementById('photo-viewer');
+  if(!v){
+    v = document.createElement('div');
+    v.id = 'photo-viewer';
+    v.innerHTML = `<div class="pv-bar">
+        <button type="button" onclick="closePhotoViewer()">✕ قفل</button>
+        <span style="display:flex;gap:8px;">
+          <button type="button" onclick="document.getElementById('photo-viewer').classList.toggle('zoomed')">🔍 تكبير</button>
+          <button type="button" onclick="savePhotoFromViewer()">⬇️ حفظ</button>
+        </span>
+      </div>
+      <div class="pv-stage"><img alt="صورة"></div>`;
+    v.querySelector('img').addEventListener('click', ()=> v.classList.toggle('zoomed'));
+    document.body.appendChild(v);
+  }
+  v.classList.remove('zoomed');
+  v.querySelector('img').src = src;
+  v.classList.add('show');
+}
+function closePhotoViewer(){
+  const v = document.getElementById('photo-viewer');
+  if(v && v.classList.contains('show')){ v.classList.remove('show','zoomed'); return true; }
+  return false;
+}
+async function savePhotoFromViewer(){
+  const img = document.querySelector('#photo-viewer img');
+  if(!img || !img.src) return;
+  try{
+    const blob = await (await fetch(img.src)).blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'ibtkar-photo-' + new Date().toISOString().slice(0,10) + (blob.type.includes('png') ? '.png' : '.jpg');
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=> URL.revokeObjectURL(url), 4000);
+  }catch(e){ window.open(img.src, '_blank'); }
+}
+
 function showToast(msg){
   const t = document.getElementById('toast');
   t.textContent = msg;
@@ -4538,7 +4587,7 @@ async function handleExpenseImageSelect(evt){
   if(!file) return;
   if(!file.type.startsWith('image/')){ showToast('اختار ملف صورة'); return; }
   try{
-    newExpenseImage = await resizeImageFile(file, 640, 0.72);
+    newExpenseImage = await resizeImageFile(file, 1200, 0.7); // invoices / transfers: sharp enough to read the text
     document.getElementById('exp-image-preview').src = newExpenseImage;
     document.getElementById('exp-image-preview-wrap').style.display = 'block';
   }catch(e){
@@ -4727,7 +4776,7 @@ async function addExpense(){
   } else {
     receiptData = { recipientName: description || project || 'مصروف عام', recipientRole: 'مصروف عام', amount, project, contextLine: null, date: new Date().toISOString(), by: selectedActor.expense };
   }
-  if(receiptData) offerPaymentReceipt(receiptData, reminderInfo);
+  if(receiptData){ receiptData.image = record.image || null; offerPaymentReceipt(receiptData, reminderInfo); }
 }
 
 /* ===================== Income (قبض) ===================== */
@@ -4751,7 +4800,7 @@ async function handleIncomeImageSelect(evt){
   if(!file) return;
   if(!file.type.startsWith('image/')){ showToast('اختار ملف صورة'); return; }
   try{
-    newIncomeImage = await resizeImageFile(file, 640, 0.72);
+    newIncomeImage = await resizeImageFile(file, 1200, 0.7); // invoices / transfers: sharp enough to read the text
     document.getElementById('inc-image-preview').src = newIncomeImage;
     document.getElementById('inc-image-preview-wrap').style.display = 'block';
   }catch(e){
@@ -4810,7 +4859,7 @@ function openTxnDetail(id, kind){
   document.getElementById('expense-detail-delete-btn').textContent = isIncome ? 'حذف القبض' : 'حذف المصروف';
   const photoWrap = document.getElementById('expense-detail-photo-wrap');
   photoWrap.innerHTML = e.image
-    ? `<img class="expense-detail-photo" src="${e.image}" alt="مرفق">`
+    ? `<img class="expense-detail-photo" src="${e.image}" alt="مرفق" onclick="openPhotoViewer(this.src)"><div class="photo-hint">دوس على الصورة تفتحها كاملة وتكبّرها</div>`
     : '';
   const linkedWorker = (!isIncome && e.workerId) ? (state.workers||[]).find(w=>w.id===e.workerId) : null;
   const linkedLog = (linkedWorker && e.workerLogId) ? (linkedWorker.logs||[]).find(l=>l.id===e.workerLogId) : null;
@@ -4834,7 +4883,7 @@ function openTxnDetail(id, kind){
 /* Rebuild the receipt for an already-saved payment, as it stood at the time of that payment
    (the payments before it on the same contract / supplier account, and what was left after it). */
 function buildReceiptDataForTxn(e, kind){
-  const base = { amount:Number(e.amount)||0, project:e.project, date:e.date, by:e.by, amountLabel:'المبلغ المدفوع', contextLine:null };
+  const base = { amount:Number(e.amount)||0, project:e.project, date:e.date, by:e.by, amountLabel:'المبلغ المدفوع', contextLine:null, image: e.image || null };
   if(kind==='income'){
     const p = findProjectByLocation(e.project || '');
     return { ...base, recipientName: (p && p.client) || e.project || 'العميل', recipientRole: 'قبض من العميل' + (e.method ? ' — ' + e.method : ''), amountLabel:'المبلغ المقبوض' };
@@ -5022,10 +5071,16 @@ async function buildPaymentReceiptCanvas(){
       <div><div style="font-size:12px;color:#8C8177;">التاريخ</div><div style="font-size:14px;font-weight:700;">${dateLabel}</div></div>
       ${data.by ? `<div><div style="font-size:12px;color:#8C8177;">بواسطة</div><div style="font-size:14px;font-weight:700;">${escapeHtml(data.by)}</div></div>` : ''}
     </div>
+    ${data.image ? `<div style="margin-top:18px;">
+      <div style="font-size:12px;color:#8C8177;margin-bottom:6px;">📎 صورة الفاتورة / التحويل</div>
+      <img src="${data.image}" crossorigin="anonymous" style="display:block;width:100%;height:auto;border-radius:10px;border:1px solid #E6DED2;">
+    </div>` : ''}
     <div style="margin-top:26px;padding-top:12px;border-top:1px solid #E6DED2;font-size:11px;color:#8C8177;">
       تم الإصدار بواسطة IBTKAR Architecture Development — ${fmtDateTime(new Date().toISOString())}
     </div>
   `;
+  // wait for the attached photo to load so it's in the picture
+  await Promise.all([...document.querySelectorAll('#receipt-print-body img')].map(img=> img.complete ? null : new Promise(r=>{ img.onload = img.onerror = r; setTimeout(r, 6000); })));
 
   const wrap = document.getElementById('receipt-print-wrap');
   wrap.style.display = 'block';
@@ -5060,13 +5115,12 @@ async function downloadPaymentReceipt(format){
       filename = receiptFilenameBase() + '.jpg';
       mime = 'image/jpeg';
     } else {
-      const imgData = canvas.toDataURL('image/png');
+      const imgData = canvas.toDataURL('image/jpeg', 0.9); // JPEG keeps a receipt with a photo small enough for WhatsApp
       const { jsPDF } = window.jspdf;
-      const pdf = new jsPDF({ unit:'pt', format:'a4' });
-      const pageWidth = pdf.internal.pageSize.getWidth();
-      const imgProps = pdf.getImageProperties(imgData);
-      const imgHeight = (imgProps.height * pageWidth) / imgProps.width;
-      pdf.addImage(imgData, 'PNG', 0, 0, pageWidth, imgHeight);
+      const pageWidth = 595.28; // A4 width — the page is as tall as the receipt, so a long one (with the photo) is never cut
+      const imgHeight = (canvas.height * pageWidth) / canvas.width;
+      const pdf = new jsPDF({ unit:'pt', format:[pageWidth, Math.max(imgHeight, 200)] });
+      pdf.addImage(imgData, 'JPEG', 0, 0, pageWidth, imgHeight);
       blob = pdf.output('blob'); // same proven pattern as every other PDF export in this app
       filename = receiptFilenameBase() + '.pdf';
       mime = 'application/pdf';
@@ -7374,6 +7428,7 @@ function returnToProjectDashboard(){
 }
 // the Android app calls this on the phone's back button after closing any open window
 window.ibtkarHandleBack = function(){
+  if(closePhotoViewer()) return true;
   if(typeof bdNbExitFullscreen==='function' && bdNbExitFullscreen()) return true;
   if(activeProjectContext && ['warehouse','accounts','workers'].includes(currentView)){
     returnToProjectDashboard();
