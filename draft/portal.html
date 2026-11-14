@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>متابعة المشروع</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;900&display=swap">
+<style>
+/* Client page: read-only view of one project, published by the IBTKAR app (draft) */
+:root{ --bg:#F5F1EC; --card:#FFFFFF; --ink:#2E2A2C; --muted:#8C8177; --line:#E6DED2; --gold:#D59663; --green:#6E8B74; --rose:#C2547A; }
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:'Tajawal','Segoe UI',Tahoma,sans-serif;font-size:15px;line-height:1.6;
+  padding:max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) 32px max(16px, env(safe-area-inset-left))}
+.wrap{max-width:560px;margin:0 auto;display:grid;gap:12px}
+.head{text-align:center;padding:10px 0 4px}
+.brand{font-weight:900;color:var(--gold);letter-spacing:.5px}
+h1{margin:2px 0 0;font-size:22px;font-weight:900}
+.hello{color:var(--muted);font-size:14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px 16px}
+.card h2{margin:0 0 8px;font-size:15px;font-weight:900}
+.bar{height:10px;border-radius:10px;background:#E9E2D9;overflow:hidden}
+.bar div{height:100%;background:var(--green)}
+.big{font-size:28px;font-weight:900;font-variant-numeric:tabular-nums}
+.photos{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.photos img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:10px;cursor:zoom-in}
+.row{display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-bottom:1px solid var(--line);font-size:14px}
+.row:last-child{border-bottom:none}
+.n{font-variant-numeric:tabular-nums;white-space:nowrap}
+.ok{color:var(--green);font-weight:700}
+.due{color:var(--rose);font-weight:700}
+.day{margin-bottom:8px}
+.day b{font-size:13.5px}
+.day ul{margin:2px 0 0;padding-inline-start:18px;font-size:13.5px}
+.muted{color:var(--muted);font-size:12.5px}
+.foot{text-align:center;color:var(--muted);font-size:12px;padding-top:6px}
+#viewer{position:fixed;inset:0;background:rgba(20,18,19,.95);display:none;align-items:center;justify-content:center;padding:16px}
+#viewer.show{display:flex}
+#viewer img{max-width:100%;max-height:100%;object-fit:contain}
+</style>
+</head>
+<body>
+<div class="wrap" id="app"><div class="card" style="text-align:center">جاري التحميل…</div></div>
+<div id="viewer" onclick="this.classList.remove('show')"><img alt=""></div>
+
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-database-compat.js"></script>
+<script>
+firebase.initializeApp({
+  apiKey: "AIzaSyBFcNGuBPeJSSjBf_Ff1B4wGGClMPOXVpI",
+  authDomain: "ibtkar-system.firebaseapp.com",
+  databaseURL: "https://ibtkar-system-default-rtdb.firebaseio.com",
+  projectId: "ibtkar-system",
+  appId: "1:20537859000:web:9710db0df9d33b20318d4d"
+});
+const esc = s=> String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const money = n=> Number(n||0).toLocaleString('en-US') + ' ج.م';
+const fmt = d=> d ? new Date(d.length===10 ? d+'T00:00:00' : d).toLocaleDateString('ar-EG',{day:'numeric',month:'long',numberingSystem:'latn'}) : '';
+const token = new URLSearchParams(location.search).get('t');
+const app = document.getElementById('app');
+function show(src){ const v = document.getElementById('viewer'); v.querySelector('img').src = src; v.classList.add('show'); }
+
+if(!token){ app.innerHTML = '<div class="card">اللينك ناقص — اطلب اللينك تاني من الشركة.</div>'; }
+else {
+  const ref = firebase.database().ref('ibtkar_draft_portal/' + token);
+  ref.child('page').once('value').then(snap=>{
+    const p = snap.val();
+    if(!p){ app.innerHTML = '<div class="card">الصفحة دي مش متاحة دلوقتي — اطلب اللينك تاني من الشركة.</div>'; return; }
+    let h = `<div class="head"><div class="brand">${esc(p.company)}</div><h1>${esc(p.project)}</h1>${p.client ? `<div class="hello">أهلاً ${esc(p.client)}</div>` : ''}</div>`;
+    if(p.progress!=null) h += `<div class="card"><h2>📈 الإنجاز</h2><div class="big">${p.progress}%</div><div class="bar"><div style="width:${p.progress}%"></div></div></div>`;
+    if(p.photos && p.photos.length) h += `<div class="card"><h2>📸 من الموقع</h2><div class="photos">${p.photos.map(src=>`<img src="${src}" onclick="show(this.src)" alt="">`).join('')}</div></div>`;
+    if(p.reports && p.reports.length) h += `<div class="card"><h2>📄 آخر الأيام</h2>${p.reports.map(r=>`<div class="day"><b>${fmt(r.date)}</b> <span class="muted">· ${r.onSite} في الموقع</span>${r.done && r.done.length ? `<ul>${r.done.map(x=>`<li>✅ ${esc(x)}</li>`).join('')}</ul>` : ''}${r.next && r.next.length ? `<ul>${r.next.map(x=>`<li>⏭️ ${esc(x)}</li>`).join('')}</ul>` : ''}</div>`).join('')}</div>`;
+    if(p.payments){
+      h += `<div class="card"><h2>💰 الدفعات</h2>${p.payments.map(x=>`<div class="row"><span>${esc(x.what)}${x.due ? ` <span class="muted">· ${fmt(x.due)}</span>` : ''}</span><span class="n ${x.left>0?'due':'ok'}">${x.left>0 ? money(x.left) + ' فاضل' : '✓ مدفوعة'}</span></div>`).join('') || '<div class="muted">مفيش دفعات متسجلة</div>'}
+        <div class="muted" style="margin-top:6px">إجمالي اللي اتدفع: ${money(p.received)}</div></div>`;
+    }
+    if(p.choices && p.choices.length) h += `<div class="card"><h2>🎯 اختياراتك</h2>${p.choices.map(c=>`<div class="row"><span>${esc(c.category)}${c.category&&c.name?': ':''}${esc(c.name)}</span><span class="${c.confirmed?'ok':'muted'}">${c.confirmed?'✓ متأكد':'⏳ مستني ردك'}</span></div>`).join('')}</div>`;
+    h += `<div class="foot">آخر تحديث: ${fmt(p.updatedAt)} · صفحة للعرض بس</div>`;
+    app.innerHTML = h;
+    // visit log for the company
+    const ua = navigator.userAgent;
+    const device = /iPhone|iPad/.test(ua) ? 'آيفون' : /Android/.test(ua) ? 'أندرويد' : /Windows/.test(ua) ? 'كمبيوتر ويندوز' : /Mac/.test(ua) ? 'ماك' : 'جهاز';
+    ref.child('views').push({ at: new Date().toISOString(), device }).catch(()=>{});
+  }).catch(()=>{ app.innerHTML = '<div class="card">مقدرتش أفتح الصفحة — اتأكد من النت وجرب تاني.</div>'; });
+}
+</script>
+</body>
+</html>
