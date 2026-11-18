@@ -883,6 +883,58 @@ input[type="number"]{-moz-appearance:textfield;}
 .kw-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px 12px;font-size:13px;}
 .kw-grid label{display:flex;justify-content:space-between;align-items:center;gap:6px;}
 @media (max-width:480px){ .kw-grid{grid-template-columns:1fr;} }
+
+.ks{position:fixed;inset:0;z-index:300;background:var(--cream);display:grid;grid-template-rows:auto 1fr;font-family:'Tajawal',sans-serif;}
+.ks[hidden]{display:none;}
+body.ks-on{overflow:hidden;}
+body.ks-on .overlay{z-index:400;}
+body.ks-on .bottom-nav,body.ks-on #settings-fab{display:none;}
+.ks-top{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:calc(10px + env(safe-area-inset-top,0px)) 14px 10px;background:#fff;border-bottom:1px solid var(--line);position:relative;}
+.ks-top::after{content:"";position:absolute;bottom:-1px;inset-inline-start:0;width:84px;height:3px;background:var(--gold);}
+.ks-top .k-name{flex:0 1 240px;}
+.ks-seg{display:flex;background:var(--blush);border-radius:10px;padding:3px;}
+.ks-seg button{border:none;background:none;padding:7px 14px;border-radius:8px;font:700 14px Tajawal,sans-serif;color:var(--charcoal);cursor:pointer;}
+.ks-seg button.on{background:var(--charcoal);color:#fff;}
+.ks-acts{display:flex;gap:6px;flex-wrap:wrap;margin-inline-start:auto;}
+#ks-doors.on{background:var(--rose);color:#fff;border-color:var(--rose);}
+.ks-body{display:grid;grid-template-columns:300px minmax(0,1fr) 380px;min-height:0;}
+.ks-side{background:#fff;overflow:auto;min-height:0;border-inline-end:1px solid var(--line);}
+#ks-right{border-inline-end:none;border-inline-start:1px solid var(--line);}
+.ks-tabs{display:flex;position:sticky;top:0;background:#fff;z-index:2;border-bottom:1px solid var(--line);}
+.ks-tabs button{flex:1;border:none;background:none;padding:11px 6px;font:700 13.5px Tajawal,sans-serif;color:var(--muted);cursor:pointer;border-bottom:3px solid transparent;}
+.ks-tabs button.on{color:var(--charcoal);border-bottom-color:var(--rose);}
+.ks-pane{padding:12px;display:grid;gap:8px;}
+.ks-cap{font-weight:900;font-size:13px;color:var(--charcoal);margin-top:6px;}
+.ks-fit{font-size:12.5px;color:var(--muted);}
+.ks-fit.bad{color:var(--deep-rose);font-weight:700;}
+.ks-lib{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;}
+.ks-lib button{border:1.5px solid var(--line);background:#fff;border-radius:10px;padding:6px 4px;display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;font:700 11.5px Tajawal,sans-serif;color:var(--charcoal);}
+.ks-lib button:hover{border-color:var(--rose);background:var(--blush);}
+.ks-thumb{width:46px;height:auto;max-height:70px;}
+.ks-sw{display:flex;flex-wrap:wrap;gap:6px;}
+.ks-sw button{width:34px;height:34px;border-radius:50%;border:2px solid var(--line);cursor:pointer;}
+.ks-sw button.on{outline:3px solid var(--rose);outline-offset:2px;}
+.ks-main{position:relative;min-height:0;min-width:0;}
+#ks-canvas{position:absolute;inset:0;}
+#ks-canvas canvas{display:block;}
+#ks-view-svg{position:absolute;inset:0;overflow:auto;padding:14px;}
+#ks-view-svg .k-svg{max-height:none;}
+.ks-elev .k-svg{min-width:520px;}
+.ks-hint{position:absolute;bottom:10px;inset-inline-start:10px;inset-inline-end:10px;font-size:12px;color:var(--muted);background:rgba(255,255,255,.85);border-radius:8px;padding:5px 9px;pointer-events:none;text-align:center;}
+.ks-msg{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--muted);padding:20px;text-align:center;}
+.ks-empty{color:var(--muted);font-size:13.5px;padding:20px 6px;text-align:center;}
+.ks-part{display:grid;grid-template-columns:22px 64px 1fr;gap:8px;align-items:center;padding:7px 0;border-bottom:1px solid var(--line);font-size:13px;}
+.ks-no{width:22px;height:22px;border-radius:50%;background:var(--rose);color:#fff;font-weight:900;font-size:11.5px;display:flex;align-items:center;justify-content:center;}
+.ks-dim{font-weight:900;font-variant-numeric:tabular-nums;}
+.ks-part small{color:var(--muted);}
+.ks-sheet{cursor:zoom-in;border:1px solid var(--line);border-radius:10px;padding:6px;background:#fff;}
+.ks-sheet svg,.modal .wr-card svg{width:100%;height:auto;display:block;}
+@media (max-width:980px){
+  .ks-body{grid-template-columns:1fr;grid-template-rows:48vh auto auto;overflow:auto;}
+  .ks-main{order:-1;border-bottom:1px solid var(--line);}
+  .ks-side{overflow:visible;border:none;}
+  .ks-acts{margin-inline-start:0;}
+}
 /* ===================== IBTKAR GE 2026 — الهوية البصرية (DRAFT) =====================
    ألوان الدليل، تصميم مسطح من غير ظلال، كروت Blush من غير إطار، خط دهبي تحت العناوين،
    جداول بهيدر روز وصفوف متبادلة، والإجمالي فحمي بأرقام دهبي. */
@@ -12684,6 +12736,24 @@ initAppLock();
     <div id="kw-body"></div>
   </div>
 </div>
+<div id="kstudio" class="ks" hidden>
+  <div class="ks-top">
+    <button type="button" class="btn btn-ghost btn-sm" onclick="closeKitchenStudio()">→ المطابخ</button>
+    <input type="text" id="ks-name" class="k-name" onchange="kSet('name',this.value.trim()||'مطبخ')">
+    <div id="ks-views" class="ks-seg"><button type="button" data-v="3d" onclick="ksSetView('3d')">٣D</button><button type="button" data-v="wall" onclick="ksSetView('wall')">الحيطة</button><button type="button" data-v="plan" onclick="ksSetView('plan')">من فوق</button></div>
+    <div class="ks-acts">
+      <button type="button" class="btn btn-ghost btn-sm" id="ks-doors" onclick="ksToggleDoors()">🚪 افتح الضلف</button>
+      <button type="button" class="btn btn-ghost btn-sm" onclick="ksSnapshot()">📸 صورة للعميل</button>
+      <button type="button" class="btn btn-ghost btn-sm" onclick="openKitchenWorkshop()">⚙️ الورشة والأسعار</button>
+      <button type="button" class="btn btn-gold btn-sm" onclick="kPdf()">📄 PDF الورشة</button>
+    </div>
+  </div>
+  <div class="ks-body">
+    <aside id="ks-left" class="ks-side"></aside>
+    <main class="ks-main"><div id="ks-canvas"></div><div id="ks-view-svg"></div><div id="ks-hint" class="ks-hint"></div></main>
+    <aside id="ks-right" class="ks-side"></aside>
+  </div>
+</div>
 <div class="overlay" id="overlay-notifs">
   <div class="modal" style="max-width:460px;">
     <button class="modal-close" onclick="closeModal('overlay-notifs')">×</button>
@@ -14481,6 +14551,447 @@ function openKitchenWorkshop(){
 }
 function kwSet(path, v){ const S = kwS(); const parts = path.split('.'); let o = S; for(let i=0;i<parts.length-1;i++) o = o[parts[i]]; o[parts[parts.length-1]] = v; state.settings.kitchenWorkshop = S; saveState(); openKitchenWorkshop(); kRender(); }
 function kpSet(k, v){ const P = kwP(); P[k] = isNaN(v) ? 0 : v; state.settings.kitchenPrices2 = P; saveState(); kRender(); }
+
+</script>
+<script>
+
+/* =====================================================================================
+   🍳 استوديو المطبخ (DRAFT) — شاشة كاملة للكمبيوتر (وتشتغل على الموبايل):
+   المكتبة والأوضة | المطبخ ٣D / الحيطة / من فوق | الوحدة، القطع، التقطيع، التكلفة.
+   الـ ٣D بيتبني من نفس مقاسات القطع اللي في الكات ليست. كل الأبعاد بالسنتيمتر.
+   ===================================================================================== */
+
+/* ---------- رص القطع على الألواح: MaxRects (أحسن من الرص في صفوف) ---------- */
+function kNestMaxRects(parts, opts){
+  const S = kwS(), k = S.kerf, BL = S.board.L - 2*S.trim, BW = S.board.W - 2*S.trim;
+  const rotate = !(opts && opts.grain);
+  const items = [];
+  parts.forEach(p=>{ for(let i=0;i<p.qty;i++) items.push({ ...p, a: Math.max(p.L,p.W), b: Math.min(p.L,p.W) }); });
+  items.sort((x,y)=> (y.a*y.b) - (x.a*x.b) || y.a - x.a);
+  const sheets = [], tooBig = [];
+  const newSheet = ()=>({ free: [{ x:0, y:0, w: BL + k, h: BW + k }], items: [] });
+  const fit = (sh, w, h)=>{ // best short side fit
+    let best = null;
+    for(const f of sh.free){
+      if(w <= f.w && h <= f.h){ const ss = Math.min(f.w - w, f.h - h), ls = Math.max(f.w - w, f.h - h);
+        if(!best || ss < best.ss || (ss===best.ss && ls < best.ls)) best = { x:f.x, y:f.y, ss, ls }; }
+    }
+    return best;
+  };
+  const place = (sh, r)=>{
+    const out = [];
+    for(const f of sh.free){
+      if(r.x >= f.x + f.w || r.x + r.w <= f.x || r.y >= f.y + f.h || r.y + r.h <= f.y){ out.push(f); continue; }
+      if(r.x > f.x) out.push({ x:f.x, y:f.y, w: r.x - f.x, h: f.h });
+      if(r.x + r.w < f.x + f.w) out.push({ x: r.x + r.w, y: f.y, w: f.x + f.w - r.x - r.w, h: f.h });
+      if(r.y > f.y) out.push({ x:f.x, y:f.y, w: f.w, h: r.y - f.y });
+      if(r.y + r.h < f.y + f.h) out.push({ x:f.x, y: r.y + r.h, w: f.w, h: f.y + f.h - r.y - r.h });
+    }
+    sh.free = out.filter((a,i)=> !out.some((b,j)=> j!==i && a.x >= b.x && a.y >= b.y && a.x + a.w <= b.x + b.w && a.y + a.h <= b.y + b.h && (j < i || a.w!==b.w || a.h!==b.h || a.x!==b.x || a.y!==b.y)));
+  };
+  for(const it of items){
+    const fitsA = it.a <= BL && it.b <= BW, fitsB = rotate && it.b <= BL && it.a <= BW;
+    if(!fitsA && !fitsB){ tooBig.push(it); continue; }
+    let done = false;
+    for(const sh of [...sheets, null]){
+      const s = sh || newSheet();
+      const o1 = fitsA ? fit(s, it.a + k, it.b + k) : null;
+      const o2 = fitsB ? fit(s, it.b + k, it.a + k) : null;
+      const use = o1 && (!o2 || o1.ss <= o2.ss) ? { ...o1, w: it.a, h: it.b } : (o2 ? { ...o2, w: it.b, h: it.a } : null);
+      if(!use) continue;
+      if(!sh) sheets.push(s);
+      s.items.push({ ...it, x: use.x, y: use.y, w: use.w, h: use.h });
+      place(s, { x: use.x, y: use.y, w: use.w + k, h: use.h + k });
+      done = true; break;
+    }
+    if(!done) tooBig.push(it);
+  }
+  const area = items.reduce((s,i)=> s + i.a*i.b, 0);
+  const eff = sheets.length ? Math.round(area / (sheets.length * S.board.L * S.board.W) * 100) : 0;
+  return { sheets, eff, tooBig, BL, BW };
+}
+kNest = function(parts){ return kNestMaxRects(parts, { grain: false }); };
+// القطع تاخد أرقام (١، ٢، ٣…) لكل خامة — نفس الرقم في الجدول وفي رسمة التقطيع
+{ const _kc = kCompute; kCompute = function(k){
+  const c = _kc(k);
+  Object.entries(c.byMat).forEach(([m, list])=>{
+    list.forEach((p,i)=> p.no = i + 1);
+    if(list.length){
+      const grain = m==='front' && !!kwS().grainFront;
+      c.nests[m] = kNestMaxRects(list, { grain });
+    }
+  });
+  const S = kwS(), P = kwP();
+  c.items.forEach(x=>{
+    if(/^ألواح بدن/.test(x[1]) && c.nests.carcass) x[2] = c.nests.carcass.sheets.length;
+    if(/^ألواح ضلف/.test(x[1]) && c.nests.front) x[2] = c.nests.front.sheets.length;
+    if(/^ألواح صناديق/.test(x[1]) && c.nests.drawer) x[2] = c.nests.drawer.sheets.length;
+    if(/^ألواح HDF/.test(x[1]) && c.nests.back) x[2] = c.nests.back.sheets.length;
+  });
+  c.materials = c.items.reduce((s,x)=> s + x[2]*x[4], 0);
+  c.labor = c.materials * (P.labor||0)/100; c.profit = (c.materials + c.labor) * (P.profit||0)/100; c.total = c.materials + c.labor + c.profit;
+  return c;
+}; }
+
+/* ---------- الحيطان في الفراغ (مشتركة بين الرسمة من فوق والـ ٣D) ---------- */
+function kWallSegs(k){
+  const segs = []; let x = 0, y = 0, dir = 0;
+  const dirs = [[1,0],[0,1],[-1,0],[0,-1]];
+  k.walls.forEach((w,i)=>{
+    if(k.layout==='II' && i===1){ const a = segs[0]; const gap = Math.max(240, kwS().baseD*2 + 120);
+      segs.push({ w, x1: a.x1 + w.length, y1: a.y1 + gap, dir:[-1,0] }); return; }
+    const [dx,dy] = dirs[dir]; segs.push({ w, x1:x, y1:y, dir:[dx,dy] });
+    x += dx*w.length; y += dy*w.length; dir = (dir+1)%4;
+  });
+  segs.forEach(s=>{ s.x2 = s.x1 + s.dir[0]*s.w.length; s.y2 = s.y1 + s.dir[1]*s.w.length; s.n = [-s.dir[1], s.dir[0]]; });
+  return segs;
+}
+kPlanSvg = function(k){
+  if(!k.walls.length) return '';
+  const segs = kWallSegs(k);
+  const xs = segs.flatMap(s=>[s.x1,s.x2, s.x1 + s.n[0]*80, s.x2 + s.n[0]*80]), ys = segs.flatMap(s=>[s.y1,s.y2, s.y1 + s.n[1]*80, s.y2 + s.n[1]*80]);
+  const minX = Math.min(...xs)-40, minY = Math.min(...ys)-40, W = Math.max(...xs)-minX+40, H = Math.max(...ys)-minY+40;
+  let svg = '';
+  segs.forEach(s=>{
+    const L = kLayoutWall(k, s.w), [nx,ny] = s.n, [dx,dy] = s.dir;
+    [...L.base, ...L.wallRow].forEach(u=>{ const p = L.pos[u.id], dpt = kDims(u).D, isWall = KU[u.type].row==='wall';
+      const ax = s.x1 + dx*p.x, ay = s.y1 + dy*p.x, bx = ax + dx*u.w, by = ay + dy*u.w;
+      const poly = [[ax,ay],[bx,by],[bx+nx*dpt,by+ny*dpt],[ax+nx*dpt,ay+ny*dpt]].map(q=>q.join(',')).join(' ');
+      svg += `<polygon points="${poly}" fill="${u.id===kz.sel ? '#F3D9C4' : isWall ? 'none' : (KU[u.type].row==='tall' ? '#E7D9DD' : '#F8EEF0')}" stroke="#C2547A" stroke-width="${isWall ? 1 : 1.4}" ${isWall ? 'stroke-dasharray="6 4"' : ''} onclick="kSelect('${u.id}')" style="cursor:pointer"/>`; });
+    svg += `<line x1="${s.x1}" y1="${s.y1}" x2="${s.x2}" y2="${s.y2}" stroke="#2E2A2C" stroke-width="8" stroke-linecap="square"/>`;
+    s.w.openings.forEach(o=>{ const ax = s.x1 + dx*o.from, ay = s.y1 + dy*o.from; svg += `<line x1="${ax}" y1="${ay}" x2="${ax+dx*o.width}" y2="${ay+dy*o.width}" stroke="${o.type==='door' ? '#D59663' : '#7FB3D5'}" stroke-width="8"/>`; });
+    svg += `<text x="${(s.x1+s.x2)/2 - nx*24}" y="${(s.y1+s.y2)/2 - ny*24 + 7}" font-size="22" text-anchor="middle" fill="#6B6467">${escapeHtml(s.w.name)} · ${s.w.length}</text>`;
+  });
+  return `<svg viewBox="${minX} ${minY} ${W} ${H}" class="k-svg">${svg}</svg>`;
+};
+
+/* ---------- ألوان الخامات ---------- */
+const KS_FRONTS = [['أبيض','#F4F2EE'],['كريمي','#EDE3D3'],['خشب فاتح','#C9A37A'],['خشب غامق','#6E4B35'],['رمادي','#8C8C8A'],['زيتي','#5E6B57'],['كحلي','#2F3A4C'],['أسود مطفي','#2E2A2C'],['روز','#C2547A']];
+const KS_TOPS = [['رخام أبيض','#EEEAE4'],['رخام بيج','#D9CBB5'],['جرانيت أسود','#2B2A2A'],['رمادي','#9A9A98'],['خشب','#B08A62']];
+function ksLook(k){ k.look = Object.assign({ front:'#F4F2EE', carcass:'#ECE7E0', top:'#EEEAE4', handle:'#2E2A2C' }, k.look || {}); return k.look; }
+
+/* ---------- الـ ٣D ---------- */
+let ks = { open:false, view:'3d', left:'lib', right:'unit', doorsOpen:false, three:null, loading:null };
+function ksLoadThree(){
+  if(window.THREE) return Promise.resolve();
+  if(ks.loading) return ks.loading;
+  const load = src=> new Promise((res, rej)=>{ const s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = rej; document.head.appendChild(s); });
+  ks.loading = load('vendor/three.min.js').catch(()=> load('https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js'));
+  return ks.loading;
+}
+function ks3dInit(){
+  const host = document.getElementById('ks-canvas');
+  if(ks.three || !window.THREE || !host) return;
+  const T = THREE;
+  const renderer = new T.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+  renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
+  renderer.setClearColor(0xF5F1EC, 1);
+  host.appendChild(renderer.domElement);
+  const scene = new T.Scene();
+  const camera = new T.PerspectiveCamera(40, 1, 5, 20000);
+  scene.add(new T.HemisphereLight(0xffffff, 0xE7D9DD, 0.75));
+  const sun = new T.DirectionalLight(0xffffff, 0.55); sun.position.set(300, 600, 500); scene.add(sun);
+  const fill = new T.DirectionalLight(0xffffff, 0.25); fill.position.set(-400, 300, -200); scene.add(fill);
+  const root = new T.Group(); scene.add(root);
+  const orbit = { theta: -0.6, phi: 1.05, r: 900, target: new T.Vector3(150, 90, 100) };
+  ks.three = { renderer, scene, camera, root, orbit, pickables: [] };
+  const el = renderer.domElement; el.style.touchAction = 'none';
+  let drag = null; const pts = new Map();
+  el.addEventListener('pointerdown', e=>{ el.setPointerCapture(e.pointerId); pts.set(e.pointerId, { x:e.clientX, y:e.clientY });
+    drag = { x:e.clientX, y:e.clientY, moved:false, pan: e.button===2 || e.shiftKey || pts.size===2, d0: pts.size===2 ? ksPinch(pts) : 0 }; });
+  el.addEventListener('pointermove', e=>{
+    if(!drag || !pts.has(e.pointerId)) return; pts.set(e.pointerId, { x:e.clientX, y:e.clientY });
+    const dx = e.clientX - drag.x, dy = e.clientY - drag.y; if(Math.abs(dx)+Math.abs(dy) > 3) drag.moved = true;
+    if(pts.size===2){ const d = ksPinch(pts); if(drag.d0){ orbit.r = Math.max(150, Math.min(4000, orbit.r * drag.d0 / d)); } drag.d0 = d; }
+    else if(drag.pan){ const s = orbit.r / 900; const right = new T.Vector3().setFromMatrixColumn(camera.matrix, 0), up = new T.Vector3(0,1,0);
+      orbit.target.addScaledVector(right, -dx*s).addScaledVector(up, dy*s); }
+    else { orbit.theta -= dx*0.008; orbit.phi = Math.max(0.15, Math.min(1.5, orbit.phi - dy*0.008)); }
+    drag.x = e.clientX; drag.y = e.clientY; ks3dRender();
+  });
+  const end = e=>{ pts.delete(e.pointerId); if(drag && !drag.moved && e.type==='pointerup') ks3dPick(e); if(!pts.size) drag = null; };
+  el.addEventListener('pointerup', end); el.addEventListener('pointercancel', end);
+  el.addEventListener('wheel', e=>{ e.preventDefault(); orbit.r = Math.max(150, Math.min(4000, orbit.r * (e.deltaY > 0 ? 1.1 : 0.9))); ks3dRender(); }, { passive:false });
+  el.addEventListener('contextmenu', e=> e.preventDefault());
+  el.addEventListener('dblclick', ()=>{ ks.doorsOpen = !ks.doorsOpen; ks3dBuild(); });
+  new ResizeObserver(()=> ks3dRender()).observe(host);
+}
+function ksPinch(pts){ const [a,b] = [...pts.values()]; return Math.hypot(a.x-b.x, a.y-b.y) || 1; }
+function ks3dRender(){
+  const t = ks.three; if(!t) return; const host = document.getElementById('ks-canvas'); if(!host || !host.clientWidth) return;
+  const w = host.clientWidth, h = host.clientHeight;
+  t.renderer.setSize(w, h, false); t.renderer.domElement.style.width = w + 'px'; t.renderer.domElement.style.height = h + 'px';
+  t.camera.aspect = w / h; t.camera.updateProjectionMatrix();
+  const o = t.orbit;
+  t.camera.position.set(o.target.x + o.r*Math.sin(o.phi)*Math.sin(o.theta), o.target.y + o.r*Math.cos(o.phi), o.target.z + o.r*Math.sin(o.phi)*Math.cos(o.theta));
+  t.camera.lookAt(o.target);
+  t.renderer.render(t.scene, t.camera);
+}
+function ks3dPick(e){
+  const t = ks.three; const r = t.renderer.domElement.getBoundingClientRect();
+  const v = new THREE.Vector2(((e.clientX - r.left)/r.width)*2 - 1, -((e.clientY - r.top)/r.height)*2 + 1);
+  const ray = new THREE.Raycaster(); ray.setFromCamera(v, t.camera);
+  const hit = ray.intersectObjects(t.pickables, false)[0];
+  if(hit){ let o = hit.object; while(o && !o.userData.unitId) o = o.parent; if(o){ const u = kCur().units.find(x=>x.id===o.userData.unitId); if(u){ kz.wall = u.wallId; kz.sel = u.id; ks.right = 'unit'; ksRender(); } } }
+}
+function ks3dBuild(fit){
+  const t = ks.three, k = kCur(); if(!t || !k) return;
+  const T = THREE, S = kwS(), look = ksLook(k);
+  while(t.root.children.length){ const c = t.root.children.pop(); c.traverse(o=>{ if(o.geometry) o.geometry.dispose(); }); }
+  t.pickables = [];
+  const mats = {};
+  const mat = (color, opts)=>{ const key = color + JSON.stringify(opts||{}); return mats[key] = mats[key] || new T.MeshStandardMaterial(Object.assign({ color, roughness: 0.75, metalness: 0.02, side: T.DoubleSide }, opts||{})); };
+  const lineMat = new T.LineBasicMaterial({ color: 0x5c4a48, transparent: true, opacity: 0.35 });
+  const box = (parent, w, h, d, x, y, z, color, opts, noEdge)=>{
+    const g = new T.BoxGeometry(Math.max(0.1,w), Math.max(0.1,h), Math.max(0.1,d));
+    const m = new T.Mesh(g, mat(color, opts)); m.position.set(x, y, z); parent.add(m);
+    if(!noEdge) { const l = new T.LineSegments(new T.EdgesGeometry(g), lineMat); m.add(l); }
+    return m;
+  };
+  const segs = kWallSegs(k);
+  let bb = { minX: 1e9, maxX: -1e9, minZ: 1e9, maxZ: -1e9 };
+  // الأرضية
+  segs.forEach(s=>{ [[s.x1,s.y1],[s.x2,s.y2]].forEach(([x,z])=>{ bb.minX = Math.min(bb.minX,x); bb.maxX = Math.max(bb.maxX,x); bb.minZ = Math.min(bb.minZ,z); bb.maxZ = Math.max(bb.maxZ,z); }); });
+  const floorW = (bb.maxX - bb.minX) + 400, floorD = (bb.maxZ - bb.minZ) + 400;
+  const floor = new T.Mesh(new T.PlaneGeometry(floorW, floorD), mat('#E4DDD3')); floor.rotation.x = -Math.PI/2; floor.position.set((bb.minX+bb.maxX)/2, 0, (bb.minZ+bb.maxZ)/2); t.root.add(floor);
+  const grid = new T.GridHelper(Math.max(floorW, floorD), Math.round(Math.max(floorW, floorD)/50), 0xD6CCC0, 0xDDD5CB); grid.position.copy(floor.position); grid.position.y = 0.1; t.root.add(grid);
+  segs.forEach(s=>{
+    const g = new T.Group();
+    const X = new T.Vector3(s.dir[0], 0, s.dir[1]), Y = new T.Vector3(0,1,0), Z = new T.Vector3(s.n[0], 0, s.n[1]);
+    g.matrixAutoUpdate = false; g.matrix.makeBasis(X, Y, Z); g.matrix.setPosition(s.x1, 0, s.y1);
+    t.root.add(g);
+    const wl = s.w.length;
+    // الحيطة (شفافة شوية عشان تشوف من وراها)
+    box(g, wl, 270, 8, wl/2, 135, -4 - S.backT, '#F7F3EE', { transparent:true, opacity:0.55 }, true);
+    s.w.openings.forEach(o=>{
+      const b = o.type==='door' ? 0 : (o.bottom||100), tp = o.type==='door' ? 210 : (o.top||200);
+      box(g, o.width, tp - b, 1, o.from + o.width/2, (b + tp)/2, -S.backT + 0.6, o.type==='door' ? '#E8D5BE' : '#BFD9EA', { transparent:true, opacity:0.85 }, false);
+    });
+    const L = kLayoutWall(k, s.w);
+    [...L.base, ...L.wallRow].forEach(u=> ks3dUnit(g, u, L.pos[u.id].x, box, look, S));
+    // الرخامة فوق السفلي
+    L.base.filter(u=> KU[u.type].row==='base').forEach(u=>{ const d = kDims(u); box(g, u.w, 3, d.D + 2, L.pos[u.id].x + u.w/2, d.H + 1.5, (d.D + 2)/2, look.top, { roughness: 0.35 }); });
+  });
+  if(fit){ const o = t.orbit; o.target.set((bb.minX+bb.maxX)/2, 100, (bb.minZ+bb.maxZ)/2 + 40); o.r = Math.max(500, Math.max(bb.maxX-bb.minX, bb.maxZ-bb.minZ) * 1.9); }
+  ks3dRender();
+}
+function ks3dUnit(g, u, x0, box, look, S){
+  const T = THREE, d = kDims(u), t = S.carcassT, gap = S.gap, ft = S.frontT;
+  const ug = new T.Group(); ug.userData.unitId = u.id; g.add(ug);
+  const sel = u.id===kz.sel;
+  const y0 = (KU[u.type].row==='wall' ? S.wallBottom : 0) + d.legs, W = u.w, Hc = d.Hc, Dc = d.Dc;
+  const cc = sel ? '#F3D9C4' : look.carcass;
+  const pick = m=>{ m.userData.unitId = u.id; ks.three.pickables.push(m); return m; };
+  if(u.type==='filler'){ pick(box(ug, W, Hc, ft, x0 + W/2, y0 + Hc/2, Dc + ft/2, look.front)); return; }
+  // البدن
+  pick(box(ug, t, Hc, Dc, x0 + t/2, y0 + Hc/2, Dc/2, cc));
+  pick(box(ug, t, Hc, Dc, x0 + W - t/2, y0 + Hc/2, Dc/2, cc));
+  pick(box(ug, W - 2*t, t, Dc, x0 + W/2, y0 + t/2, Dc/2, cc));
+  const rails = KU[u.type].row==='base';
+  if(rails){ pick(box(ug, W - 2*t, t, S.railW, x0 + W/2, y0 + Hc - t/2, Dc - S.railW/2, cc)); pick(box(ug, W - 2*t, t, S.railW, x0 + W/2, y0 + Hc - t/2, S.railW/2, cc)); }
+  else pick(box(ug, W - 2*t, t, Dc, x0 + W/2, y0 + Hc - t/2, Dc/2, cc));
+  pick(box(ug, W, Hc, S.backT, x0 + W/2, y0 + Hc/2, -S.backT/2, '#D9D2C8'));
+  const sh = u.shelves || 0;
+  for(let i=1;i<=sh;i++) box(ug, W - 2*t - 0.2, t, Dc - 2, x0 + W/2, y0 + Hc*i/(sh+1), (Dc-2)/2, cc);
+  // الرجول
+  if(d.legs){ [[4,4],[W-4,4],[4,Dc-6],[W-4,Dc-6]].forEach(([lx,lz])=>{ const c = new T.Mesh(new T.CylinderGeometry(1.6,1.6,d.legs,10), new T.MeshStandardMaterial({ color:0x2E2A2C })); c.position.set(x0 + lx, d.legs/2, lz); ug.add(c); }); }
+  // الوشوش
+  const open = ks.doorsOpen;
+  const handle = (parent, x, y, z, vertical)=>{ if(S.system!=='handle') return; box(parent, vertical ? 1.2 : 12, vertical ? 12 : 1.2, 2, x, y, z, look.handle, { metalness: 0.6, roughness: 0.3 }, true); };
+  const fz = Dc + ft/2;
+  const door = (dx, dy, dw, dh, hingeLeft, glass)=>{
+    const hy = KU[u.type].row==='wall' ? 8 : dh - 8;
+    const pivot = new T.Group(); pivot.position.set(hingeLeft ? dx : dx + dw, dy, Dc + ft); ug.add(pivot);
+    if(open) pivot.rotation.y = hingeLeft ? -1.6 : 1.6;
+    const m = pick(box(pivot, dw, dh, ft, hingeLeft ? dw/2 : -dw/2, dh/2, -ft/2, glass ? '#CFE3EE' : look.front, glass ? { transparent:true, opacity:0.55 } : null));
+    handle(pivot, hingeLeft ? dw - 4 : -dw + 4, hy, 1.2, true);
+    return m;
+  };
+  const doors = (n, yb, h, xs, w, glass)=>{ n = Math.max(1, n|0); const dw = (w - gap*n)/n; for(let i=0;i<n;i++) door(xs + gap/2 + i*(dw+gap), yb, dw, h, n===1 ? true : i < n/2, glass); };
+  const drawer = (yb, h)=>{
+    const out = open ? Dc*0.6 : 0, grp = new T.Group(); grp.position.z = out; ug.add(grp);
+    pick(box(grp, W - gap, h - gap, ft, x0 + W/2, yb + h/2, fz, look.front));
+    handle(grp, x0 + W/2, yb + h - 5, Dc + ft + 1.2, false);
+    if(open){ const bh = Math.max(8, h - 6), bw = W - 2*t - 2*S.slideClear;
+      box(grp, bw, bh, 1.6, x0 + W/2, yb + bh/2 + 2, Dc - 2, cc); box(grp, 1.6, bh, Dc - 6, x0 + t + S.slideClear, yb + bh/2 + 2, Dc/2, cc); box(grp, 1.6, bh, Dc - 6, x0 + W - t - S.slideClear, yb + bh/2 + 2, Dc/2, cc); box(grp, bw, 0.4, Dc - 6, x0 + W/2, yb + 2, Dc/2, '#D9D2C8'); }
+  };
+  const topGap = S.system==='gola' ? S.golaGap : 0;
+  const yTop = y0 + Hc - topGap;
+  switch(u.type){
+    case 'base-doors': case 'sink': doors(u.doors||2, y0 + gap/2, Hc - gap - topGap, x0, W); break;
+    case 'base-drawers': { let yy = yTop; kDrawerHeights(u, Hc - topGap).forEach(h=>{ yy -= h; drawer(yy, h); }); break; }
+    case 'base-combo': { const dh = u.drawerH || 20; drawer(yTop - dh, dh); doors(u.doors||2, y0 + gap/2, Hc - dh - gap - topGap, x0, W); break; }
+    case 'corner': { const bl = Math.min(u.blind||50, W - 20); box(ug, bl, Hc - gap - topGap, ft, x0 + bl/2, y0 + (Hc - topGap)/2, fz, look.front); doors(u.doors||1, y0 + gap/2, Hc - gap - topGap, x0 + bl, W - bl); break; }
+    case 'wall-doors': doors(u.doors||2, y0 + gap/2, Hc - gap, x0, W, !!u.glass); break;
+    case 'wall-flap': { const pivot = new T.Group(); pivot.position.set(x0, y0 + Hc, Dc + ft); ug.add(pivot); if(open) pivot.rotation.x = -1.3;
+      pick(box(pivot, W - gap, Hc - gap, ft, W/2, -(Hc - gap)/2, -ft/2, look.front)); handle(pivot, W/2, -(Hc - 8), 1.2, false); break; }
+    case 'open': break;
+    case 'tall-pantry': { const lower = (Hc - gap)*0.6; doors(u.doors||2, y0 + gap/2, lower - gap, x0, W); doors(u.doors||2, y0 + lower + gap/2, Hc - lower - gap, x0, W); break; }
+    case 'tall-oven': { const n = u.drawers || 2; let yy = y0; for(let i=0;i<n;i++){ drawer(yy, 18); yy += 18; }
+      box(ug, W - 2*t, u.ovenH || 60, 4, x0 + W/2, yy + (u.ovenH||60)/2, Dc - 2, '#1F1D1E', { metalness: 0.4, roughness: 0.25 });
+      const up = y0 + Hc - (yy + (u.ovenH||60)) ; if(up > 15) doors(1, yy + (u.ovenH||60) + gap/2, up - gap, x0, W); break; }
+  }
+  if(u.type==='sink'){ box(ug, Math.min(60, W - 20), 0.6, 40, x0 + W/2, d.H + 3.4, (d.D)/2, '#B8BDC2', { metalness: 0.7, roughness: 0.25 }, false); }
+}
+
+/* ---------- الشاشة ---------- */
+function ksThumb(type){
+  const t = KU[type], tall = t.row==='tall', wall = t.row==='wall';
+  const W = 60, H = tall ? 110 : wall ? 45 : 60;
+  let s = `<rect x="2" y="2" width="${W}" height="${H}" rx="2" fill="#F8EEF0" stroke="#C2547A" stroke-width="2"/>`;
+  const v = x=> s += `<line x1="${x}" y1="4" x2="${x}" y2="${H}" stroke="#C2547A" stroke-width="1.5"/>`;
+  const hz = y=> s += `<line x1="2" y1="${y}" x2="${W+2}" y2="${y}" stroke="#C2547A" stroke-width="1.5"/>`;
+  const knob = (x,y)=> s += `<line x1="${x-5}" y1="${y}" x2="${x+5}" y2="${y}" stroke="#2E2A2C" stroke-width="2.5" stroke-linecap="round"/>`;
+  switch(type){
+    case 'base-doors': v(32); break;
+    case 'sink': v(32); s += `<rect x="12" y="-4" width="40" height="5" fill="#B8BDC2"/>`; break;
+    case 'base-drawers': hz(17); hz(32); hz(47); [10,25,40,55].forEach(y=>knob(32,y)); break;
+    case 'base-combo': hz(17); v(32); knob(32,10); break;
+    case 'corner': s += `<rect x="2" y="2" width="26" height="${H}" fill="#E7D9DD"/>`; break;
+    case 'wall-doors': v(32); s += `<rect x="8" y="8" width="18" height="${H-12}" fill="#CFE3EE"/>`; break;
+    case 'wall-flap': knob(32, H-6); break;
+    case 'open': hz(17); hz(32); s = s.replace('fill="#F8EEF0"','fill="#fff"'); break;
+    case 'tall-pantry': hz(66); v(32); break;
+    case 'tall-oven': hz(30); s += `<rect x="6" y="34" width="52" height="40" fill="#2E2A2C"/>`; hz(78); hz(94); break;
+    case 'filler': s = `<rect x="26" y="2" width="12" height="${H}" fill="#F8EEF0" stroke="#C2547A" stroke-width="2"/>`; break;
+  }
+  return `<svg viewBox="-2 -6 68 ${H+12}" class="ks-thumb">${s}</svg>`;
+}
+function ksPartThumb(p){
+  const r = p.W / p.L, w = 54, h = Math.max(6, Math.round(54 * r));
+  const thick = p.thick.length, thin = p.thin.length;
+  return `<svg viewBox="-3 -3 ${w+6} ${h+6}" width="${w+6}" height="${h+6}"><rect x="0" y="0" width="${w}" height="${h}" fill="#fff" stroke="#9C8F90" stroke-width="1"/>
+    ${thick ? `<rect x="0" y="0" width="${w}" height="${h}" fill="none" stroke="#D59663" stroke-width="3"/>` : thin ? `<line x1="0" y1="${h}" x2="${w}" y2="${h}" stroke="#D59663" stroke-width="3"/>` : ''}</svg>`;
+}
+function openKitchenStudio(id){
+  kz.id = id || kz.id; const k = kCur(); if(!k) return;
+  kz.wall = kz.wall && k.walls.some(w=>w.id===kz.wall) ? kz.wall : (k.walls[0]||{}).id; kz.sel = null;
+  ks.open = true; ks.view = k.units.length ? '3d' : 'plan'; ks.left = k.units.length ? 'lib' : 'room'; ks.right = 'unit';
+  closeModal('overlay-kitchen-designer');
+  document.getElementById('kstudio').hidden = false; document.body.classList.add('ks-on');
+  ksRender();
+  ksLoadThree().then(()=>{ ks3dInit(); ks3dBuild(true); }).catch(()=>{ const c = document.getElementById('ks-canvas'); if(c) c.innerHTML = '<div class="ks-msg">الـ ٣D محتاج الإنترنت أول مرة على المتصفح — جرّب "الحيطة" أو "من فوق"</div>'; });
+}
+function closeKitchenStudio(){ ks.open = false; document.getElementById('kstudio').hidden = true; document.body.classList.remove('ks-on'); openKitchenDesigner(); }
+kOpen = function(id){ openKitchenStudio(id); };
+{ const _kn = kNew; kNew = function(){ _kn(); openKitchenStudio(kz.id); }; }
+{ const _kr = kRender; kRender = function(){ if(ks.open) ksRender(); else _kr(); }; }
+{ const _hb2 = window.ibtkarHandleBack; window.ibtkarHandleBack = function(){ if(ks.open){ closeKitchenStudio(); return true; } return _hb2 ? _hb2() : false; }; }
+function ksSetView(v){ ks.view = v; ksRender(); if(v==='3d') ks3dBuild(); }
+function ksSetLeft(v){ ks.left = v; ksRender(); }
+function ksSetRight(v){ ks.right = v; ksRender(); }
+function ksToggleDoors(){ ks.doorsOpen = !ks.doorsOpen; ksRender(); ks3dBuild(); }
+function ksSetLook(key, color){ const k = kCur(); ksLook(k)[key] = color; kSave(); ksRender(); ks3dBuild(); }
+async function ksSnapshot(){
+  if(ks.view!=='3d' || !ks.three){ showToast('افتح منظر الـ ٣D الأول'); return; }
+  const sel = kz.sel; kz.sel = null; ks3dBuild(); ks3dRender();
+  const url = ks.three.renderer.domElement.toDataURL('image/jpeg', 0.92);
+  kz.sel = sel; ks3dBuild();
+  const blob = await (await fetch(url)).blob();
+  await shareBlob(blob, `مطبخ-${(kCur().name||'').replace(/\s+/g,'-')}.jpg`, 'image/jpeg', kCur().name || 'مطبخ', null);
+}
+function ksRender(){
+  const k = kCur(), root = document.getElementById('kstudio'); if(!k || !root) return;
+  const wall = k.walls.find(w=>w.id===kz.wall) || k.walls[0]; if(wall) kz.wall = wall.id;
+  const L = wall ? kLayoutWall(k, wall) : null, u = kU(), look = ksLook(k);
+  document.getElementById('ks-name').value = k.name;
+  document.querySelectorAll('#ks-views button').forEach(b=> b.classList.toggle('on', b.dataset.v===ks.view));
+  document.getElementById('ks-doors').classList.toggle('on', ks.doorsOpen);
+  // الجنب الأول: المكتبة / الأوضة / الألوان
+  const left = document.getElementById('ks-left');
+  const wallChips = `<div class="dp-chips">${k.walls.map(w=> dpChip(`${w.name} (${w.length})`, w.id===kz.wall, `kz.wall='${w.id}';kz.sel=null;ksRender()`)).join('')}</div>`;
+  const tabs = `<div class="ks-tabs">${[['lib','المكتبة'],['room','الأوضة'],['look','الألوان']].map(([v,l])=>`<button type="button" class="${ks.left===v?'on':''}" onclick="ksSetLeft('${v}')">${l}</button>`).join('')}</div>`;
+  let lb = '';
+  if(ks.left==='lib'){
+    const over = L ? Math.max(L.baseEnd, L.wallEnd) - wall.length : 0;
+    lb = `<div class="ks-cap">بتضيف على</div>${wallChips}
+      <div class="ks-fit ${over > 0 ? 'bad' : ''}">${over > 0 ? `⚠️ الوحدات أطول من الحيطة بـ ${r1(over)} سم` : L ? `فاضل: سفلي ${r1(wall.length - L.baseEnd)} · علوي ${r1(wall.length - L.wallEnd)} سم` : ''}</div>
+      ${['base','wall','tall'].map(row=>`<div class="ks-cap">${row==='base'?'وحدات سفلية':row==='wall'?'وحدات علوية':'وحدات طويلة'}</div>
+        <div class="ks-lib">${Object.entries(KU).filter(([,t])=>t.row===row).map(([type,t])=>`<button type="button" onclick="kAddUnit('${type}')" title="${t.label}">${ksThumb(type)}<span>${t.label}</span></button>`).join('')}</div>`).join('')}`;
+  } else if(ks.left==='room'){
+    lb = `<div class="field"><label>المشروع</label><select onchange="kSet('projectId',this.value)"><option value="">—</option>${v2Projects().map(p=>`<option value="${p.id}" ${k.projectId===p.id?'selected':''}>${escapeHtml(p.name)}</option>`).join('')}</select></div>
+      <div class="ks-cap">شكل المطبخ</div>
+      <div class="dp-chips">${[['I','مستقيم'],['L','حرف L'],['U','حرف U'],['II','حيطتين قصاد بعض']].map(([l,n])=> dpChip(n, k.layout===l, `kLayout('${l}')`)).join('')}</div>
+      ${k.walls.map(w=>`<div class="k-wall"><div class="k-wall-h"><b>${escapeHtml(w.name)}</b><label>الطول <input type="number" inputmode="decimal" value="${w.length}" onchange="kWallLen('${w.id}',this.value)"> سم</label></div>
+        ${w.openings.map(o=>`<div class="k-open"><span>${o.type==='door'?'🚪 باب':'🪟 شباك'}</span>
+          <label>من <input type="number" value="${o.from}" onchange="kOpenSet('${w.id}','${o.id}','from',this.value)"></label>
+          <label>عرض <input type="number" value="${o.width}" onchange="kOpenSet('${w.id}','${o.id}','width',this.value)"></label>
+          ${o.type==='window' ? `<label>ارتفاع من <input type="number" value="${o.bottom}" onchange="kOpenSet('${w.id}','${o.id}','bottom',this.value)"></label><label>لـ <input type="number" value="${o.top}" onchange="kOpenSet('${w.id}','${o.id}','top',this.value)"></label>` : ''}
+          <button type="button" class="qe-row-del" onclick="kOpenDel('${w.id}','${o.id}')">✕</button></div>`).join('')}
+        <div style="display:flex;gap:6px;"><button type="button" class="btn btn-ghost btn-sm" onclick="kAddOpening('${w.id}','window')">+ شباك</button><button type="button" class="btn btn-ghost btn-sm" onclick="kAddOpening('${w.id}','door')">+ باب</button></div></div>`).join('')}`;
+  } else {
+    const sw = (key, list)=> `<div class="ks-sw">${list.map(([n,c])=>`<button type="button" class="${look[key]===c?'on':''}" style="background:${c}" title="${n}" onclick="ksSetLook('${key}','${c}')"></button>`).join('')}</div>`;
+    lb = `<div class="ks-cap">الضلف والوشوش</div>${sw('front', KS_FRONTS)}<div class="ks-cap">البدن</div>${sw('carcass', [['أبيض','#ECE7E0'],['رمادي فاتح','#D5D2CD'],['خشب فاتح','#C9A37A'],['أسود','#2E2A2C']])}
+      <div class="ks-cap">الرخامة</div>${sw('top', KS_TOPS)}<div class="ks-cap">المقابض</div>${sw('handle', [['أسود','#2E2A2C'],['ستانلس','#B8BDC2'],['دهبي','#C8A15A']])}
+      <div class="hint" style="margin-top:8px;">الألوان للعرض على العميل بس — مش بتغيّر الحساب.</div>`;
+  }
+  left.innerHTML = tabs + `<div class="ks-pane">${lb}</div>`;
+  // النص: المنظر
+  const view = document.getElementById('ks-view-svg'), canvas = document.getElementById('ks-canvas');
+  canvas.style.display = ks.view==='3d' ? '' : 'none';
+  view.style.display = ks.view==='3d' ? 'none' : '';
+  if(ks.view==='wall' && wall) view.innerHTML = `${wallChips}<div class="ks-elev">${kElevSvg(k, wall)}</div>`;
+  if(ks.view==='plan') view.innerHTML = kPlanSvg(k);
+  document.getElementById('ks-hint').textContent = ks.view==='3d' ? 'اسحب عشان تلف · عجلة الماوس للتقريب · Shift أو كليك يمين للتحريك · دبل كليك يفتح الضلف · كليك على وحدة يختارها' : 'دوس على أي وحدة عشان تعدّلها';
+  // الجنب التاني
+  const right = document.getElementById('ks-right');
+  const rtabs = `<div class="ks-tabs">${[['unit','الوحدة'],['parts','القطع'],['sheets','التقطيع'],['cost','الكميات والتكلفة']].map(([v,l])=>`<button type="button" class="${ks.right===v?'on':''}" onclick="ksSetRight('${v}')">${l}</button>`).join('')}</div>`;
+  let rb = '';
+  const c = k.units.length && ks.right!=='unit' ? kCompute(k) : null;
+  if(ks.right==='unit') rb = u ? kUnitEditor(u) : `<div class="ks-empty">${k.units.length ? 'اختار وحدة من الرسمة أو الـ ٣D' : 'ابدأ بالأوضة، وبعدين ضيف وحدات من المكتبة'}</div>`;
+  else if(!c) rb = '<div class="ks-empty">لسه مفيش وحدات</div>';
+  else if(ks.right==='parts'){
+    rb = Object.entries(c.byMat).filter(([,l])=>l.length).map(([m,l])=>`<div class="ks-cap">${KMAT[m]} · ${l.reduce((s,p)=>s+p.qty,0)} قطعة</div>
+      ${l.map(p=>`<div class="ks-part"><span class="ks-no">${p.no}</span>${ksPartThumb(p)}<div><b>${escapeHtml(p.name)}</b> × ${p.qty}<br><span class="ks-dim">${p.L} × ${p.W} سم</span> <small>${escapeHtml(p.units)}</small><br><small>${p.thick.length ? 'لزق تخين ' + p.thick.length + ' جناب' : p.thin.length ? 'لزق رفيع حرف واحد' : 'من غير لزق'}</small></div></div>`).join('')}`).join('');
+  } else if(ks.right==='sheets'){
+    rb = Object.entries(c.nests).map(([m,n])=>`<div class="ks-cap">${KMAT[m]} · ${n.sheets.length} لوح · استغلال ${n.eff}٪</div>
+      ${n.tooBig.length ? `<div class="step-warn">⚠️ أكبر من اللوح: ${n.tooBig.map(x=>x.name+' '+x.a+'×'+x.b).join('، ')}</div>` : ''}
+      ${n.sheets.map((sh,i)=>`<div class="ks-sheet" onclick="ksBigSheet('${m}',${i})">${ksSheetSvg(sh, i, n.sheets.length, false)}</div>`).join('')}`).join('');
+  } else if(ks.right==='cost'){
+    const P = kwP();
+    rb = `<table class="wr-t">${c.items.map(x=>`<tr><td>${escapeHtml(x[1])}</td><td class="v"><b>${x[2]}</b> ${x[3]}</td><td class="v">${x[4] ? v2Money(x[2]*x[4]) : ''}</td></tr>`).join('')}</table>
+      <table class="wr-t wr-total"><tr><td><b>الخامات</b></td><td class="v"><b>${v2Money(c.materials)}</b></td></tr></table>
+      <table class="wr-t"><tr><td>مصنعية (${P.labor}٪)</td><td class="v">${v2Money(c.labor)}</td></tr><tr><td>ربح (${P.profit}٪)</td><td class="v">${v2Money(c.profit)}</td></tr></table>
+      <table class="wr-t wr-total"><tr><td><b>الإجمالي</b></td><td class="v"><b>${v2Money(c.total)}</b></td></tr></table>
+      <div class="hint" style="margin-top:6px;">الأسعار من ⚙️ الورشة والأسعار — اتأكد إنها أسعاركم.</div>`;
+  }
+  right.innerHTML = rtabs + `<div class="ks-pane">${rb}</div>`;
+  if(ks.view==='3d') ks3dBuild();
+}
+function ksSheetSvg(sh, i, total, big){
+  const S = kwS();
+  let svg = `<rect x="0" y="0" width="${S.board.L}" height="${S.board.W}" fill="#F5F1EC" stroke="#2E2A2C" stroke-width="${big ? .6 : 1}"/>`;
+  sh.items.forEach(it=>{ const x = it.x + S.trim, y = it.y + S.trim, fs = Math.min(big ? 6 : 9, it.h/2.6, it.w/3);
+    svg += `<rect x="${x}" y="${y}" width="${it.w}" height="${it.h}" fill="#fff" stroke="#C2547A" stroke-width=".6"/>`;
+    if(it.w > 8 && it.h > 5) svg += `<text x="${x+it.w/2}" y="${y+it.h/2 + fs*0.35}" font-size="${fs}" text-anchor="middle" fill="#2E2A2C" font-weight="700">${it.no}</text>`;
+    if(big && it.w > 26 && it.h > 12) svg += `<text x="${x+it.w/2}" y="${y+it.h/2 + fs*1.5}" font-size="${fs*0.7}" text-anchor="middle" fill="#6B6467">${escapeHtml(it.name)} ${it.a}×${it.b}</text>`;
+  });
+  return `<div class="hint">لوح ${i+1} من ${total} · ${S.board.W}×${S.board.L}${big ? '' : ' · دوس للتكبير'}</div><svg viewBox="-2 -2 ${S.board.L+4} ${S.board.W+4}">${svg}</svg>`;
+}
+function ksBigSheet(m, i){
+  const c = kCompute(kCur()), n = c.nests[m]; if(!n) return;
+  const ov = document.createElement('div'); ov.className = 'overlay show'; ov.style.zIndex = 400;
+  ov.innerHTML = `<div class="modal" style="max-width:1100px;"><button class="modal-close">×</button><h2>${KMAT[m]} — لوح ${i+1}</h2>${ksSheetSvg(n.sheets[i], i, n.sheets.length, true)}
+    <table class="wr-t" style="margin-top:8px;">${c.byMat[m].filter(p=> n.sheets[i].items.some(it=>it.no===p.no)).map(p=>`<tr><td><b>${p.no}</b> · ${escapeHtml(p.name)} <small>${escapeHtml(p.units)}</small></td><td class="v">${p.L} × ${p.W}</td></tr>`).join('')}</table></div>`;
+  ov.querySelector('.modal-close').onclick = ()=> ov.remove(); ov.addEventListener('click', e=>{ if(e.target===ov) ov.remove(); });
+  document.body.appendChild(ov);
+}
+// PDF الورشة: الكميات + جدول القطع المترقم + رسومات التقطيع المترقمة
+kPdf = async function(){
+  const k = kCur(); if(!k || !k.units.length) return;
+  const c = kCompute(k), S = kwS();
+  showToast('جاري تجهيز الـ PDF...');
+  const head = `<div class="wr-top"><div><div class="wr-title">${escapeHtml(k.name)} — كات ليست</div><div class="wr-range">${c.units} وحدة · لوح ${S.board.W}×${S.board.L} · سلاح ${S.kerf} سم · ${S.system==='gola' ? 'جولا' : 'بمقابض'}</div></div></div>`;
+  const cards = [`<div class="wr-card">${head}<div class="wr-sec"><div class="wr-h">🧾 الكميات</div><table class="wr-t">${c.items.map(x=>`<tr><td>${escapeHtml(x[1])}</td><td class="v"><b>${x[2]}</b> ${x[3]}</td></tr>`).join('')}</table></div><div class="wr-foot">${escapeHtml(k.name)}</div></div>`];
+  Object.entries(c.byMat).filter(([,l])=>l.length).forEach(([m,l])=>{
+    const n = c.nests[m];
+    cards.push(`<div class="wr-card">${head}<div class="wr-sec"><div class="wr-h">📋 ${KMAT[m]} — ${n ? n.sheets.length + ' لوح' : ''}</div>
+      <table class="wr-t"><tr><td><b>#</b></td><td><b>القطعة</b></td><td class="v"><b>المقاس</b></td><td class="v"><b>عدد</b></td><td class="v"><b>لزق</b></td></tr>
+      ${l.map(p=>`<tr><td><b>${p.no}</b></td><td>${escapeHtml(p.name)} <small>${escapeHtml(p.units)}</small></td><td class="v">${p.L} × ${p.W}</td><td class="v">${p.qty}</td><td class="v">${p.thick.length ? '▮ ' + p.thick.length : p.thin.length ? '▯ 1' : '—'}</td></tr>`).join('')}</table></div></div>`);
+    if(n) n.sheets.forEach((sh,i)=> cards.push(`<div class="wr-card">${head}<div class="wr-sec"><div class="wr-h">🪵 ${KMAT[m]}</div>${ksSheetSvg(sh, i, n.sheets.length, true)}</div></div>`));
+  });
+  const blob = await renderCardsToPdf(cards);
+  await shareBlob(blob, `كات-ليست-${(k.name||'مطبخ').replace(/\s+/g,'-')}.pdf`, 'application/pdf', 'كات ليست المطبخ', null);
+};
 
 </script>
 </body>

@@ -44,7 +44,9 @@ jobs:
           grep -q "com.ibtkar.app.draft" android/app/build.gradle
 
       - name: Prepare web assets
-        run: ./android/scripts/prepare-web.sh
+        run: |
+          ./android/scripts/prepare-web.sh
+          ./draft/vendor-three.sh android/app/src/main/assets/www
 
       - name: Build APK
         working-directory: android
@@ -62,3 +64,63 @@ jobs:
             --target "$GITHUB_SHA" --prerelease \
             --title "إبتكار تجريبي — نسخة ${{ github.run_number }}" \
             --notes "نسخة تجريبية منفصلة عن البرنامج الأصلي: بتتثبت جنبه وبياناتها لوحدها."
+
+  # نسخة الكمبيوتر من التجريبي (ويندوز) — بتتثبت جنب برنامج الكمبيوتر الأصلي ("Ibtkar Draft")
+  desktop-web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Draft web assets for desktop
+        run: |
+          cp draft/index.html index.html
+          ./android/scripts/prepare-web.sh "$GITHUB_WORKSPACE/desktop-www"
+          ./draft/vendor-three.sh "$GITHUB_WORKSPACE/desktop-www"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: draft-desktop-www
+          path: desktop-www
+
+  desktop-windows:
+    needs: desktop-web
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/download-artifact@v4
+        with:
+          name: draft-desktop-www
+          path: desktop/www
+      - name: Make it a separate draft app
+        working-directory: desktop
+        run: |
+          node -e "
+            const fs=require('fs'); const p=JSON.parse(fs.readFileSync('package.json','utf8'));
+            p.name='ibtkar-desktop-draft'; p.productName='Ibtkar Draft'; p.description='إبتكار — نسخة تجريبية للكمبيوتر';
+            p.build.appId='com.ibtkar.app.draft'; p.build.productName='Ibtkar Draft';
+            p.build.nsis.shortcutName='Ibtkar Draft'; p.build.nsis.artifactName='ibtkar-draft-setup.exe';
+            fs.writeFileSync('package.json', JSON.stringify(p,null,2));"
+          sed -i "s/title: 'إبتكار'/title: 'إبتكار تجريبي'/" main.js
+      - name: Build installer
+        working-directory: desktop
+        run: |
+          mkdir -p build && cp ../icon-512.png build/icon.png
+          npm version "1.0.${{ github.run_number }}" --no-git-tag-version
+          npm install --no-audit --no-fund
+          npm run dist
+      - name: Publish to "desktop-draft" release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete desktop-draft --yes --cleanup-tag || true
+          gh release create desktop-draft desktop/dist/ibtkar-draft-setup.exe \
+            --target "$GITHUB_SHA" --prerelease \
+            --title "إبتكار تجريبي — الكمبيوتر (نسخة ${{ github.run_number }})" \
+            --notes "نسخة تجريبية للكمبيوتر — بتتثبت جنب البرنامج الأصلي وبياناتها لوحدها."
