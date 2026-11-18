@@ -37,7 +37,7 @@ public class NotifyReceiver extends BroadcastReceiver {
     static final String ACTION_MORNING = "com.ibtkar.app.MORNING";
     static final String ACTION_FEED = "com.ibtkar.app.FEED_CHECK";
     static final String PREFS = "ibtkar_notify";
-    static final String CH_MORNING = "morning";
+    static final String CH_MORNING = "morning_alarm";
     static final String CH_FEED = "activity";
     static final String FEED_URL =
             "https://ibtkar-system-default-rtdb.firebaseio.com/ibtkar_draft_feed.json?orderBy=%22%24key%22&limitToLast=20";
@@ -94,8 +94,20 @@ public class NotifyReceiver extends BroadcastReceiver {
         if (Build.VERSION.SDK_INT < 26) return;
         NotificationManager nm = ctx.getSystemService(NotificationManager.class);
         if (nm == null) return;
-        nm.createNotificationChannel(new NotificationChannel(CH_MORNING, "تنبيه الصبح",
-                NotificationManager.IMPORTANCE_HIGH));
+        nm.deleteNotificationChannel("morning"); // القناة القديمة (صوت إشعار عادي)
+        NotificationChannel morning = new NotificationChannel(CH_MORNING, "منبّه ٩ الصبح",
+                NotificationManager.IMPORTANCE_HIGH);
+        // صوت منبّه مش صوت إشعار، وبيشتغل على صوت المنبّه في الموبايل
+        android.net.Uri alarm = android.media.RingtoneManager.getDefaultUri(android.media.RingtoneManager.TYPE_ALARM);
+        if (alarm == null) alarm = android.media.RingtoneManager.getDefaultUri(android.media.RingtoneManager.TYPE_NOTIFICATION);
+        morning.setSound(alarm, new android.media.AudioAttributes.Builder()
+                .setUsage(android.media.AudioAttributes.USAGE_ALARM)
+                .setContentType(android.media.AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                .build());
+        morning.enableVibration(true);
+        morning.setVibrationPattern(new long[]{0, 600, 300, 600, 300, 600});
+        morning.setBypassDnd(true);
+        nm.createNotificationChannel(morning);
         nm.createNotificationChannel(new NotificationChannel(CH_FEED, "اللي اتعمل في السيستم",
                 NotificationManager.IMPORTANCE_DEFAULT));
     }
@@ -113,7 +125,8 @@ public class NotifyReceiver extends BroadcastReceiver {
                 .setContentText(lines.isEmpty() ? "" : lines.get(0))
                 .setAutoCancel(true)
                 .setContentIntent(openApp(ctx))
-                .setPriority(CH_MORNING.equals(channel) ? NotificationCompat.PRIORITY_HIGH : NotificationCompat.PRIORITY_DEFAULT);
+                .setPriority(CH_MORNING.equals(channel) ? NotificationCompat.PRIORITY_HIGH : NotificationCompat.PRIORITY_DEFAULT)
+                .setCategory(CH_MORNING.equals(channel) ? NotificationCompat.CATEGORY_ALARM : NotificationCompat.CATEGORY_SOCIAL);
         if (lines.size() > 1) {
             NotificationCompat.InboxStyle st = new NotificationCompat.InboxStyle();
             for (String l : lines) st.addLine(l);
@@ -129,11 +142,17 @@ public class NotifyReceiver extends BroadcastReceiver {
     }
 
     static void showMorning(Context ctx) {
+        // الجمعة إجازة — مفيش منبّه
+        if (Calendar.getInstance().get(Calendar.DAY_OF_WEEK) == Calendar.FRIDAY) return;
+        showMorningNow(ctx);
+    }
+
+    static void showMorningNow(Context ctx) {
         SharedPreferences p = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
         String user = p.getString("user", "");
         String extra = p.getString("morning", "");
         List<String> lines = new ArrayList<>();
-        lines.add("افتحوا السيستم وشوفوا عندكم إيه النهارده والدنيا ماشية إزاي");
+        lines.add("افتح البرنامج وسجّل شغل النهارده: المشاريع الشغالة وفيها إيه");
         if (!extra.isEmpty()) Collections.addAll(lines, extra.split("\n"));
         post(ctx, 901, CH_MORNING, "☀️ صباح الخير" + (user.isEmpty() ? "" : " يا " + user), lines);
     }

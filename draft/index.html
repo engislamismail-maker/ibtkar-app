@@ -846,6 +846,15 @@ input[type="number"]{-moz-appearance:textfield;}
 .lock-forgot{background:none;border:none;color:var(--muted,#8C8177);font-size:12px;text-decoration:underline;cursor:pointer;margin-top:14px;}
 </style>
 <style>
+
+.dp-chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px;}
+.dp-chip{border:1.5px solid var(--line);background:#fff;border-radius:999px;padding:7px 12px;font:700 13.5px Tajawal,sans-serif;color:var(--charcoal);cursor:pointer;}
+.dp-chip.on{background:var(--rose);border-color:var(--rose);color:#fff;}
+.dp-chip.dp-add{border-style:dashed;color:var(--muted);}
+.dp-q{font-weight:900;font-size:14px;margin:12px 0 6px;}
+.dp-line{display:flex;flex-direction:column;gap:1px;padding:8px 0;border-bottom:1px solid var(--line);font-size:13.5px;}
+.dp-line:last-of-type{border-bottom:none;}
+.dp-line small{color:var(--muted);font-size:12px;}
 /* ===================== IBTKAR GE 2026 — الهوية البصرية (DRAFT) =====================
    ألوان الدليل، تصميم مسطح من غير ظلال، كروت Blush من غير إطار، خط دهبي تحت العناوين،
    جداول بهيدر روز وصفوف متبادلة، والإجمالي فحمي بأرقام دهبي. */
@@ -976,6 +985,7 @@ table.wr-kpis b{color:var(--charcoal);}
   </div>
   <button class="btn btn-gold btn-full voice-home-btn" onclick="openVoicePicker()">🎙️ اتكلم — حسابات أو أرشيف</button>
 
+  <div id="home-dayplan-wrap"></div>
   <div id="home-collection-wrap"></div>
   <div id="home-steps-wrap"></div>
 
@@ -12623,6 +12633,14 @@ initAppLock();
 </div>
 <div id="wr-render-host" style="position:absolute;top:-99999px;left:-99999px;width:720px;"></div>
 
+<div class="overlay" id="overlay-day-plan">
+  <div class="modal" style="max-width:520px;">
+    <button class="modal-close" onclick="closeModal('overlay-day-plan')">×</button>
+    <h2 id="dp-title">☀️ شغل النهارده</h2>
+    <div id="dp-body"></div>
+    <div class="modal-actions" id="dp-foot" style="display:flex;gap:8px;"></div>
+  </div>
+</div>
 <div class="overlay" id="overlay-notifs">
   <div class="modal" style="max-width:460px;">
     <button class="modal-close" onclick="closeModal('overlay-notifs')">×</button>
@@ -13773,6 +13791,168 @@ function brandLogoSrc(){ const l = document.querySelector('.brand-mark'); return
   if(logo) h = h.replace('<div class="wr-top"><div>', `<div class="wr-top"><div><img class="wr-logo" src="${logo}" alt="IBTKAR">`);
   h = h.replace(/<div class="wr-foot">([\s\S]*?)<\/div><\/div>$/, (all, inner)=> `<div class="wr-foot">${inner}</div><div class="wr-band">${BRAND_CONTACT}</div></div>`);
   return h;
+}; }
+
+</script>
+<script>
+
+/* =====================================================================================
+   ☀️ شغل النهارده (DRAFT) — بعد تنبيه ٩ الصبح: تختار المشاريع اللي شغالة، ولكل مشروع
+   شغالين في إيه ومين في الموقع (ويتسجلهم يوم شغل)، في خطوات قليلة. بيظهر في الرئيسية،
+   وفي تقرير الأسبوع وصفحة العميل، والتاني بيجيله إشعار.
+   ===================================================================================== */
+const DP_TRADES_TOP = ['تكسير','مباني','كهرباء','سباكة','تهوية وتكييف','محارة','جبس بورد','عزل','سيراميك وبورسلين','رخام','نقاشة','أخشاب','ألوميتال','زجاج','ستيل'];
+let dp = null; // { date, step, projects:[ids], idx, data:{ [projectId]: {trades:[], workers:[], note, logDays} } }
+function dpToday(){ return bdTodayStr(); }
+function dpPlansFor(date){ return (state.dayPlans||[]).filter(x=> x.date===date); }
+function dpProjectLoc(p){ return p.location || p.name; }
+{ const _n2 = normalizeState; normalizeState = function(){ _n2(); state.dayPlans = state.dayPlans || []; state.dayPlans.forEach(x=>{ x.trades = x.trades || []; x.workers = x.workers || []; }); }; }
+
+function openDayPlan(){
+  const date = dpToday(), existing = dpPlansFor(date);
+  let pick = existing.map(x=>x.projectId);
+  if(!pick.length){ // اقتراح: المشاريع اللي اتشغل فيها آخر مرة
+    const last = (state.dayPlans||[]).map(x=>x.date).sort().pop();
+    if(last) pick = dpPlansFor(last).map(x=>x.projectId);
+  }
+  const data = {};
+  existing.forEach(x=>{ data[x.projectId] = { trades:[...x.trades], workers:[...x.workers], note:x.note||'', logDays:false }; });
+  dp = { date, step:'projects', projects: pick.filter(id=> v2Projects().some(p=>p.id===id)), idx:0, data };
+  dpRender();
+  document.getElementById('overlay-day-plan').classList.add('show');
+}
+function dpChip(label, on, onclick){ return `<button type="button" class="dp-chip ${on?'on':''}" onclick="${onclick}">${on?'✓ ':''}${escapeHtml(label)}</button>`; }
+function dpRender(){
+  const body = document.getElementById('dp-body'), foot = document.getElementById('dp-foot');
+  const dateLabel = new Date(dp.date+'T00:00:00').toLocaleDateString('ar-EG',{weekday:'long',day:'numeric',month:'long',numberingSystem:'latn'});
+  if(dp.step==='projects'){
+    document.getElementById('dp-title').textContent = '☀️ شغل النهارده';
+    body.innerHTML = `<div class="sub" style="margin-bottom:10px;">${dateLabel} — اختار المشاريع اللي شغالة النهارده</div>
+      <div class="dp-chips">${v2Projects().map(p=> dpChip(p.name, dp.projects.includes(p.id), `dpToggleProject('${p.id}')`)).join('')}</div>`;
+    foot.innerHTML = `<button type="button" class="btn btn-ghost btn-full" onclick="closeModal('overlay-day-plan')">بعدين</button>
+      <button type="button" class="btn btn-primary btn-full" onclick="dpNext()" ${dp.projects.length?'':'disabled'}>التالي (${dp.projects.length})</button>`;
+    return;
+  }
+  if(dp.step==='project'){
+    const id = dp.projects[dp.idx], p = (state.projects||[]).find(x=>x.id===id);
+    const d = dp.data[id] = dp.data[id] || { trades:[], workers:[], note:'', logDays:true };
+    const loc = p ? dpProjectLoc(p) : '';
+    const recent = new Set(); (state.workers||[]).forEach(w=> (w.logs||[]).forEach(l=>{ if(p && projectMatchesName(p, l.project) && l.date>=bdAddDays(dp.date,-14)) recent.add(w.id); }));
+    const workers = (state.workers||[]).slice().sort((a,b)=> (recent.has(b.id)-recent.has(a.id)) || (!!b.favorite-!!a.favorite) || (a.name||'').localeCompare(b.name||''));
+    const extraTrades = d.trades.filter(t=> !DP_TRADES_TOP.includes(t));
+    const loggedToday = (state.workers||[]).filter(w=> (w.logs||[]).some(l=> l.date===dp.date && p && projectMatchesName(p, l.project))).map(w=>w.id);
+    document.getElementById('dp-title').textContent = `☀️ ${p ? p.name : ''} (${dp.idx+1} من ${dp.projects.length})`;
+    body.innerHTML = `<div class="dp-q">🔨 شغالين في إيه النهارده؟</div>
+      <div class="dp-chips">${[...DP_TRADES_TOP, ...extraTrades].map(t=> dpChip(t, d.trades.includes(t), `dpToggle('trades',${JSON.stringify(t).replace(/"/g,'&quot;')})`)).join('')}
+        <button type="button" class="dp-chip dp-add" onclick="dpAddTrade()">+ حاجة تانية</button></div>
+      <div class="dp-q">👷 مين في الموقع؟ <span class="hint">${recent.size ? 'اللي اشتغلوا هنا قريب في الأول' : ''}</span></div>
+      <div class="dp-chips">${workers.map(w=> dpChip(w.name + (loggedToday.includes(w.id) ? ' (متسجل)' : ''), d.workers.includes(w.id), `dpToggle('workers','${w.id}')`)).join('') || '<span class="hint">مفيش عمال متسجلين</span>'}</div>
+      <label class="checkbox-label" style="margin:8px 0;"><input type="checkbox" id="dpLog" ${d.logDays?'checked':''} onchange="dp.data['${id}'].logDays=this.checked"> سجّل للي في الموقع يوم شغل النهارده</label>
+      <div class="dp-q">📝 ملاحظة (اختياري)</div>
+      <div style="display:flex;gap:8px;align-items:flex-start;">
+        <textarea id="dpNote" rows="2" style="flex:1;font-family:inherit;font-size:14.5px;border:1.5px solid var(--border);border-radius:10px;padding:8px;background:var(--cream);" placeholder="مثلاً: مستنيين السيراميك يوصل الضهر" oninput="dp.data['${id}'].note=this.value">${escapeHtml(d.note)}</textarea>
+        <button type="button" class="btn btn-gold btn-sm" onclick="dpListen()">🎙️</button>
+      </div>`;
+    const last = dp.idx === dp.projects.length-1;
+    foot.innerHTML = `<button type="button" class="btn btn-ghost btn-full" onclick="dpBack()">رجوع</button>
+      <button type="button" class="btn btn-primary btn-full" onclick="${last ? 'dpSave()' : 'dpNext()'}">${last ? '✓ خلصنا — احفظ' : 'المشروع اللي بعده'}</button>`;
+  }
+}
+function dpToggleProject(id){ const i = dp.projects.indexOf(id); if(i>=0) dp.projects.splice(i,1); else dp.projects.push(id); dpRender(); }
+function dpToggle(kind, val){ const d = dp.data[dp.projects[dp.idx]]; const a = d[kind]; const i = a.indexOf(val); if(i>=0) a.splice(i,1); else a.push(val); dpRender(); }
+async function dpAddTrade(){ const t = ((await appPrompt('اكتب الشغلانة', '')) || '').trim(); if(!t) return; const d = dp.data[dp.projects[dp.idx]]; if(!d.trades.includes(t)) d.trades.push(t); dpRender(); }
+function dpNext(){ if(dp.step==='projects'){ dp.step = 'project'; dp.idx = 0; } else dp.idx++; dpRender(); }
+function dpBack(){ if(dp.idx>0) dp.idx--; else dp.step = 'projects'; dpRender(); }
+function dpListen(){
+  if(!(window.IbtkarNative && IbtkarNative.listen)){ showToast('الكتابة بالصوت شغالة في تطبيق الموبايل'); return; }
+  window.__speechTarget = 'dpNote'; IbtkarNative.listen();
+}
+{ const _sr = window.ibtkarSpeechResult; window.ibtkarSpeechResult = function(text, error){
+  if(window.__speechTarget){
+    const el = document.getElementById(window.__speechTarget); window.__speechTarget = null;
+    if(error){ showToast(error); return; }
+    if(el){ el.value = (el.value ? el.value + ' ' : '') + text; el.dispatchEvent(new Event('input')); }
+    return;
+  }
+  return _sr(text, error);
+}; }
+async function dpSave(){
+  const me = getDeviceUser(), date = dp.date;
+  state.dayPlans = (state.dayPlans||[]).filter(x=> !(x.date===date && dp.projects.includes(x.projectId)));
+  let days = 0; const lines = [];
+  dp.projects.forEach(id=>{
+    const p = (state.projects||[]).find(x=>x.id===id); if(!p) return;
+    const d = dp.data[id] || { trades:[], workers:[], note:'' };
+    state.dayPlans.push({ id: uid(), date, projectId: id, trades: d.trades, workers: d.workers, note: (d.note||'').trim(), by: me || '', at: new Date().toISOString() });
+    if(d.logDays){
+      d.workers.forEach(wid=>{
+        const w = (state.workers||[]).find(x=>x.id===wid); if(!w) return;
+        if((w.logs||[]).some(l=> l.date===date && projectMatchesName(p, l.project))) return; // متسجل قبل كده
+        w.logs = w.logs || [];
+        const loc = dpProjectLoc(p);
+        w.logs.unshift({ id: uid(), date, project: loc, helpers: 0, startTime: null, endTime: null, note: 'شغل النهارده' + (d.trades.length ? ': ' + d.trades.join('، ') : ''), code: formatLogCode(loc, date), paid: false });
+        days++;
+      });
+    }
+    lines.push(`${p.name}: ${d.trades.join('، ') || '—'}${d.workers.length ? ` (${d.workers.length} في الموقع)` : ''}`);
+  });
+  closeModal('overlay-day-plan');
+  try{ renderWorkers(); }catch(e){}
+  renderHome();
+  await saveState();
+  feedPush('☀️ شغل النهارده — ' + lines.join(' · '));
+  showToast(`✅ اتحفظ شغل النهارده${days ? ` واتسجل ${days} يوم شغل` : ''}`);
+}
+function renderHomeDayPlan(){
+  const el = document.getElementById('home-dayplan-wrap'); if(!el) return;
+  const plans = dpPlansFor(dpToday());
+  if(!plans.length){
+    el.innerHTML = `<button type="button" class="btn btn-gold btn-full" style="margin-bottom:16px;" onclick="openDayPlan()">☀️ سجّل شغل النهارده — المشاريع الشغالة وفيها إيه</button>`;
+    return;
+  }
+  el.innerHTML = `<div class="card" style="padding:14px 16px;margin-bottom:16px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px;">
+      <div class="home-section-title" style="margin:0;border:none;padding:0;">☀️ شغل النهارده</div>
+      <button type="button" class="btn btn-ghost btn-sm" onclick="openDayPlan()">✏️ تعديل</button></div>
+    ${plans.map(x=>{ const p = (state.projects||[]).find(y=>y.id===x.projectId); const ws = x.workers.map(id=> ((state.workers||[]).find(w=>w.id===id)||{}).name).filter(Boolean);
+      return `<div class="dp-line"><b>${escapeHtml(p ? p.name : '')}</b><span>${escapeHtml(x.trades.join('، ') || '—')}</span>${ws.length ? `<small>👷 ${escapeHtml(ws.join('، '))}</small>` : ''}${x.note ? `<small>📝 ${escapeHtml(x.note)}</small>` : ''}</div>`; }).join('')}
+    <div class="hint" style="margin-top:4px;">سجّلها ${escapeHtml([...new Set(plans.map(x=>x.by).filter(Boolean))].join(' و') || '—')}</div>
+  </div>`;
+}
+// بيفتح لوحده: أول فتحة في اليوم بعد ٨ الصبح، لو محدش سجّل شغل النهارده (ومش يوم جمعة)
+function dpMaybeAsk(){
+  const d = new Date(); if(d.getDay()===5 || d.getHours() < 8) return;
+  if(!state || !state.projects || !v2Projects().length || dpPlansFor(dpToday()).length) return;
+  let asked = ''; try{ asked = localStorage.getItem('ibtkar-dayplan-asked') || ''; }catch(e){}
+  if(asked === dpToday()) return;
+  try{ localStorage.setItem('ibtkar-dayplan-asked', dpToday()); }catch(e){}
+  if(document.querySelector('.overlay.show')) return;
+  openDayPlan();
+}
+{ const _rh2 = renderHome; renderHome = function(){
+  _rh2();
+  try{ renderHomeDayPlan(); }catch(e){ console.error(e); }
+  setTimeout(()=>{ try{ if(currentView==='home') dpMaybeAsk(); }catch(e){} }, 1800);
+}; }
+// تقرير الأسبوع وصفحة العميل: سطر لكل يوم اتسجل فيه شغل
+{ const _bwd2 = buildWeeklyData; buildWeeklyData = function(p, r){
+  const d = _bwd2(p, r);
+  d.plans = (state.dayPlans||[]).filter(x=> x.projectId===p.id && x.date>=r.from && x.date<=r.to).sort((a,b)=> a.date.localeCompare(b.date));
+  if(d.plans.length) d.active = true;
+  return d;
+}; }
+{ const _wch2 = weeklyCardHtml; weeklyCardHtml = function(d, o){
+  let h = _wch2(d, o);
+  if(!d.plans || !d.plans.length) return h;
+  const client = o && o.client;
+  if(client && !((o.parts||{}).progress)) return h;
+  const rows = d.plans.map(x=>{
+    const day = new Date(x.date+'T00:00:00').toLocaleDateString('ar-EG',{weekday:'long',day:'numeric',month:'short',numberingSystem:'latn'});
+    return `<tr><td>📅 ${escapeHtml(day)}: ${escapeHtml(x.trades.join('، ') || '—')}${!client && x.note ? `<small> · ${escapeHtml(x.note)}</small>` : ''}</td><td class="v">${x.workers.length ? x.workers.length + ' في الموقع' : ''}</td></tr>`;
+  }).join('');
+  const sec = `<div class="wr-sec"><div class="wr-h"><span class="bi bi-c">${brandIcon('calendar-days', { circle:true, size:22 })}</span>أيام الشغل الأسبوع ده</div><table class="wr-t">${rows}</table></div>`;
+  const at = h.indexOf('<div class="wr-sec">');
+  return at >= 0 ? h.slice(0, at) + sec + h.slice(at) : h;
 }; }
 
 </script>

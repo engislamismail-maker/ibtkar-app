@@ -468,7 +468,7 @@ public class MainActivity extends Activity {
         /** تجربة: يطلّع تنبيه الصبح دلوقتي. */
         @JavascriptInterface
         public void testMorning() {
-            NotifyReceiver.showMorning(MainActivity.this);
+            NotifyReceiver.showMorningNow(MainActivity.this);
         }
     }
 
