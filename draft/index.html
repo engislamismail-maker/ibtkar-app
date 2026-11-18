@@ -855,6 +855,34 @@ input[type="number"]{-moz-appearance:textfield;}
 .dp-line{display:flex;flex-direction:column;gap:1px;padding:8px 0;border-bottom:1px solid var(--line);font-size:13.5px;}
 .dp-line:last-of-type{border-bottom:none;}
 .dp-line small{color:var(--muted);font-size:12px;}
+
+.k-modal{max-width:760px;width:100%;}
+.k-name{flex:1;font:900 17px Tajawal,sans-serif;border:1.5px solid var(--line);border-radius:10px;padding:7px 10px;background:#fff;min-width:0;}
+.k-tabs{display:flex;gap:6px;margin:10px 0;}
+.k-tabs button{flex:1;border:1.5px solid var(--line);background:#fff;border-radius:10px;padding:9px;font:700 14px Tajawal,sans-serif;color:var(--charcoal);cursor:pointer;}
+.k-tabs button.on{background:var(--charcoal);border-color:var(--charcoal);color:#fff;}
+.k-svg{width:100%;height:auto;display:block;background:#fff;border:1px solid var(--line);border-radius:10px;margin:8px 0;}
+.k-elev{overflow-x:auto;}
+.k-elev .k-svg{min-width:320px;max-height:340px;}
+.k-wall{background:var(--blush);border-radius:12px;padding:10px 12px;margin-bottom:8px;display:grid;gap:8px;}
+.k-wall-h{display:flex;justify-content:space-between;align-items:center;gap:8px;}
+.k-wall input,.k-open input,.k-step input,.k-dh input,.kw-grid input{width:70px;padding:6px;border:1.5px solid var(--line);border-radius:8px;font:700 14px Tajawal,sans-serif;text-align:center;background:#fff;}
+.k-open{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;font-size:13px;}
+.k-ed{background:var(--blush);border-radius:12px;padding:10px 12px;display:grid;gap:6px;}
+.k-ed-h{display:flex;justify-content:space-between;align-items:center;}
+.k-step{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:14px;}
+.k-step > div{display:flex;align-items:center;gap:4px;}
+.k-step button{width:34px;height:34px;border-radius:50%;border:none;background:var(--rose);color:#fff;font:900 18px Tajawal,sans-serif;cursor:pointer;}
+.k-step small{color:var(--muted);}
+.k-dh{display:flex;flex-wrap:wrap;gap:6px 10px;font-size:13px;align-items:center;}
+.k-dh label{display:flex;gap:4px;align-items:center;}
+.k-ed-acts{display:flex;gap:6px;flex-wrap:wrap;}
+.k-lib-row{display:grid;grid-template-columns:44px 1fr;align-items:start;gap:6px;font-size:13px;color:var(--muted);}
+.k-sheet{margin-top:8px;}
+.k-sheet svg{width:100%;height:auto;display:block;}
+.kw-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px 12px;font-size:13px;}
+.kw-grid label{display:flex;justify-content:space-between;align-items:center;gap:6px;}
+@media (max-width:480px){ .kw-grid{grid-template-columns:1fr;} }
 /* ===================== IBTKAR GE 2026 — الهوية البصرية (DRAFT) =====================
    ألوان الدليل، تصميم مسطح من غير ظلال، كروت Blush من غير إطار، خط دهبي تحت العناوين،
    جداول بهيدر روز وصفوف متبادلة، والإجمالي فحمي بأرقام دهبي. */
@@ -1280,7 +1308,7 @@ table.wr-kpis b{color:var(--charcoal);}
   </div>
   <div class="v2-tiles pm-tiles">
     <button type="button" class="v2-tile" onclick="switchView('pricing')"><span>🧮</span><b>تسعير سريع</b><small>من مقاسات الغرف للتكلفة</small></button>
-    <button type="button" class="v2-tile" onclick="openKitchenPricing()"><span>🍳</span><b>تسعير مطبخ</b><small>وحدات + رخامة + إكسسوارات</small></button>
+    <button type="button" class="v2-tile" onclick="openKitchenDesigner()"><span>🍳</span><b>مصمم المطبخ</b><small>ارسم وارص الوحدات وخد الكات ليست</small></button>
     <button type="button" class="v2-tile soon" onclick="showToast('Coming soon')"><span>🔜</span><b>Coming soon</b><small>&nbsp;</small></button>
   </div>
 </div>
@@ -12641,6 +12669,21 @@ initAppLock();
     <div class="modal-actions" id="dp-foot" style="display:flex;gap:8px;"></div>
   </div>
 </div>
+<div class="overlay" id="overlay-kitchen-designer">
+  <div class="modal k-modal">
+    <button class="modal-close" onclick="closeModal('overlay-kitchen-designer')">×</button>
+    <div id="kd-head"></div>
+    <div id="kd-body"></div>
+  </div>
+</div>
+<div class="overlay" id="overlay-kitchen-workshop">
+  <div class="modal" style="max-width:520px;">
+    <button class="modal-close" onclick="closeModal('overlay-kitchen-workshop')">×</button>
+    <h2>⚙️ إعدادات الورشة والأسعار</h2>
+    <div class="sub">الأرقام دي بتتطبق على كل المطابخ — الافتراضي من فيديو الوحدات الديناميك.</div>
+    <div id="kw-body"></div>
+  </div>
+</div>
 <div class="overlay" id="overlay-notifs">
   <div class="modal" style="max-width:460px;">
     <button class="modal-close" onclick="closeModal('overlay-notifs')">×</button>
@@ -13954,6 +13997,490 @@ function dpMaybeAsk(){
   const at = h.indexOf('<div class="wr-sec">');
   return at >= 0 ? h.slice(0, at) + sec + h.slice(at) : h;
 }; }
+
+</script>
+<script>
+
+/* =====================================================================================
+   🍳 مصمم المطبخ (DRAFT) — ترسم الحيطان، ترص وحدات "ديناميك" عليها (تتعدل أبعادها
+   وأدراجها وضلفها ورفوفها)، وفي الآخر: كات ليست لكل خامة، عدد الألواح ورسمة التقطيع،
+   شريط اللزق، المفصلات، المجاري، الرجول، المقابض/الجولا، المسامير — والتسعير.
+   كل الأبعاد بالسنتيمتر.
+   ===================================================================================== */
+const KW_DEFAULT = {
+  board: { L: 280, W: 122 },            // مقاس اللوح
+  carcassT: 1.8, frontT: 1.8, backT: 0.3, drawerT: 1.8,
+  kerf: 0.4, trim: 1,                    // سلاح المنشار + تشذيب حرف اللوح
+  legH: 10, baseH: 90, baseD: 60, wallH: 72, wallD: 32, tallH: 220, wallBottom: 150,
+  gap: 0.3,                              // الفاصل بين الضلف
+  system: 'handle',                      // handle | gola
+  golaGap: 3,
+  railW: 10,                             // مرابط السقف في السفلي
+  slideClear: 1.3,                       // خلوص المجرى على كل جنب
+  runners: [30, 35, 40, 45, 50, 55],
+  edgeWaste: 10,                         // ٪ هالك الشريط
+  screwsPerJoint: 4,
+  legsPerUnit: 4, legsWide: 6, wideFrom: 90,
+  glassFrame: 7                          // برواز ضلفة الزجاج
+};
+const KP_DEFAULT = { carcass: 1800, front: 2600, back: 450, drawer: 1800, edgeThin: 6, edgeThick: 18, hinge: 45, flap: 350, slide: 220, leg: 25, handle: 60, gola: 350, pin: 1, screw: 1.5, worktop: 3500, plinth: 180, glass: 900, labor: 15, profit: 20 };
+const KU = {
+  'base-doors':  { label:'سفلي ضلف', row:'base', ic:'🚪', def:{ w:60, doors:2, shelves:1 } },
+  'base-drawers':{ label:'سفلي أدراج', row:'base', ic:'🗄️', def:{ w:60, drawers:3, dh:[] } },
+  'base-combo':  { label:'درج + ضلف', row:'base', ic:'🧰', def:{ w:60, drawerH:20, doors:2, shelves:1 } },
+  'sink':        { label:'وحدة حوض', row:'base', ic:'🚰', def:{ w:80, doors:2 } },
+  'corner':      { label:'ركنة سفلي', row:'base', ic:'📐', def:{ w:100, blind:50, doors:1, shelves:1 } },
+  'wall-doors':  { label:'علوي ضلف', row:'wall', ic:'🚪', def:{ w:60, doors:2, shelves:2, glass:false } },
+  'wall-flap':   { label:'علوي قلاب', row:'wall', ic:'⬆️', def:{ w:80, h:36 } },
+  'open':        { label:'رفوف مفتوحة', row:'wall', ic:'📚', def:{ w:30, shelves:2 } },
+  'tall-pantry': { label:'دولاب طويل', row:'tall', ic:'🗄️', def:{ w:60, doors:2, shelves:4 } },
+  'tall-oven':   { label:'طويل فرن', row:'tall', ic:'🔥', def:{ w:60, ovenH:60, drawers:2 } },
+  'filler':      { label:'فلر', row:'base', ic:'▮', def:{ w:5 } }
+};
+const KITCHEN_LAYOUTS = { I:['حيطة أ'], L:['حيطة أ','حيطة ب'], U:['حيطة أ','حيطة ب','حيطة ج'], II:['حيطة أ','حيطة ب (قصادها)'] };
+
+function kwS(){ state.settings = state.settings || {}; const s = state.settings.kitchenWorkshop = Object.assign({}, KW_DEFAULT, state.settings.kitchenWorkshop || {}); s.board = Object.assign({}, KW_DEFAULT.board, s.board || {}); return s; }
+function kwP(){ state.settings = state.settings || {}; return state.settings.kitchenPrices2 = Object.assign({}, KP_DEFAULT, state.settings.kitchenPrices2 || {}); }
+{ const _n3 = normalizeState; normalizeState = function(){ _n3(); state.kitchens = state.kitchens || [];
+  state.kitchens.forEach(k=>{ k.walls = k.walls || []; k.units = k.units || []; k.walls.forEach(w=>{ w.openings = w.openings || []; }); k.units.forEach(u=>{ if(u.dh && !Array.isArray(u.dh)) u.dh = Object.values(u.dh); }); }); }; }
+
+let kz = { id:null, tab:'walls', wall:null, sel:null };
+function kCur(){ return (state.kitchens||[]).find(k=>k.id===kz.id); }
+let kSaveT = null;
+function kSave(){ clearTimeout(kSaveT); kSaveT = setTimeout(()=> saveState(), 600); }
+const r1 = n=> Math.round(n*10)/10;
+
+/* ---------- الأبعاد الفعلية لكل وحدة ---------- */
+function kDims(u){
+  const S = kwS(), t = KU[u.type] || {};
+  const row = t.row;
+  const H = u.h || (row==='wall' ? S.wallH : row==='tall' ? S.tallH : S.baseH);
+  const D = u.d || (row==='wall' ? S.wallD : S.baseD);
+  const legs = row==='wall' ? 0 : S.legH;
+  return { W: u.w, H, D, Hc: H - legs, Dc: D - S.frontT, legs, row };
+}
+function kDrawerHeights(u, Hc){
+  const n = Math.max(1, Math.min(6, u.drawers || 3));
+  let dh = (u.dh||[]).slice(0, n).map(Number).filter(x=>x>0);
+  if(dh.length !== n){ const each = r1(Hc / n); dh = Array(n).fill(each); dh[0] = r1(Hc - each*(n-1)); }
+  return dh;
+}
+
+/* ---------- القطع والإكسسوارات لكل وحدة ---------- */
+function kParts(u, code){
+  const S = kwS(), t = S.carcassT, g = S.gap, d = kDims(u), out = [], hw = {};
+  const add = (mat, name, L, W, qty, thin, thick)=> out.push({ mat, name, L: r1(L), W: r1(W), qty, unit: code, thin: thin || [], thick: thick || [] });
+  const inc = (k, n)=>{ hw[k] = (hw[k]||0) + n; };
+  const hingesFor = h=> h<=90 ? 2 : h<=150 ? 3 : h<=200 ? 4 : 5;
+  const iw = d.W - 2*t;
+  const box = (opts)=>{
+    add('carcass','جنب', d.Hc, d.Dc, 2, [d.Hc]);
+    add('carcass','قاعدة', iw, d.Dc, 1, [iw]);
+    if(opts.rails){ add('carcass','مربط سقف', iw, S.railW, 2, [iw]); }
+    else add('carcass','سقف', iw, d.Dc, 1, [iw]);
+    add('back','ظهر HDF', d.W - 0.4, d.Hc - 0.4, 1);
+    inc('screwJoints', 4 + (opts.rails ? 2 : 0));
+    inc('backNails', Math.ceil(2*(d.W + d.Hc) / 10));
+    if(d.legs){ inc('legs', d.W > S.wideFrom ? S.legsWide : S.legsPerUnit); }
+  };
+  const shelves = (n, depthCut)=>{ if(n>0){ add('carcass','رف', iw - 0.2, d.Dc - (depthCut||2), n, [iw - 0.2]); inc('pins', 4*n); } };
+  const doors = (n, h, w, glass)=>{
+    n = Math.max(1, n|0); const dw = (w - g*n) / n;
+    for(let i=0;i<n;i++){
+      if(glass){
+        add('front','برواز ضلفة زجاج', h, dw, 1, [], [h, h, dw, dw]);
+        inc('glassM2', Math.max(0,(dw-2*S.glassFrame))*Math.max(0,(h-2*S.glassFrame))/10000);
+      } else add('front','ضلفة', h, dw, 1, [], [h, h, dw, dw]);
+      inc('hinges', hingesFor(h)); inc('handles', S.system==='handle' ? 1 : 0);
+    }
+  };
+  const drawer = (frontH, w)=>{
+    const fh = frontH - g;
+    add('front','وش درج', fh, w - g, 1, [], [fh, fh, w - g, w - g]);
+    const rl = [...S.runners].reverse().find(x=> x <= d.Dc - 3) || S.runners[0];
+    const bh = Math.max(8, Math.round(fh - 6));
+    const bw = iw - 2*S.slideClear;
+    add('drawer','جنب درج', rl, bh, 2, [rl]);
+    add('drawer','ضهر/قدام درج', bw - 2*S.drawerT, bh, 2, [bw - 2*S.drawerT]);
+    add('back','قاعدة درج HDF', bw, rl, 1);
+    inc('slide' + rl, 1); inc('handles', S.system==='handle' ? 1 : 0); inc('screwJoints', 4);
+  };
+  const golaTop = ()=>{ if(S.system==='gola') inc('golaM', d.W/100); };
+  const topGap = S.system==='gola' ? S.golaGap : 0;
+  switch(u.type){
+    case 'base-doors': box({ rails:true }); shelves(u.shelves); doors(u.doors, d.Hc - g - topGap, d.W); golaTop(); break;
+    case 'sink': box({ rails:true }); doors(u.doors, d.Hc - g - topGap, d.W); golaTop(); break;
+    case 'base-drawers': {
+      box({ rails:true }); golaTop();
+      const dh = kDrawerHeights(u, d.Hc - topGap);
+      dh.forEach((h,i)=>{ drawer(h, d.W); if(S.system==='gola' && i>0) inc('golaM', d.W/100); });
+      break; }
+    case 'base-combo': {
+      box({ rails:true }); golaTop(); shelves(u.shelves);
+      const dh = u.drawerH || 20; drawer(dh, d.W);
+      add('carcass','فاصل تحت الدرج', iw, d.Dc, 1, [iw]); inc('screwJoints', 2);
+      doors(u.doors, d.Hc - dh - g - topGap, d.W); if(S.system==='gola') inc('golaM', d.W/100);
+      break; }
+    case 'corner': {
+      box({ rails:true }); shelves(u.shelves); golaTop();
+      const blind = Math.min(u.blind || 50, d.W - 20);
+      add('front','ستارة ركنة (أعمى)', d.Hc - g - topGap, blind, 1, [], [d.Hc, blind]);
+      doors(u.doors, d.Hc - g - topGap, d.W - blind);
+      break; }
+    case 'wall-doors': box({}); shelves(u.shelves); doors(u.doors, d.Hc - g, d.W, !!u.glass); break;
+    case 'wall-flap': {
+      box({}); const h = d.Hc - g;
+      add('front','ضلفة قلاب', h, d.W - g, 1, [], [h, h, d.W - g, d.W - g]);
+      inc('flap', 1); inc('hinges', d.W > 90 ? 3 : 2); inc('handles', S.system==='handle' ? 1 : 0);
+      break; }
+    case 'open': box({}); shelves(u.shelves, 0); break;
+    case 'tall-pantry': {
+      box({}); shelves(u.shelves);
+      const lower = r1((d.Hc - g) * 0.6), upper = r1(d.Hc - g - lower);
+      add('carcass','رف ثابت', iw, d.Dc, 1, [iw]); inc('screwJoints', 2);
+      doors(u.doors, lower - g, d.W); doors(u.doors, upper, d.W);
+      break; }
+    case 'tall-oven': {
+      box({});
+      const n = Math.max(1, u.drawers || 2), dh = 18, below = n*dh, ovenH = u.ovenH || 60;
+      add('carcass','رف ثابت (حوالين الفرن)', iw, d.Dc, 2, [iw, iw]); inc('screwJoints', 4);
+      for(let i=0;i<n;i++) drawer(dh, d.W);
+      const upper = d.Hc - below - ovenH - 2*t - g;
+      if(upper > 15){ shelves(1); doors(1, upper, d.W); }
+      break; }
+    case 'filler': add('front','فلر', d.Hc, d.W, 1, [], [d.Hc, d.Hc]); break;
+  }
+  return { parts: out.filter(p=> p.qty > 0 && p.L > 0), hw };
+}
+
+/* ---------- ترتيب الوحدات على الحيطة ---------- */
+function kLayoutWall(k, wall){
+  const S = kwS();
+  const units = k.units.filter(u=> u.wallId===wall.id);
+  const base = units.filter(u=> KU[u.type] && KU[u.type].row!=='wall').sort((a,b)=> a.order-b.order);
+  const wallRow = units.filter(u=> KU[u.type] && KU[u.type].row==='wall').sort((a,b)=> a.order-b.order);
+  const pos = {}; let x = 0;
+  base.forEach(u=>{ x += (u.gap||0); pos[u.id] = { x, w:u.w }; x += u.w; });
+  const tallSpans = base.filter(u=> KU[u.type].row==='tall').map(u=> [pos[u.id].x, pos[u.id].x + u.w]);
+  let y = 0;
+  wallRow.forEach(u=>{
+    y += (u.gap||0);
+    let moved = true;
+    while(moved){ moved = false; for(const [a,b] of tallSpans){ if(y < b && y + u.w > a){ y = b; moved = true; } } }
+    pos[u.id] = { x:y, w:u.w }; y += u.w;
+  });
+  return { base, wallRow, pos, baseEnd: x, wallEnd: y };
+}
+
+/* ---------- رص القطع على الألواح ---------- */
+function kNest(parts){
+  const S = kwS(), BL = S.board.L - 2*S.trim, BW = S.board.W - 2*S.trim, k = S.kerf;
+  const items = [];
+  parts.forEach(p=>{ for(let i=0;i<p.qty;i++) items.push({ ...p, a: Math.max(p.L,p.W), b: Math.min(p.L,p.W) }); });
+  items.sort((x,y)=> y.b - x.b || y.a - x.a);
+  const sheets = [], tooBig = [];
+  for(const it of items){
+    if(!(it.a <= BL && it.b <= BW)){ tooBig.push(it); continue; }
+    let placed = false;
+    for(const sh of sheets){
+      for(const row of sh.rows){
+        if(it.b <= row.h && row.used + it.a <= BL){ sh.items.push({ ...it, x: row.used, y: row.y, w: it.a, h: it.b }); row.used += it.a + k; placed = true; break; }
+      }
+      if(placed) break;
+      if(sh.nextY + it.b <= BW){ const row = { y: sh.nextY, h: it.b, used: 0 }; sh.rows.push(row); sh.nextY += it.b + k;
+        sh.items.push({ ...it, x: 0, y: row.y, w: it.a, h: it.b }); row.used = it.a + k; placed = true; break; }
+    }
+    if(!placed){ const sh = { rows: [{ y:0, h: it.b, used: it.a + k }], nextY: it.b + k, items: [{ ...it, x:0, y:0, w: it.a, h: it.b }] }; sheets.push(sh); }
+  }
+  const area = items.reduce((s,i)=> s + i.a*i.b, 0);
+  const eff = sheets.length ? Math.round(area / (sheets.length * S.board.L * S.board.W) * 100) : 0;
+  return { sheets, eff, tooBig, BL, BW };
+}
+
+/* ---------- الحساب الكامل ---------- */
+const KMAT = { carcass:'بدن', front:'ضلف ووشوش', drawer:'صناديق أدراج', back:'ظهر وقواعد HDF' };
+function kCompute(k){
+  const S = kwS(), P = kwP();
+  const all = [], hw = {}; let worktop = 0, plinth = 0;
+  const codeOf = {}; let n = 0;
+  k.walls.forEach((w, wi)=>{
+    const L = kLayoutWall(k, w);
+    [...L.base, ...L.wallRow].forEach(u=>{ n++; codeOf[u.id] = String.fromCharCode(65+wi) + n; });
+    L.base.forEach(u=>{ if(KU[u.type].row==='base'){ worktop += u.w; plinth += u.w; } });
+  });
+  k.units.forEach(u=>{
+    if(!KU[u.type] || !codeOf[u.id]) return;
+    const r = kParts(u, codeOf[u.id]);
+    all.push(...r.parts); Object.entries(r.hw).forEach(([key,v])=>{ hw[key] = (hw[key]||0) + v; });
+  });
+  // نفس القطعة بنفس المقاس تتجمع
+  const grouped = {};
+  all.forEach(p=>{ const key = [p.mat, p.name, Math.max(p.L,p.W), Math.min(p.L,p.W)].join('|');
+    const gp = grouped[key] = grouped[key] || { ...p, L: Math.max(p.L,p.W), W: Math.min(p.L,p.W), qty: 0, units: new Set(), thin: p.thin, thick: p.thick };
+    gp.qty += p.qty; gp.units.add(p.unit); });
+  const list = Object.values(grouped).map(g=>({ ...g, units: [...g.units].join(' ') }));
+  const byMat = {}; Object.keys(KMAT).forEach(m=> byMat[m] = list.filter(p=>p.mat===m).sort((a,b)=> b.L - a.L));
+  const nests = {}; Object.keys(KMAT).forEach(m=>{ if(byMat[m].length) nests[m] = kNest(byMat[m]); });
+  const waste = 1 + S.edgeWaste/100;
+  const thinM = all.reduce((s,p)=> s + p.qty * p.thin.reduce((a,b)=>a+b,0), 0) / 100 * waste;
+  const thickM = all.reduce((s,p)=> s + p.qty * p.thick.reduce((a,b)=>a+b,0), 0) / 100 * waste;
+  const slides = Object.keys(hw).filter(x=> x.startsWith('slide')).map(x=>({ len: +x.slice(5), n: hw[x] })).sort((a,b)=>a.len-b.len);
+  const screws = (hw.screwJoints||0) * S.screwsPerJoint + (hw.hinges||0)*4 + slides.reduce((s,x)=>s+x.n,0)*12 + (hw.legs||0)*4 + (hw.handles||0)*2;
+  const items = [
+    ['🪵', 'ألواح بدن ' + S.carcassT*10 + ' ملي', nests.carcass ? nests.carcass.sheets.length : 0, 'لوح', P.carcass],
+    ['🪵', 'ألواح ضلف ' + S.frontT*10 + ' ملي', nests.front ? nests.front.sheets.length : 0, 'لوح', P.front],
+    ['🪵', 'ألواح صناديق أدراج', nests.drawer ? nests.drawer.sheets.length : 0, 'لوح', P.drawer],
+    ['🪵', 'ألواح HDF ' + S.backT*10 + ' ملي', nests.back ? nests.back.sheets.length : 0, 'لوح', P.back],
+    ['➖', 'شريط لزق رفيع (حرف البدن)', Math.ceil(thinM), 'متر', P.edgeThin],
+    ['➖', 'شريط لزق تخين (الضلف والوشوش)', Math.ceil(thickM), 'متر', P.edgeThick],
+    ['🔩', 'مفصلات', hw.hinges||0, 'عدد', P.hinge],
+    ['⬆️', 'مكابس قلاب', hw.flap||0, 'عدد', P.flap],
+    ...slides.map(s=> ['↔️', `مجاري أدراج ${s.len} سم`, s.n, 'جوز', P.slide]),
+    ['🦵', 'رجول', hw.legs||0, 'عدد', P.leg],
+    S.system==='gola' ? ['➖', 'بروفايل جولا', r1(hw.golaM||0), 'متر', P.gola] : ['✋', 'مقابض', hw.handles||0, 'عدد', P.handle],
+    ['📌', 'بنوز رفوف', hw.pins||0, 'عدد', P.pin],
+    ['🔩', 'مسامير (تجميع + تركيب إكسسوار)', screws, 'عدد', P.screw],
+    ['📍', 'مسامير ظهر', hw.backNails||0, 'عدد', 0],
+    ['🪨', 'رخامة (طول الوحدات السفلية)', r1(worktop/100), 'متر طولي', P.worktop],
+    ['▬', 'وزرة', r1(plinth/100), 'متر طولي', P.plinth],
+    ['🔲', 'زجاج ضلف', r1(hw.glassM2||0), 'م²', P.glass]
+  ].filter(x=> x[2] > 0);
+  const materials = items.reduce((s,x)=> s + x[2]*x[4], 0);
+  const labor = materials * (P.labor||0)/100, profit = (materials + labor) * (P.profit||0)/100;
+  return { byMat, nests, items, materials, labor, profit, total: materials + labor + profit, codeOf, units: k.units.length, thinM, thickM };
+}
+
+/* ---------- الرسومات ---------- */
+function kPlanSvg(k){
+  const S = kwS(), walls = k.walls; if(!walls.length) return '';
+  const pts = []; let x = 0, y = 0, dir = 0; const segs = [];
+  const dirs = [[1,0],[0,1],[-1,0],[0,-1]];
+  walls.forEach((w,i)=>{
+    if(k.layout==='II' && i===1){ const prev = segs[0]; segs.push({ w, x1: prev.x1, y1: prev.y1 + 300, x2: prev.x1 + w.length, y2: prev.y1 + 300, dir:[1,0], flip:true }); return; }
+    const [dx,dy] = dirs[dir]; segs.push({ w, x1:x, y1:y, x2: x + dx*w.length, y2: y + dy*w.length, dir:[dx,dy] });
+    x += dx*w.length; y += dy*w.length; dir = (dir+1)%4;
+  });
+  const xs = segs.flatMap(s=>[s.x1,s.x2]), ys = segs.flatMap(s=>[s.y1,s.y2]);
+  const minX = Math.min(...xs)-20, minY = Math.min(...ys)-20, W = Math.max(...xs)-minX+20, H = Math.max(...ys)-minY+80;
+  const inner = (s)=>{ const [dx,dy] = s.dir; return s.flip ? [0,-1] : [-dy, dx]; };
+  let svg = '';
+  segs.forEach((s)=>{
+    const L = kLayoutWall(k, s.w), [nx,ny] = inner(s), [dx,dy] = s.dir;
+    L.base.forEach(u=>{ const p = L.pos[u.id], dpt = kDims(u).D;
+      const ax = s.x1 + dx*p.x, ay = s.y1 + dy*p.x, bx = ax + dx*u.w, by = ay + dy*u.w;
+      const poly = [[ax,ay],[bx,by],[bx+nx*dpt,by+ny*dpt],[ax+nx*dpt,ay+ny*dpt]].map(q=>q.join(',')).join(' ');
+      svg += `<polygon points="${poly}" fill="${u.id===kz.sel ? '#F3D9C4' : (KU[u.type].row==='tall' ? '#E7D9DD' : '#F8EEF0')}" stroke="#C2547A" stroke-width="1.2"/>`; });
+    svg += `<line x1="${s.x1}" y1="${s.y1}" x2="${s.x2}" y2="${s.y2}" stroke="#2E2A2C" stroke-width="6" stroke-linecap="square"/>`;
+    s.w.openings.forEach(o=>{ const ax = s.x1 + dx*o.from, ay = s.y1 + dy*o.from; svg += `<line x1="${ax}" y1="${ay}" x2="${ax+dx*o.width}" y2="${ay+dy*o.width}" stroke="${o.type==='door' ? '#D59663' : '#7FB3D5'}" stroke-width="6"/>`; });
+    svg += `<text x="${(s.x1+s.x2)/2 - nx*22}" y="${(s.y1+s.y2)/2 - ny*22 + 6}" font-size="22" text-anchor="middle" fill="#6B6467">${escapeHtml(s.w.name)} · ${s.w.length}</text>`;
+  });
+  return `<svg viewBox="${minX} ${minY} ${W} ${H}" class="k-svg" style="max-height:260px">${svg}</svg>`;
+}
+function kElevSvg(k, wall){
+  const S = kwS(), L = kLayoutWall(k, wall), Wl = Math.max(wall.length, L.baseEnd, L.wallEnd), Ht = Math.max(S.tallH, S.wallBottom + S.wallH) + 10;
+  let svg = `<rect x="0" y="0" width="${Wl}" height="${Ht}" fill="#fff"/>`;
+  const Y = h=> Ht - h;
+  wall.openings.forEach(o=>{ const b = o.type==='door' ? 0 : (o.bottom||100), t = o.type==='door' ? 210 : (o.top||200);
+    svg += `<rect x="${o.from}" y="${Y(t)}" width="${o.width}" height="${t-b}" fill="${o.type==='door' ? '#FBE8D2' : '#DCEBF5'}" stroke="#9BB" stroke-dasharray="4 3"/><text x="${o.from + o.width/2}" y="${Y(t)+18}" font-size="14" text-anchor="middle" fill="#6B6467">${o.type==='door' ? 'باب' : 'شباك'}</text>`; });
+  const draw = (u, x, bottom)=>{
+    const d = kDims(u), sel = u.id===kz.sel, top = bottom + d.H;
+    svg += `<g onclick="kSelect('${u.id}')" style="cursor:pointer">`;
+    if(d.legs) svg += `<rect x="${x+3}" y="${Y(bottom+d.legs)}" width="${u.w-6}" height="${d.legs}" fill="#2E2A2C" opacity=".85"/>`;
+    const cb = bottom + d.legs;
+    svg += `<rect x="${x}" y="${Y(top)}" width="${u.w}" height="${d.Hc}" fill="${sel ? '#F3D9C4' : '#F8EEF0'}" stroke="${sel ? '#D59663' : '#C2547A'}" stroke-width="${sel ? 3 : 1.5}"/>`;
+    const line = (yy)=> svg += `<line x1="${x}" y1="${Y(yy)}" x2="${x+u.w}" y2="${Y(yy)}" stroke="#C2547A" stroke-width="1"/>`;
+    const vline = (xx, y1, y2)=> svg += `<line x1="${xx}" y1="${Y(y1)}" x2="${xx}" y2="${Y(y2)}" stroke="#C2547A" stroke-width="1"/>`;
+    const doorsV = (n, y1, y2, x0, w0)=>{ for(let i=1;i<n;i++) vline(x0 + w0*i/n, y1, y2); };
+    switch(u.type){
+      case 'base-drawers': { let yy = top; kDrawerHeights(u, d.Hc).forEach((h,i)=>{ yy -= h; if(i < (u.drawers||3)-1) line(yy); svg += `<line x1="${x+u.w/2-8}" y1="${Y(yy+h-6)}" x2="${x+u.w/2+8}" y2="${Y(yy+h-6)}" stroke="#2E2A2C" stroke-width="2"/>`; }); break; }
+      case 'base-combo': line(top - (u.drawerH||20)); doorsV(u.doors||2, cb, top-(u.drawerH||20), x, u.w); break;
+      case 'corner': vline(x + Math.min(u.blind||50, u.w-20), cb, top); break;
+      case 'tall-pantry': { const lower = cb + d.Hc*0.6; line(lower); doorsV(u.doors||2, cb, top, x, u.w); break; }
+      case 'tall-oven': { const n = u.drawers||2; let yy = cb; for(let i=0;i<n;i++){ yy += 18; line(yy); } svg += `<rect x="${x+4}" y="${Y(yy+(u.ovenH||60))}" width="${u.w-8}" height="${u.ovenH||60}" fill="#2E2A2C" opacity=".75"/>`; line(yy+(u.ovenH||60)); break; }
+      case 'wall-flap': break;
+      case 'open': for(let i=1;i<=(u.shelves||2);i++) line(cb + d.Hc*i/((u.shelves||2)+1)); break;
+      case 'filler': break;
+      default: doorsV(u.doors||1, cb, top, x, u.w);
+    }
+    if(u.glass) svg += `<rect x="${x+7}" y="${Y(top-7)}" width="${u.w-14}" height="${d.Hc-14}" fill="#DCEBF5" opacity=".6"/>`;
+    svg += `<text x="${x+u.w/2}" y="${Y(top) - 6}" font-size="13" text-anchor="middle" fill="#2E2A2C">${u.w}</text></g>`;
+  };
+  L.base.forEach(u=> draw(u, L.pos[u.id].x, 0));
+  L.wallRow.forEach(u=> draw(u, L.pos[u.id].x, S.wallBottom));
+  svg += `<line x1="0" y1="${Ht}" x2="${Wl}" y2="${Ht}" stroke="#2E2A2C" stroke-width="3"/>`;
+  if(wall.length < Wl) svg += `<rect x="${wall.length}" y="0" width="${Wl-wall.length}" height="${Ht}" fill="#C2547A" opacity=".12"/>`;
+  return `<svg viewBox="-10 -24 ${Wl+20} ${Ht+34}" class="k-svg">${svg}<text x="${Wl/2}" y="-8" font-size="16" text-anchor="middle" fill="#6B6467">${escapeHtml(wall.name)} — ${wall.length} سم</text></svg>`;
+}
+function kSheetSvg(sh, nest, i, total){
+  const S = kwS();
+  let svg = `<rect x="0" y="0" width="${S.board.L}" height="${S.board.W}" fill="#F5F1EC" stroke="#2E2A2C" stroke-width="1"/>`;
+  sh.items.forEach(it=>{ const x = it.x + S.trim, y = it.y + S.trim;
+    svg += `<rect x="${x}" y="${y}" width="${it.w}" height="${it.h}" fill="#fff" stroke="#C2547A" stroke-width=".6"/>`;
+    if(it.w > 14 && it.h > 7) svg += `<text x="${x+it.w/2}" y="${y+it.h/2+2}" font-size="${Math.min(7, it.h/3)}" text-anchor="middle" fill="#2E2A2C">${it.a}×${it.b}</text>`;
+  });
+  return `<div class="k-sheet"><div class="hint">لوح ${i+1} من ${total}</div><svg viewBox="-2 -2 ${S.board.L+4} ${S.board.W+4}">${svg}</svg></div>`;
+}
+
+/* ---------- الشاشات ---------- */
+function openKitchenDesigner(){ kz = { id:null, tab:'list', wall:null, sel:null }; kRender(); document.getElementById('overlay-kitchen-designer').classList.add('show'); }
+function kNew(){
+  const k = { id: uid(), name: 'مطبخ جديد', projectId: '', layout: 'L', walls: [], units: [], createdAt: new Date().toISOString() };
+  KITCHEN_LAYOUTS.L.forEach((n,i)=> k.walls.push({ id: uid(), name: n, length: i ? 240 : 320, openings: [] }));
+  state.kitchens = state.kitchens || []; state.kitchens.unshift(k);
+  kz = { id: k.id, tab:'walls', wall: k.walls[0].id, sel: null }; kSave(); kRender();
+}
+function kOpen(id){ const k = (state.kitchens||[]).find(x=>x.id===id); if(!k) return; kz = { id, tab:'units', wall: (k.walls[0]||{}).id, sel:null }; kRender(); }
+async function kDelete(id){ if(!(await v2Confirm('تمسح المطبخ ده؟', 'امسح', 'لا'))) return; state.kitchens = state.kitchens.filter(x=>x.id!==id); kSave(); kRender(); }
+function kTab(t){ kz.tab = t; kRender(); }
+function kSet(path, val){ const k = kCur(); if(!k) return; const parts = path.split('.'); let o = k; for(let i=0;i<parts.length-1;i++) o = o[parts[i]]; o[parts[parts.length-1]] = val; kSave(); kRender(); }
+function kLayout(l){
+  const k = kCur(); k.layout = l;
+  const names = KITCHEN_LAYOUTS[l];
+  while(k.walls.length < names.length) k.walls.push({ id: uid(), name: names[k.walls.length], length: 240, openings: [] });
+  if(k.walls.length > names.length){ const gone = k.walls.splice(names.length).map(w=>w.id); k.units = k.units.filter(u=> !gone.includes(u.wallId)); }
+  k.walls.forEach((w,i)=> w.name = names[i]);
+  if(!k.walls.some(w=>w.id===kz.wall)) kz.wall = k.walls[0].id;
+  kSave(); kRender();
+}
+function kWallLen(id, v){ const w = kCur().walls.find(x=>x.id===id); w.length = Math.max(30, parseFloat(v)||0); kSave(); kRender(); }
+function kAddOpening(id, type){ const w = kCur().walls.find(x=>x.id===id); w.openings.push({ id: uid(), type, from: 20, width: type==='door' ? 90 : 120, bottom: 100, top: 200 }); kSave(); kRender(); }
+function kOpenSet(wid, oid, key, v){ const o = kCur().walls.find(x=>x.id===wid).openings.find(x=>x.id===oid); o[key] = parseFloat(v)||0; kSave(); kRender(); }
+function kOpenDel(wid, oid){ const w = kCur().walls.find(x=>x.id===wid); w.openings = w.openings.filter(x=>x.id!==oid); kSave(); kRender(); }
+function kAddUnit(type){
+  const k = kCur(); const t = KU[type]; if(!k || !kz.wall) return;
+  const rowUnits = k.units.filter(u=> u.wallId===kz.wall && ((KU[u.type].row==='wall') === (t.row==='wall')));
+  const u = { id: uid(), wallId: kz.wall, type, order: rowUnits.length ? Math.max(...rowUnits.map(x=>x.order)) + 1 : 0, ...JSON.parse(JSON.stringify(t.def)) };
+  k.units.push(u); kz.sel = u.id; kSave(); kRender();
+}
+function kSelect(id){ kz.sel = id; if(kz.tab!=='units') kz.tab = 'units'; kRender(); }
+function kU(){ const k = kCur(); return k && k.units.find(u=>u.id===kz.sel); }
+function kStep(key, delta, min, max){ const u = kU(); if(!u) return; const d = kDims(u); const cur = u[key] != null ? u[key] : (key==='h' ? d.H : key==='d' ? d.D : 0); u[key] = Math.max(min, Math.min(max, r1(cur + delta))); if(key==='drawers') u.dh = []; kSave(); kRender(); }
+function kVal(key, v, min, max){ const u = kU(); if(!u) return; u[key] = Math.max(min, Math.min(max, parseFloat(v)||min)); if(key==='drawers') u.dh = []; kSave(); kRender(); }
+function kDh(i, v){ const u = kU(); const d = kDims(u); const dh = kDrawerHeights(u, d.Hc); dh[i] = parseFloat(v)||dh[i];
+  // اللي فاضل يتوزع على الباقي عشان المجموع يفضل قد ارتفاع البدن
+  const rest = d.Hc - dh.slice(0, i+1).reduce((a,b)=>a+b,0), after = dh.length - i - 1;
+  if(after > 0) for(let j=i+1;j<dh.length;j++) dh[j] = r1(rest/after);
+  u.dh = dh; kSave(); kRender(); }
+function kToggle(key){ const u = kU(); u[key] = !u[key]; kSave(); kRender(); }
+function kMove(dir){ const k = kCur(), u = kU(); if(!u) return; const isWall = KU[u.type].row==='wall';
+  const row = k.units.filter(x=> x.wallId===u.wallId && ((KU[x.type].row==='wall')===isWall)).sort((a,b)=>a.order-b.order);
+  const i = row.indexOf(u), j = i + dir; if(j<0 || j>=row.length) return; const o = row[j].order; row[j].order = u.order; u.order = o; kSave(); kRender(); }
+function kDup(){ const k = kCur(), u = kU(); if(!u) return; const c = JSON.parse(JSON.stringify(u)); c.id = uid(); c.order = u.order + 0.5; k.units.push(c);
+  const isWall = KU[u.type].row==='wall'; k.units.filter(x=> x.wallId===u.wallId && ((KU[x.type].row==='wall')===isWall)).sort((a,b)=>a.order-b.order).forEach((x,i)=> x.order = i); kz.sel = c.id; kSave(); kRender(); }
+function kDel(){ const k = kCur(); k.units = k.units.filter(x=>x.id!==kz.sel); kz.sel = null; kSave(); kRender(); }
+
+function kStepper(label, key, val, step, min, max, unit){
+  return `<div class="k-step"><span>${label}</span><div><button type="button" onclick="kStep('${key}',${-step},${min},${max})">−</button>
+    <input type="number" inputmode="decimal" value="${val}" onchange="kVal('${key}',this.value,${min},${max})"><button type="button" onclick="kStep('${key}',${step},${min},${max})">+</button>${unit ? `<small>${unit}</small>` : ''}</div></div>`;
+}
+function kUnitEditor(u){
+  const t = KU[u.type], d = kDims(u);
+  let h = `<div class="k-ed"><div class="k-ed-h"><b>${t.ic} ${t.label}</b><span class="hint">${d.W}×${d.H}×${d.D}</span></div>`;
+  h += kStepper('العرض', 'w', u.w, 5, 5, 200, 'سم');
+  if(u.type!=='filler') { h += kStepper('الارتفاع', 'h', d.H, 1, 20, 260, 'سم'); h += kStepper('العمق', 'd', d.D, 1, 10, 80, 'سم'); }
+  if(u.gap || true) h += kStepper('مسافة قبلها', 'gap', u.gap||0, 5, 0, 400, 'سم');
+  if('doors' in t.def) h += kStepper('عدد الضلف', 'doors', u.doors||1, 1, 1, 4);
+  if('shelves' in t.def) h += kStepper('عدد الرفوف', 'shelves', u.shelves||0, 1, 0, 8);
+  if('drawerH' in t.def) h += kStepper('ارتفاع الدرج', 'drawerH', u.drawerH||20, 1, 10, 40, 'سم');
+  if('blind' in t.def) h += kStepper('الجزء الأعمى', 'blind', u.blind||50, 5, 20, 100, 'سم');
+  if('ovenH' in t.def) h += kStepper('فتحة الفرن', 'ovenH', u.ovenH||60, 1, 45, 90, 'سم');
+  if(u.type==='base-drawers'){
+    h += kStepper('عدد الأدراج', 'drawers', u.drawers||3, 1, 1, 6);
+    const dh = kDrawerHeights(u, d.Hc);
+    h += `<div class="k-dh"><span class="hint">ارتفاع كل درج من فوق لتحت (المجموع ${r1(d.Hc)} سم):</span>${dh.map((x,i)=>`<label>درج ${i+1}<input type="number" inputmode="decimal" value="${x}" onchange="kDh(${i},this.value)"></label>`).join('')}</div>`;
+  }
+  if(u.type==='tall-oven') h += kStepper('أدراج تحت الفرن', 'drawers', u.drawers||2, 1, 0, 4);
+  if(u.type==='wall-doors') h += `<label class="checkbox-label"><input type="checkbox" ${u.glass?'checked':''} onchange="kToggle('glass')"> ضلف زجاج</label>`;
+  h += `<div class="k-ed-acts"><button type="button" class="btn btn-ghost btn-sm" onclick="kMove(1)">➡️</button><button type="button" class="btn btn-ghost btn-sm" onclick="kMove(-1)">⬅️</button>
+    <button type="button" class="btn btn-ghost btn-sm" onclick="kDup()">نسخة</button><button type="button" class="btn btn-ghost btn-sm" onclick="kDel()">🗑️ مسح</button></div></div>`;
+  return h;
+}
+function kRender(){
+  const body = document.getElementById('kd-body'); if(!body) return;
+  const head = document.getElementById('kd-head');
+  if(kz.tab==='list' || !kCur()){
+    head.innerHTML = `<h2>🍳 مصمم المطبخ</h2><div class="sub">ارسم الحيطان، رص الوحدات، وخد الكات ليست والإكسسوارات والتسعير.</div>`;
+    const list = state.kitchens || [];
+    body.innerHTML = `<button type="button" class="btn btn-primary btn-full" onclick="kNew()">+ مطبخ جديد</button>
+      <div style="margin-top:12px;">${list.map(k=>`<div class="pd-row" style="cursor:pointer;"><div class="pd-row-main" onclick="kOpen('${k.id}')"><div class="pd-row-title">${escapeHtml(k.name)}</div><div class="pd-row-sub">${k.walls.length} حيطة · ${k.units.length} وحدة${k.projectId ? ' · ' + escapeHtml(((state.projects||[]).find(p=>p.id===k.projectId)||{}).name||'') : ''}</div></div><button type="button" class="qe-row-del" onclick="kDelete('${k.id}')">✕</button></div>`).join('') || '<div class="no-hist">لسه مفيش مطابخ</div>'}</div>
+      <div class="modal-actions" style="display:flex;gap:8px;"><button type="button" class="btn btn-ghost btn-full" onclick="openKitchenWorkshop()">⚙️ إعدادات الورشة والأسعار</button><button type="button" class="btn btn-ghost btn-full" onclick="closeModal('overlay-kitchen-designer');openKitchenPricing()">حساب سريع بالمتر</button></div>`;
+    return;
+  }
+  const k = kCur();
+  head.innerHTML = `<div style="display:flex;gap:8px;align-items:center;"><button type="button" class="btn btn-ghost btn-sm" onclick="kTab('list')">→</button>
+    <input type="text" value="${escapeHtml(k.name)}" onchange="kSet('name',this.value.trim()||'مطبخ')" class="k-name"></div>
+    <div class="k-tabs">${[['walls','الحيطان'],['units','الوحدات'],['calc','الحساب']].map(([t,l])=>`<button type="button" class="${kz.tab===t?'on':''}" onclick="kTab('${t}')">${l}</button>`).join('')}</div>`;
+  if(kz.tab==='walls'){
+    body.innerHTML = `<div class="field"><label>المشروع (اختياري)</label><select onchange="kSet('projectId',this.value)"><option value="">—</option>${v2Projects().map(p=>`<option value="${p.id}" ${k.projectId===p.id?'selected':''}>${escapeHtml(p.name)}</option>`).join('')}</select></div>
+      <div class="dp-q">شكل المطبخ</div>
+      <div class="dp-chips">${[['I','مستقيم'],['L','حرف L'],['U','حرف U'],['II','حيطتين قصاد بعض']].map(([l,n])=> dpChip(n, k.layout===l, `kLayout('${l}')`)).join('')}</div>
+      ${kPlanSvg(k)}
+      ${k.walls.map(w=>`<div class="k-wall"><div class="k-wall-h"><b>${escapeHtml(w.name)}</b><label>الطول <input type="number" inputmode="decimal" value="${w.length}" onchange="kWallLen('${w.id}',this.value)"> سم</label></div>
+        ${w.openings.map(o=>`<div class="k-open"><span>${o.type==='door'?'🚪 باب':'🪟 شباك'}</span>
+          <label>يبدأ من <input type="number" value="${o.from}" onchange="kOpenSet('${w.id}','${o.id}','from',this.value)"></label>
+          <label>عرض <input type="number" value="${o.width}" onchange="kOpenSet('${w.id}','${o.id}','width',this.value)"></label>
+          ${o.type==='window' ? `<label>من ارتفاع <input type="number" value="${o.bottom}" onchange="kOpenSet('${w.id}','${o.id}','bottom',this.value)"></label><label>لـ <input type="number" value="${o.top}" onchange="kOpenSet('${w.id}','${o.id}','top',this.value)"></label>` : ''}
+          <button type="button" class="qe-row-del" onclick="kOpenDel('${w.id}','${o.id}')">✕</button></div>`).join('')}
+        <div style="display:flex;gap:6px;"><button type="button" class="btn btn-ghost btn-sm" onclick="kAddOpening('${w.id}','window')">+ شباك</button><button type="button" class="btn btn-ghost btn-sm" onclick="kAddOpening('${w.id}','door')">+ باب</button></div></div>`).join('')}
+      <button type="button" class="btn btn-primary btn-full" style="margin-top:10px;" onclick="kTab('units')">التالي: رص الوحدات</button>`;
+    return;
+  }
+  if(kz.tab==='units'){
+    const wall = k.walls.find(w=>w.id===kz.wall) || k.walls[0]; kz.wall = wall.id;
+    const L = kLayoutWall(k, wall), u = kU();
+    const over = Math.max(L.baseEnd, L.wallEnd) - wall.length;
+    body.innerHTML = `<div class="dp-chips">${k.walls.map(w=> dpChip(`${w.name} (${w.length})`, w.id===wall.id, `kz.wall='${w.id}';kz.sel=null;kRender()`)).join('')}</div>
+      <div class="k-elev">${kElevSvg(k, wall)}</div>
+      <div class="hint" style="margin:4px 0 8px;">${over > 0 ? `<b style="color:var(--deep-rose)">⚠️ الوحدات أطول من الحيطة بـ ${r1(over)} سم</b>` : `السفلي فاضل له ${r1(wall.length - L.baseEnd)} سم · العلوي فاضل له ${r1(wall.length - L.wallEnd)} سم`}${wall.openings.some(o=> o.type==='window' && L.wallRow.some(x=>{ const p = L.pos[x.id]; return p.x < o.from + o.width && p.x + x.w > o.from; })) ? ' · <b style="color:var(--deep-rose)">⚠️ وحدة علوية قدام الشباك</b>' : ''}</div>
+      ${u ? kUnitEditor(u) : '<div class="hint">دوس على أي وحدة في الرسمة عشان تعدّلها</div>'}
+      <div class="dp-q">+ ضيف وحدة على ${escapeHtml(wall.name)}</div>
+      ${['base','wall','tall'].map(row=>`<div class="k-lib-row"><span>${row==='base'?'سفلي':row==='wall'?'علوي':'طويل'}</span><div class="dp-chips">${Object.entries(KU).filter(([,t])=>t.row===row).map(([type,t])=>`<button type="button" class="dp-chip" onclick="kAddUnit('${type}')">${t.label}</button>`).join('')}</div></div>`).join('')}
+      <button type="button" class="btn btn-primary btn-full" style="margin-top:10px;" onclick="kTab('calc')">احسب: كات ليست وإكسسوارات وتسعير</button>`;
+    return;
+  }
+  if(kz.tab==='calc'){
+    if(!k.units.length){ body.innerHTML = '<div class="no-hist">رص وحدات الأول</div>'; return; }
+    const c = kCompute(k), S = kwS();
+    body.innerHTML = `<div id="kc-card" class="wr-card"><div class="wr-top"><div><div class="wr-title">${escapeHtml(k.name)}</div><div class="wr-range">${c.units} وحدة · لوح ${S.board.W}×${S.board.L} · سلاح ${S.kerf} سم · ${S.system==='gola' ? 'نظام جولا' : 'بمقابض'}</div></div></div>
+      <div class="wr-sec"><div class="wr-h">🧾 الكميات</div><table class="wr-t">${c.items.map(x=>`<tr><td>${escapeHtml(x[1])}</td><td class="v"><b>${x[2]}</b> ${x[3]}</td><td class="v">${x[4] ? v2Money(x[2]*x[4]) : ''}</td></tr>`).join('')}</table>
+        <table class="wr-t wr-total"><tr><td><b>الخامات</b></td><td class="v"><b>${v2Money(c.materials)}</b></td></tr></table>
+        <table class="wr-t"><tr><td>مصنعية (${kwP().labor}٪)</td><td class="v">${v2Money(c.labor)}</td></tr><tr><td>ربح (${kwP().profit}٪)</td><td class="v">${v2Money(c.profit)}</td></tr></table>
+        <table class="wr-t wr-total"><tr><td><b>الإجمالي</b></td><td class="v"><b>${v2Money(c.total)}</b></td></tr></table></div>
+      ${Object.entries(c.byMat).filter(([,l])=>l.length).map(([m,l])=>`<div class="wr-sec"><div class="wr-h">📋 كات ليست — ${KMAT[m]}${c.nests[m] ? ` · ${c.nests[m].sheets.length} لوح (استغلال ${c.nests[m].eff}٪)` : ''}</div>
+        <table class="wr-t"><tr><td><b>القطعة</b></td><td class="v"><b>الطول×العرض</b></td><td class="v"><b>عدد</b></td><td class="v"><b>لزق</b></td></tr>
+        ${l.map(p=>`<tr><td>${escapeHtml(p.name)} <small>${escapeHtml(p.units)}</small></td><td class="v">${p.L} × ${p.W}</td><td class="v">${p.qty}</td><td class="v">${p.thick.length ? '▮ ' + p.thick.length + ' جناب' : p.thin.length ? '▯ ' + p.thin.length : '—'}</td></tr>`).join('')}</table>
+        ${c.nests[m] && c.nests[m].tooBig.length ? `<div class="step-warn">⚠️ قطع أكبر من اللوح: ${c.nests[m].tooBig.map(x=>x.name+' '+x.a+'×'+x.b).join('، ')}</div>` : ''}
+        ${c.nests[m] ? c.nests[m].sheets.map((sh,i)=> kSheetSvg(sh, c.nests[m], i, c.nests[m].sheets.length)).join('') : ''}</div>`).join('')}
+      <div class="wr-foot">▮ شريط تخين على الجناب المكتوب عددها · ▯ شريط رفيع على الحرف الأمامي · المقاسات بالسنتيمتر</div></div>
+      <div class="modal-actions" style="display:flex;gap:8px;flex-wrap:wrap;"><button type="button" class="btn btn-gold btn-full" onclick="kPdf()">📄 PDF للورشة</button><button type="button" class="btn btn-ghost btn-full" onclick="openKitchenWorkshop()">⚙️ الورشة والأسعار</button></div>`;
+  }
+}
+async function kPdf(){
+  const card = document.getElementById('kc-card'); if(!card) return;
+  showToast('جاري تجهيز الـ PDF...');
+  const blob = await renderCardsToPdf([card.outerHTML]);
+  const k = kCur();
+  await shareBlob(blob, `كات-ليست-${(k.name||'مطبخ').replace(/\s+/g,'-')}.pdf`, 'application/pdf', 'كات ليست المطبخ', null);
+}
+
+/* ---------- إعدادات الورشة والأسعار ---------- */
+const KW_FIELDS = [
+  ['board.L','طول اللوح','سم'],['board.W','عرض اللوح','سم'],['carcassT','تخانة البدن','سم'],['frontT','تخانة الضلف','سم'],['backT','تخانة الظهر HDF','سم'],['drawerT','تخانة صناديق الأدراج','سم'],
+  ['kerf','سلاح المنشار','سم'],['trim','تشذيب حرف اللوح','سم'],['legH','ارتفاع الرجل','سم'],['baseH','ارتفاع السفلي (بالرجل)','سم'],['baseD','عمق السفلي','سم'],['wallH','ارتفاع العلوي','سم'],['wallD','عمق العلوي','سم'],
+  ['tallH','ارتفاع الطويل','سم'],['wallBottom','العلوي بيبدأ من ارتفاع','سم'],['gap','الفاصل بين الضلف','سم'],['railW','عرض مربط السقف','سم'],['edgeWaste','هالك الشريط','٪'],['screwsPerJoint','مسامير لكل وصلة',''],
+  ['legsPerUnit','رجول لكل وحدة',''],['legsWide','رجول للوحدة العريضة',''],['wideFrom','الوحدة عريضة من','سم']
+];
+const KP_FIELDS = [['carcass','لوح البدن'],['front','لوح الضلف'],['drawer','لوح صناديق الأدراج'],['back','لوح HDF'],['edgeThin','متر شريط رفيع'],['edgeThick','متر شريط تخين'],['hinge','مفصلة'],['flap','مكبس قلاب'],['slide','جوز مجاري'],['leg','رجل'],['handle','مقبض'],['gola','متر جولا'],['pin','بنز رف'],['screw','مسمار'],['worktop','متر رخامة'],['plinth','متر وزرة'],['glass','م² زجاج'],['labor','مصنعية ٪'],['profit','ربح ٪']];
+function openKitchenWorkshop(){
+  const S = kwS(), P = kwP(), get = p=> p.split('.').reduce((o,k)=>o[k], S);
+  document.getElementById('kw-body').innerHTML = `<div class="dp-q">النظام</div><div class="dp-chips">${dpChip('بمقابض', S.system==='handle', "kwSet('system','handle')")}${dpChip('جولا (من غير مقابض)', S.system==='gola', "kwSet('system','gola')")}</div>
+    <div class="dp-q">الورشة</div><div class="kw-grid">${KW_FIELDS.map(([k,l,u])=>`<label>${l}<span><input type="number" inputmode="decimal" value="${get(k)}" onchange="kwSet('${k}',parseFloat(this.value))"> ${u}</span></label>`).join('')}</div>
+    <div class="dp-q">الأسعار (ج.م)</div><div class="kw-grid">${KP_FIELDS.map(([k,l])=>`<label>${l}<span><input type="number" inputmode="decimal" value="${P[k]}" onchange="kpSet('${k}',parseFloat(this.value))"></span></label>`).join('')}</div>
+    <div class="hint" style="margin-top:8px;">المفصلات: ٢ لحد ٩٠ سم، ٣ لحد ١٥٠، ٤ لحد ٢٠٠. المجاري بتتختار أكبر مقاس يدخل في عمق البدن.</div>`;
+  document.getElementById('overlay-kitchen-workshop').classList.add('show');
+}
+function kwSet(path, v){ const S = kwS(); const parts = path.split('.'); let o = S; for(let i=0;i<parts.length-1;i++) o = o[parts[i]]; o[parts[parts.length-1]] = v; state.settings.kitchenWorkshop = S; saveState(); openKitchenWorkshop(); kRender(); }
+function kpSet(k, v){ const P = kwP(); P[k] = isNaN(v) ? 0 : v; state.settings.kitchenPrices2 = P; saveState(); kRender(); }
 
 </script>
 </body>
