@@ -7,7 +7,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;900&display=swap">
 <style>
 /* Client page: read-only view of one project, published by the IBTKAR app (draft) */
-:root{ --bg:#F5F1EC; --card:#FFFFFF; --ink:#2E2A2C; --muted:#8C8177; --line:#E6DED2; --gold:#D59663; --green:#6E8B74; --rose:#C2547A; }
+:root{ --bg:#F5F1EC; --card:#FFFFFF; --ink:#2E2A2C; --muted:#6B6467; --line:#E7D9DD; --gold:#D59663; --green:#6E8B74; --rose:#C2547A; }
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);font-family:'Tajawal','Segoe UI',Tahoma,sans-serif;font-size:15px;line-height:1.6;
   padding:max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) 32px max(16px, env(safe-area-inset-left))}
@@ -86,6 +86,29 @@ table.wr-kpis span{font-size:11px;color:var(--muted)}
 .wr-imgs img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:10px;cursor:zoom-in}
 .wr-empty{font-size:13px;color:var(--muted)}
 .wr-client .wr-co{display:none}
+.wr-card{padding:0;overflow:hidden;border-color:#E7D9DD;border-radius:12px}
+.wr-card > *:not(.wr-band){margin-inline:16px}
+.wr-card > table.wr-kpis,.wr-card > .step-bar{width:calc(100% - 32px)}
+.wr-top{padding-top:14px;padding-bottom:10px;border-bottom:1px solid #E7D9DD;position:relative}
+.wr-top::after{content:"";position:absolute;bottom:-1px;right:0;width:64px;height:3px;background:var(--gold)}
+.wr-logo{height:30px;width:auto;display:block;margin-bottom:4px}
+.head .brand{display:none}
+.wr-pct{color:var(--rose)}
+table.wr-kpis{border-spacing:0;border-collapse:separate}
+table.wr-kpis td{background:#F8EEF0;border-inline-start:6px solid #fff}
+table.wr-kpis td:first-child{border-inline-start:none}
+.wr-h{display:flex;align-items:center;gap:7px;color:var(--ink)}
+.bi{display:inline-flex;line-height:0}
+.wr-t{border:1px solid #E7D9DD}
+.wr-t td{border-bottom:none;padding:7px 8px}
+.wr-t tr:nth-child(even) td{background:#F8EEF0}
+.wr-t.wr-total td{background:#2E2A2C !important;color:#fff}
+.wr-t.wr-total td b{color:var(--gold)}
+.wr-t.wr-total td:first-child b{color:#fff}
+.wr-foot{margin-bottom:10px}
+.wr-band{background:#2E2A2C;color:#E7D9DD;font-size:10.5px;text-align:center;padding:9px 12px;direction:ltr}
+.brand{color:var(--rose)}
+h1{color:var(--ink)}
 .wr-foot{font-size:11px;color:var(--muted);margin-top:12px;text-align:center}
 #viewer{position:fixed;inset:0;background:rgba(20,18,19,.95);display:none;align-items:center;justify-content:center;padding:16px}
 #viewer.show{display:flex}
