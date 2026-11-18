@@ -60,6 +60,33 @@ summary .muted{font-weight:400}
 #rcpt .paper{background:#fff;border-radius:16px;padding:20px;max-width:380px;width:100%;max-height:90vh;overflow:auto}
 #rcpt .paper img{width:100%;border-radius:10px;margin-top:10px}
 .rrow{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px dashed var(--line);font-size:14px}
+.wk{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px}
+.wk button{flex:none;border:1.5px solid var(--line);background:#fff;border-radius:20px;padding:7px 12px;font:700 13px Tajawal,sans-serif;color:var(--ink);cursor:pointer}
+.wk button.on{background:var(--gold);border-color:var(--gold);color:#fff}
+.wr-card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:16px;direction:rtl}
+.wr-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.wr-co{font-size:11px;color:var(--muted);font-weight:700}
+.wr-title{font-size:17px;font-weight:900}
+.wr-range{font-size:12px;color:var(--muted)}
+.wr-pct{font-size:28px;font-weight:900;color:var(--green)}
+.step-bar{height:8px;border-radius:8px;background:#E9E2D9;overflow:hidden;margin:6px 0}
+.step-bar span{display:block;height:100%;background:var(--green)}
+table.wr-kpis{width:100%;border-collapse:separate;border-spacing:6px;margin:8px 0}
+table.wr-kpis td{background:var(--bg);border-radius:10px;padding:8px 4px;text-align:center}
+table.wr-kpis b{display:block;font-size:14px}
+table.wr-kpis span{font-size:11px;color:var(--muted)}
+.wr-sec{margin-top:14px}
+.wr-h{font-weight:900;font-size:14px;margin-bottom:4px;color:var(--gold)}
+.wr-t{width:100%;border-collapse:collapse;font-size:13.5px}
+.wr-t td{padding:7px 4px;border-bottom:1px solid #EFE8DE;vertical-align:top;line-height:1.6}
+.wr-t td.v{text-align:left;white-space:nowrap;padding-inline-start:10px}
+.wr-t small{color:var(--muted)}
+.wr-card .bad{color:var(--rose)} .wr-t .ok{color:var(--green)}
+.wr-imgs{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:8px}
+.wr-imgs img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:10px;cursor:zoom-in}
+.wr-empty{font-size:13px;color:var(--muted)}
+.wr-client .wr-co{display:none}
+.wr-foot{font-size:11px;color:var(--muted);margin-top:12px;text-align:center}
 #viewer{position:fixed;inset:0;background:rgba(20,18,19,.95);display:none;align-items:center;justify-content:center;padding:16px}
 #viewer.show{display:flex}
 #viewer img{max-width:100%;max-height:100%;object-fit:contain}
@@ -85,6 +112,12 @@ const money = n=> Number(n||0).toLocaleString('en-US') + ' ج.م';
 const fmt = d=> d ? new Date(d.length===10 ? d+'T00:00:00' : d).toLocaleDateString('ar-EG',{day:'numeric',month:'long',numberingSystem:'latn'}) : '';
 const token = new URLSearchParams(location.search).get('t');
 const app = document.getElementById('app');
+function week(i){
+  const w = window.__p.weeks[i]; const body = document.getElementById('wkBody');
+  body.innerHTML = w.html;
+  body.querySelectorAll('img').forEach(img=> img.onclick = ()=> show(img.src));
+  document.querySelectorAll('.wk button').forEach((b,j)=> b.classList.toggle('on', j===i));
+}
 function receipt(i){
   const p = window.__p, r = p.receipts[i], box = document.getElementById('rcpt');
   box.querySelector('.paper').innerHTML = `<div style="text-align:center"><div class="brand">${esc(p.company)}</div><h2 style="margin:4px 0 2px">🧾 إيصال استلام رقم ${r.no}</h2><div class="muted">${esc(p.project)}</div></div>
@@ -102,8 +135,17 @@ else {
   ref.child('page').once('value').then(snap=>{
     const p = snap.val();
     if(!p){ app.innerHTML = '<div class="card">الصفحة دي مش متاحة دلوقتي — اطلب اللينك تاني من الشركة.</div>'; return; }
-    let h = `<div class="head"><div class="brand">${esc(p.company)}</div><h1>${esc(p.project)}</h1>${p.client ? `<div class="hello">أهلاً ${esc(p.client)}</div>` : ''}</div>`;
     window.__p = p;
+    if(p.weeks){
+      let h = `<div class="head"><div class="brand">${esc(p.company)}</div><h1>${esc(p.project)}</h1>${p.client ? `<div class="hello">أهلاً ${esc(p.client)}</div>` : ''}</div>`;
+      if(p.weeks.length > 1) h += `<div class="wk">${p.weeks.map((w,i)=>`<button type="button" class="${i===0?'on':''}" onclick="week(${i})">${i===0 ? 'الأسبوع ده' : fmt(w.from) + ' – ' + fmt(w.to)}</button>`).join('')}</div>`;
+      h += `<div id="wkBody"></div><div class="foot">صفحة للعرض بس</div>`;
+      app.innerHTML = h; week(0);
+      const ua0 = navigator.userAgent;
+      ref.child('views').push({ at: new Date().toISOString(), device: /iPhone|iPad/.test(ua0) ? 'آيفون' : /Android/.test(ua0) ? 'أندرويد' : /Windows/.test(ua0) ? 'كمبيوتر ويندوز' : /Mac/.test(ua0) ? 'ماك' : 'جهاز' }).catch(()=>{});
+      return;
+    }
+    let h = '';
     // ① وصلنا لفين
     if(p.progress!=null || (p.now && p.now.length)){
       h += `<div class="card hero"><h2>📈 وصلنا لفين</h2>${p.progress!=null ? `<div class="big">${p.progress}%</div><div class="bar"><div style="width:${p.progress}%"></div></div>` : ''}
