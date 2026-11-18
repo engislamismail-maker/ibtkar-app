@@ -79,6 +79,13 @@ public class MainActivity extends Activity {
 
         web.addJavascriptInterface(new NativeBridge(), "IbtkarNative");
 
+        // التنبيهات (٩ الصبح + اللي الشخص التاني سجّله) — أندرويد ١٣+ لازم يسأل الأول
+        if (Build.VERSION.SDK_INT >= 33
+                && checkSelfPermission("android.permission.POST_NOTIFICATIONS") != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(new String[]{"android.permission.POST_NOTIFICATIONS"}, 1003);
+        }
+        NotifyReceiver.schedule(this);
+
         web.setWebViewClient(new WebViewClient() {
             @Override
             public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
@@ -336,6 +343,10 @@ public class MainActivity extends Activity {
     }
 
     private void shareUris(ArrayList<Uri> uris, String mime, String title, String text) {
+        shareUris(uris, mime, title, text, null);
+    }
+
+    private void shareUris(ArrayList<Uri> uris, String mime, String title, String text, String email) {
         Intent i;
         if (uris.size() == 1) {
             i = new Intent(Intent.ACTION_SEND);
@@ -353,8 +364,9 @@ public class MainActivity extends Activity {
         i.setType(uris.isEmpty() ? "text/plain" : mime);
         if (text != null && !text.isEmpty()) i.putExtra(Intent.EXTRA_TEXT, text);
         if (title != null && !title.isEmpty()) i.putExtra(Intent.EXTRA_SUBJECT, title);
+        if (email != null && !email.isEmpty()) i.putExtra(Intent.EXTRA_EMAIL, new String[]{email});
         i.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-        startActivity(Intent.createChooser(i, "مشاركة"));
+        startActivity(Intent.createChooser(i, email != null && !email.isEmpty() ? "ابعت الميل بـ…" : "مشاركة"));
     }
 
     /** الواجهة اللي native-bridge.js بيكلّمها. */
@@ -411,7 +423,7 @@ public class MainActivity extends Activity {
                     String text = o.optString("text", "");
                     String url = o.optString("url", "");
                     if (!url.isEmpty()) text = text.isEmpty() ? url : text + "\n" + url;
-                    shareUris(uris, mime == null ? "*/*" : mime, o.optString("title", ""), text);
+                    shareUris(uris, mime == null ? "*/*" : mime, o.optString("title", ""), text, o.optString("email", ""));
                 } catch (Exception e) {
                     Toast.makeText(MainActivity.this, "حصلت مشكلة في المشاركة", Toast.LENGTH_SHORT).show();
                 }
@@ -431,6 +443,32 @@ public class MainActivity extends Activity {
         @JavascriptInterface
         public void listen() {
             runOnUiThread(MainActivity.this::startSpeech);
+        }
+
+        /** اسم صاحب الجهاز — عشان الإشعارات تبقى عن اللي عمله الشخص التاني بس. */
+        @JavascriptInterface
+        public void setUser(String name) {
+            getSharedPreferences(NotifyReceiver.PREFS, MODE_PRIVATE).edit().putString("user", name == null ? "" : name).apply();
+        }
+
+        /** سطور زيادة تظهر في تنبيه ٩ الصبح (مثلاً المهام اللي عليها الدور). */
+        @JavascriptInterface
+        public void setMorningText(String text) {
+            getSharedPreferences(NotifyReceiver.PREFS, MODE_PRIVATE).edit().putString("morning", text == null ? "" : text).apply();
+        }
+
+        /** التطبيق مفتوح وشاف آخر حاجة — متطلعش إشعار بيها تاني. */
+        @JavascriptInterface
+        public void feedSeen(String key) {
+            if (key == null || key.isEmpty()) return;
+            android.content.SharedPreferences p = getSharedPreferences(NotifyReceiver.PREFS, MODE_PRIVATE);
+            if (key.compareTo(p.getString("lastKey", "")) > 0) p.edit().putString("lastKey", key).apply();
+        }
+
+        /** تجربة: يطلّع تنبيه الصبح دلوقتي. */
+        @JavascriptInterface
+        public void testMorning() {
+            NotifyReceiver.showMorning(MainActivity.this);
         }
     }
 

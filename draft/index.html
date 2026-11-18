@@ -237,6 +237,65 @@ body{
 .activity-day{font-size:12px;font-weight:900;color:var(--muted);margin:12px 0 4px;}
 .method-toggle.compact-row{flex-wrap:nowrap;gap:5px;}
 .new-tools{margin-top:14px;border:2px dashed var(--gold);border-radius:14px;padding:12px;display:grid;gap:8px;background:#FBF3EC;}
+
+/* ===== V2 (draft) ===== */
+.v2-tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;}
+.v2-tile{display:flex;flex-direction:column;align-items:center;gap:4px;text-align:center;padding:16px 10px;border:2px solid var(--border);border-radius:16px;background:#fff;font-family:inherit;color:inherit;cursor:pointer;}
+.v2-tile span{font-size:30px;line-height:1;}
+.v2-tile b{font-size:15px;}
+.v2-tile small{font-size:11.5px;color:var(--muted);line-height:1.5;}
+.v2-tile:active{transform:scale(.98);}
+.v2-tile.soon{opacity:.55;border-style:dashed;}
+.pm-tiles{margin-top:6px;}
+.pm-proj{background:#fff;border:1.5px solid var(--border);border-radius:14px;padding:12px 14px;margin-bottom:10px;cursor:pointer;}
+.pm-pct{font-weight:900;color:var(--green);}
+.step-bar{height:8px;border-radius:8px;background:#E9E2D9;overflow:hidden;margin:6px 0;}
+.step-bar span{display:block;height:100%;background:var(--green);}
+.step-warn{font-size:12.5px;color:#9A3A5E;background:#FBEFF3;border-radius:8px;padding:5px 8px;margin-top:5px;}
+.ps-sum{background:var(--cream);border-radius:14px;padding:12px 14px;}
+.step-phase{font-weight:900;font-size:12.5px;color:var(--gold);margin:14px 2px 6px;}
+.step-row{display:flex;align-items:center;gap:10px;padding:9px 10px;border:1.5px solid var(--border);border-radius:12px;margin-bottom:6px;background:#fff;}
+.step-row.done{background:#EEF3EC;border-color:#CFDCCB;}
+.step-row.done .step-t{text-decoration:line-through;opacity:.7;}
+.step-row.doing{border-color:var(--gold);background:#FBF3EC;}
+.step-row.blocked{opacity:.6;}
+.step-t{font-weight:700;font-size:14px;}
+.step-s{font-size:12px;color:var(--muted);margin-top:2px;}
+.step-dot{flex:none;width:30px;height:30px;border-radius:50%;border:2px solid var(--border);background:#fff;font-weight:900;color:#fff;font-size:15px;cursor:pointer;}
+.step-dot.doing{border-color:var(--gold);color:var(--gold);}
+.step-dot.done{background:var(--green);border-color:var(--green);}
+.step-num{flex:none;width:26px;height:26px;border-radius:50%;background:var(--cream);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:900;}
+.step-tools{display:flex;gap:4px;}
+.step-tools button{border:1px solid var(--border);background:#fff;border-radius:8px;padding:4px 8px;font-size:13px;cursor:pointer;}
+.se-after{max-height:240px;overflow:auto;border:1.5px solid var(--border);border-radius:10px;padding:6px 10px;}
+.kt-grid{display:grid;grid-template-columns:1fr 1fr;gap:0 10px;}
+.kt-card{background:#fff;border:1.5px solid var(--border);border-radius:14px;padding:14px;margin-top:6px;font-family:'Tajawal',sans-serif;}
+.kt-row{display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-bottom:1px solid var(--border);font-size:13.5px;}
+.kt-row small{color:var(--muted);}
+.kt-total{display:flex;justify-content:space-between;font-size:18px;font-weight:900;padding-top:8px;color:var(--green);}
+.kt-prices{margin-top:12px;}
+.kt-prices summary{cursor:pointer;font-weight:700;}
+.kt-ptable{width:100%;border-collapse:collapse;margin-top:8px;font-size:12.5px;}
+.kt-ptable td,.kt-ptable th{padding:4px;text-align:right;}
+.kt-ptable input{width:100%;min-width:60px;padding:6px;border:1px solid var(--border);border-radius:8px;font-family:inherit;}
+.wr-card{background:#fff;border:1.5px solid var(--border);border-radius:16px;padding:18px;font-family:'Tajawal',sans-serif;direction:rtl;color:#2E2A2C;}
+.wr-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;}
+.wr-co{font-size:11px;color:#8C8177;font-weight:700;}
+.wr-title{font-size:17px;font-weight:900;}
+.wr-range{font-size:12px;color:#8C8177;}
+.wr-pct{font-size:28px;font-weight:900;color:#6E8B74;}
+.wr-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:10px 0;}
+.wr-kpis div{background:#F5F1EC;border-radius:10px;padding:8px 4px;text-align:center;}
+.wr-kpis b{display:block;font-size:13.5px;}
+.wr-kpis span{font-size:11px;color:#8C8177;}
+.wr-sec{margin-top:12px;font-size:13px;line-height:1.7;}
+.wr-h{font-weight:900;font-size:13.5px;margin-bottom:4px;color:#D59663;}
+.wr-row{display:flex;justify-content:space-between;gap:10px;padding:4px 0;border-bottom:1px dashed #E6DED2;}
+.wr-row small{color:#8C8177;}
+.wr-imgs{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:8px;}
+.wr-imgs img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px;}
+.wr-foot{font-size:10.5px;color:#8C8177;margin-top:12px;text-align:center;}
+@media (max-width:420px){ .kt-grid{grid-template-columns:1fr;} .wr-kpis{grid-template-columns:repeat(2,1fr);} }
 .new-tools-title{font-weight:900;font-size:13px;color:var(--gold);}
 .dr-card{background:#fff;color:#2E2A2C;border:1px solid var(--border);border-radius:12px;padding:20px;font-family:'Tajawal',sans-serif;}
 .dr-card .dr-head{display:flex;justify-content:space-between;align-items:flex-end;gap:10px;border-bottom:3px solid #D59663;padding-bottom:10px;margin-bottom:10px;}
@@ -825,9 +884,10 @@ input[type="number"]{-moz-appearance:textfield;}
     <button class="btn btn-primary btn-sm btn-full" onclick="openAddIncome()">⚡ تسجيل قبض</button>
     <button class="btn btn-primary btn-sm btn-full" onclick="openAddDeduction()">➖ خصم على عامل</button>
   </div>
-  <button class="btn btn-gold btn-full voice-home-btn" onclick="openVoiceEntry()">🎙️ سجّل بالصوت — قول اللي حصل والتطبيق يملا الفورم</button>
+  <button class="btn btn-gold btn-full voice-home-btn" onclick="openVoicePicker()">🎙️ اتكلم — حسابات أو أرشيف</button>
 
   <div id="home-collection-wrap"></div>
+  <div id="home-steps-wrap"></div>
 
   <div class="home-section-title">🏗️ تشيك ليست الجودة — البنود المحتاجة انتباه</div>
   <div id="home-checklist-summary"></div>
@@ -1114,6 +1174,19 @@ input[type="number"]{-moz-appearance:textfield;}
 
   <div id="projects-content"><div class="loading-note">جاري تحميل البيانات...</div></div>
 </div>
+<div id="view-pm" class="view" style="display:none;">
+  <div class="topbar">
+    <div class="brand"><div><h1>📋 إدارة المشاريع</h1><p>التسعير، المطابخ، وخطوات كل مشروع</p></div></div>
+  </div>
+  <div class="v2-tiles pm-tiles">
+    <button type="button" class="v2-tile" onclick="switchView('pricing')"><span>🧮</span><b>تسعير سريع</b><small>من مقاسات الغرف للتكلفة</small></button>
+    <button type="button" class="v2-tile" onclick="openKitchenPricing()"><span>🍳</span><b>تسعير مطبخ</b><small>وحدات + رخامة + إكسسوارات</small></button>
+    <button type="button" class="v2-tile" onclick="openStepsTemplate()"><span>🪜</span><b>قالب الخطوات</b><small>الترتيب اللي كل مشروع ماشي بيه</small></button>
+    <button type="button" class="v2-tile" onclick="openWeeklyReport()"><span>📊</span><b>تقرير الأسبوع</b><small>لكل مشروع + يتبعت ميل</small></button>
+  </div>
+  <div class="sub" style="margin:16px 0 8px;font-weight:900;">🪜 خطوات المشاريع — دوس على أي مشروع</div>
+  <div id="pm-projects"></div>
+</div>
 <div id="view-pricing" class="view" style="display:none;">
   <div class="topbar">
     <div class="brand" onclick="switchView('home')" style="cursor:pointer;" title="الرجوع للرئيسية">
@@ -1124,6 +1197,7 @@ input[type="number"]{-moz-appearance:textfield;}
       </div>
     </div>
     <div class="topbar-actions">
+      <button class="btn btn-ghost" onclick="switchView('pm')">↩️ إدارة المشاريع</button>
       <button class="btn btn-primary" onclick="openAddEstimate()">+ تسعير جديد</button>
       <button class="btn btn-ghost" onclick="openMaterialPrices()">🧾 أسعار الخامات</button>
     </div>
@@ -2181,7 +2255,9 @@ async function deleteReferenceSupplier(id){
 
     <div class="new-tools">
       <div class="new-tools-title">🆕 جديد</div>
+      <button class="btn btn-gold btn-full" onclick="openProjectSteps()">🪜 خطوات المشروع — وصلنا لفين</button>
       <button class="btn btn-gold btn-full" onclick="openDailyReport()">📄 تقرير اليوم — يتعمل لوحده</button>
+      <button class="btn btn-gold btn-full" onclick="openWeeklyReport()">📊 تقرير الأسبوع — بالإيصالات</button>
       <button class="btn btn-gold btn-full" onclick="openClientPayments()">💰 دفعات العميل والتحصيل</button>
       <button class="btn btn-gold btn-full" onclick="openClientPortal()">🔗 صفحة العميل (لينك يتبعتله)</button>
     </div>
@@ -2660,6 +2736,7 @@ async function deleteReferenceSupplier(id){
     <button class="modal-close" onclick="closeModal('overlay-settings')">×</button>
     <h2>⚙️ الإعدادات</h2>
     <div class="modal-actions"><button class="btn btn-primary btn-full" onclick="openDeviceUserSettings()" id="settings-device-user-btn">👤 أنا مين على الجهاز ده</button></div>
+    <div class="modal-actions"><button class="btn btn-gold btn-full" onclick="closeModal('overlay-settings');openV2Settings()">🆕 🔔 التنبيهات والتقرير الأسبوعي</button></div>
     <div class="modal-actions"><button class="btn btn-gold btn-full" onclick="openChecklistTemplateEditor()">🏗️ إدارة تشيك ليست الجودة</button></div>
     <div class="modal-actions"><button class="btn btn-gold btn-full" onclick="openStatementCategoriesEditor()">💰 بنود كشف حساب العميل</button></div>
     <div class="modal-actions"><button class="btn btn-gold btn-full" onclick="openStatementTypesEditor()">🏷️ أنواع البنود (توريد / مصنعية / مقاولة...)</button></div>
@@ -2870,8 +2947,8 @@ async function deleteReferenceSupplier(id){
   <button class="nav-btn" id="nav-projects" onclick="switchView('projects')">
     <span class="nav-icon">🏗️</span><span>المشاريع</span>
   </button>
-  <button class="nav-btn" id="nav-pricing" onclick="switchView('pricing')">
-    <span class="nav-icon">🧮</span><span>تسعير سريع</span>
+  <button class="nav-btn" id="nav-pricing" onclick="switchView('pm')">
+    <span class="nav-icon">📋</span><span>إدارة المشاريع</span>
   </button>
   <button class="nav-btn" id="nav-suppliers" onclick="switchView('suppliers')">
     <span class="nav-icon">🔧</span><span>الموردين</span>
@@ -12362,6 +12439,895 @@ function changeAppPin(){
   initAppLock();
 }
 initAppLock();
+</script>
+
+<!-- ===================== V2 (DRAFT) ===================== -->
+<!-- 🎙️ اختيار نوع الكلام -->
+<div class="overlay" id="overlay-voice-pick">
+  <div class="modal" style="max-width:440px;">
+    <button class="modal-close" onclick="closeModal('overlay-voice-pick')">×</button>
+    <h2>🎙️ عايز تسجل إيه؟</h2>
+    <div class="sub" style="margin-bottom:12px;">اختار، وبعدين دوس على المايك واتكلم عادي.</div>
+    <div class="v2-tiles">
+      <button type="button" class="v2-tile" onclick="openVoiceEntry('accounts')"><span>💰</span><b>حسابات</b><small>"دفعت لعلي ٢٠٠٠ من محارة الحمام"</small></button>
+      <button type="button" class="v2-tile" onclick="openVoiceEntry('archive')"><span>🗂️</span><b>أرشيف وملاحظات</b><small>"في نيو جيزة، ملحوظة ١… ملحوظة ٢…"</small></button>
+      <button type="button" class="v2-tile soon" onclick="showToast('دي هنحددها مع بعض — قولّي عايزها تعمل إيه')"><span>✨</span><b>قريباً</b><small>الحاجة التالتة</small></button>
+    </div>
+  </div>
+</div>
+
+<!-- 🪜 خطوات المشروع -->
+<div class="overlay" id="overlay-project-steps">
+  <div class="modal" style="max-width:560px;">
+    <button class="modal-close" onclick="closeModal('overlay-project-steps')">×</button>
+    <h2 id="ps-title">🪜 خطوات المشروع</h2>
+    <div class="sub" id="ps-sub" style="margin-bottom:10px;"></div>
+    <div id="ps-summary"></div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin:10px 0;">
+      <button type="button" class="btn btn-gold btn-sm" onclick="openStepEditor(null)">+ خطوة</button>
+      <button type="button" class="btn btn-ghost btn-sm" id="ps-edit-toggle" onclick="toggleStepsEditMode()">✏️ ترتيب وتعديل</button>
+      <button type="button" class="btn btn-ghost btn-sm" id="ps-reset-btn" onclick="resetStepsFromTemplate()">↺ ابدأ من القالب</button>
+    </div>
+    <div id="ps-list"></div>
+  </div>
+</div>
+
+<div class="overlay" id="overlay-step-edit">
+  <div class="modal" style="max-width:460px;">
+    <button class="modal-close" onclick="closeModal('overlay-step-edit')">×</button>
+    <h2 id="se-title">خطوة</h2>
+    <div class="field"><label>اسم الخطوة</label><input type="text" id="seName" placeholder="مثلاً: الجبسن بورد في الحمامات"></div>
+    <div class="field"><label>المرحلة</label><input type="text" id="sePhase" list="sePhaseList" placeholder="التأسيس / التشطيب ..."><datalist id="sePhaseList"></datalist></div>
+    <div class="field"><label>مينفعش تبدأ غير لما دول يخلصوا</label><div id="seAfter" class="se-after"></div></div>
+    <div class="modal-actions" style="display:flex;gap:8px;">
+      <button type="button" class="btn btn-ghost btn-full" id="seDelete" onclick="deleteStep()">🗑️ امسح</button>
+      <button type="button" class="btn btn-primary btn-full" onclick="saveStep()">حفظ</button>
+    </div>
+  </div>
+</div>
+
+<!-- 🍳 تسعير مطبخ -->
+<div class="overlay" id="overlay-kitchen">
+  <div class="modal" style="max-width:540px;">
+    <button class="modal-close" onclick="closeModal('overlay-kitchen')">×</button>
+    <h2>🍳 تسعير مطبخ</h2>
+    <div class="sub" style="margin-bottom:10px;">نسخة أولى — هنزود تفاصيلها بعدين. الأسعار تحت تقدر تعدلها.</div>
+    <div class="kt-grid">
+      <div class="field"><label>اسم التسعير / العميل</label><input type="text" id="ktName" placeholder="مطبخ أ. ريهام"></div>
+      <div class="field"><label>الخامة</label><select id="ktMaterial" onchange="renderKitchenCalc()"></select></div>
+      <div class="field"><label>وحدات سفلية (م.ط)</label><input type="number" id="ktLower" inputmode="decimal" oninput="renderKitchenCalc()"></div>
+      <div class="field"><label>وحدات علوية (م.ط)</label><input type="number" id="ktUpper" inputmode="decimal" oninput="renderKitchenCalc()"></div>
+      <div class="field"><label>دواليب طويلة (عدد)</label><input type="number" id="ktTall" inputmode="decimal" oninput="renderKitchenCalc()"></div>
+      <div class="field"><label>نوع الرخامة</label><select id="ktWorktop" onchange="renderKitchenCalc()"></select></div>
+      <div class="field"><label>طول الرخامة (م.ط)</label><input type="number" id="ktWorktopM" inputmode="decimal" oninput="renderKitchenCalc()"></div>
+      <div class="field"><label>حوض + خلاط (عدد)</label><input type="number" id="ktSinks" inputmode="decimal" value="1" oninput="renderKitchenCalc()"></div>
+      <div class="field"><label>إكسسوارات (مبلغ)</label><input type="number" id="ktAcc" inputmode="decimal" oninput="renderKitchenCalc()"></div>
+      <div class="field"><label>أجهزة (مبلغ، اختياري)</label><input type="number" id="ktAppl" inputmode="decimal" oninput="renderKitchenCalc()"></div>
+      <div class="field"><label>نسبة الربح %</label><input type="number" id="ktProfit" inputmode="decimal" oninput="renderKitchenCalc()"></div>
+    </div>
+    <div id="kt-card-wrap"></div>
+    <div class="modal-actions" style="display:flex;gap:8px;">
+      <button type="button" class="btn btn-primary btn-full" onclick="saveKitchenEstimate()">💾 حفظ</button>
+      <button type="button" class="btn btn-gold btn-full" onclick="shareKitchenEstimate()">💬 ابعته صورة</button>
+    </div>
+    <details class="kt-prices"><summary>💲 أسعار المطابخ (تتعدل)</summary><div id="kt-prices"></div></details>
+    <div class="sub" style="margin-top:14px;">التسعيرات المحفوظة</div>
+    <div id="kt-saved"></div>
+  </div>
+</div>
+
+<!-- 📊 تقرير الأسبوع -->
+<div class="overlay" id="overlay-weekly-report">
+  <div class="modal" style="max-width:600px;">
+    <button class="modal-close" onclick="closeModal('overlay-weekly-report')">×</button>
+    <h2>📊 تقرير الأسبوع</h2>
+    <div class="sub" style="margin-bottom:10px;">بيتجمع لوحده: وصلنا لفين، اللي خرج من المخازن، العدد اللي في الموقع، العمال والمقاولين، وكل الإيصالات.</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <div class="field" style="flex:1;min-width:150px;margin:0;"><label>الأسبوع اللي بيخلص يوم</label><input type="date" id="wrEnd" onchange="renderWeeklyReport()"></div>
+      <div class="field" style="flex:1;min-width:150px;margin:0;"><label>المشروع</label><select id="wrProject" onchange="renderWeeklyReport()"></select></div>
+    </div>
+    <div id="wrPreview" style="margin-top:12px;"></div>
+    <div class="modal-actions" style="display:flex;gap:8px;flex-wrap:wrap;">
+      <button type="button" class="btn btn-gold btn-full" onclick="exportWeeklyReport('pdf')">📄 PDF</button>
+      <button type="button" class="btn btn-ghost btn-full" onclick="exportWeeklyReport('jpg')">🖼️ صورة</button>
+    </div>
+    <div class="modal-actions"><button type="button" class="btn btn-primary btn-full" onclick="sendWeeklyEmail(false)">📧 ابعت تقرير كل المشاريع على الميل</button></div>
+  </div>
+</div>
+<div id="wr-render-host" style="position:absolute;top:-99999px;left:-99999px;width:720px;"></div>
+
+<!-- 🔔 التنبيهات والتقرير الأسبوعي -->
+<div class="overlay" id="overlay-v2-settings">
+  <div class="modal" style="max-width:440px;">
+    <button class="modal-close" onclick="closeModal('overlay-v2-settings')">×</button>
+    <h2>🔔 التنبيهات والتقرير الأسبوعي</h2>
+    <div class="field"><label>📧 الإيميل اللي يتبعتله تقرير الأسبوع</label><input type="email" id="v2Email" placeholder="name@gmail.com" onchange="saveReportEmail()"></div>
+    <div class="hint" style="margin-bottom:10px;">كل خميس بعد ٤ العصر، أول موبايل يفتح البرنامج يسألك: "أبعت تقرير الأسبوع؟" — تدوس ابعت، يتجهز PDF لكل المشاريع ويفتحلك الميل جاهز. ولو اتبعت من موبايل مش هيسأل التاني.</div>
+    <div class="hint" style="margin-bottom:10px;">☀️ كل يوم ٩ الصبح بيجيلكم إشعار "افتحوا السيستم". 🔔 ولما حد فيكم يسجل حاجة، التاني بيجيله إشعار.</div>
+    <div class="modal-actions" style="display:flex;gap:8px;flex-wrap:wrap;">
+      <button type="button" class="btn btn-gold btn-full" onclick="testMorningNotice()">☀️ جرّب تنبيه الصبح</button>
+      <button type="button" class="btn btn-ghost btn-full" onclick="sendWeeklyEmail(false)">📧 جرّب تقرير الأسبوع</button>
+    </div>
+    <div class="sub" style="margin-top:12px;">🔔 آخر اللي اتعمل</div>
+    <div id="v2FeedList"><div class="no-hist">لسه مفيش</div></div>
+  </div>
+</div>
+<script>
+
+/* =====================================================================================
+   V2 (DRAFT) — إدارة المشاريع، خطوات المشروع، تسعير المطبخ، تقرير الأسبوع، الكلام للأرشيف،
+   والتنبيهات. كله في الـ draft بس.
+   ===================================================================================== */
+const V2_PHASES = ['البداية','التأسيس','التشطيب الخشن','التشطيب','التسليم'];
+const V2_DEFAULT_STEPS = [
+  ['st1','استلام الموقع ورفع المقاسات','البداية',[]],
+  ['st2','تطهير الموقع والتكسير والإزالة','البداية',['st1']],
+  ['st3','المباني والتعديلات','البداية',['st2']],
+  ['st4','تأسيس الكهرباء (مواسير وعلب)','التأسيس',['st3']],
+  ['st5','تأسيس السباكة والصرف','التأسيس',['st3']],
+  ['st6','تأسيس التكييف (نحاس وصرف)','التأسيس',['st3']],
+  ['st7','فتحات وتأسيس الشفاطات','التأسيس',['st3']],
+  ['st8','اختبار ضغط مواسير المياه','التأسيس',['st5']],
+  ['st9','عزل الحمامات والمطبخ','التأسيس',['st5','st8']],
+  ['st10','المحارة','التشطيب الخشن',['st4','st5','st6']],
+  ['st11','الجبسن بورد والأسقف','التشطيب الخشن',['st4','st6','st7','st10']],
+  ['st12','السيراميك والبورسلين','التشطيب الخشن',['st9','st10']],
+  ['st13','معجون وتأسيس الدهانات','التشطيب',['st10','st11']],
+  ['st14','تركيب الأبواب والشبابيك','التشطيب',['st12','st13']],
+  ['st15','تركيب المطبخ','التشطيب',['st12','st13']],
+  ['st16','تشطيب الكهرباء (مفاتيح وبرايز وإضاءة)','التشطيب',['st13']],
+  ['st17','تركيب الأطقم الصحية والخلاطات','التشطيب',['st12']],
+  ['st18','تركيب أجهزة التكييف','التشطيب',['st13']],
+  ['st19','وش الدهان النهائي','التشطيب',['st14','st15','st16','st17']],
+  ['st20','النظافة والاستلام النهائي','التسليم',['st19']]
+].map(([id,title,phase,after])=>({id,title,phase,after}));
+
+const V2_KITCHEN_PRICES = {
+  materials: {
+    'MDF لاكيه': { lower: 9000, upper: 7000, tall: 18000 },
+    'HPL': { lower: 7000, upper: 5500, tall: 14000 },
+    'أكريليك': { lower: 11000, upper: 8500, tall: 22000 },
+    'خشب طبيعي': { lower: 16000, upper: 12000, tall: 30000 }
+  },
+  worktops: { 'جرانيت': 3500, 'رخام': 4500, 'كوارتز': 9000, 'كوريان': 8000 },
+  sink: 6000, install: 5000, profit: 20
+};
+
+function v2Clone(x){ return JSON.parse(JSON.stringify(x)); }
+function v2Normalize(){
+  if(!state) return;
+  if(!Array.isArray(state.stepTemplate) || !state.stepTemplate.length) state.stepTemplate = v2Clone(V2_DEFAULT_STEPS);
+  state.stepTemplate.forEach(s=>{ s.after = s.after || []; });
+  (state.projects||[]).forEach(p=>{ if(p.steps) p.steps.forEach(s=>{ s.after = s.after || []; s.status = s.status || 'todo'; }); });
+  state.kitchenEstimates = state.kitchenEstimates || [];
+  state.settings = state.settings || {};
+  if(!state.settings.kitchenPrices) state.settings.kitchenPrices = v2Clone(V2_KITCHEN_PRICES);
+}
+{ const _n = normalizeState; normalizeState = function(){ _n(); try{ v2Normalize(); }catch(e){ console.error(e); } }; }
+
+function v2Confirm(message, okLabel, cancelLabel){
+  return new Promise(resolve=>{
+    const ov = document.createElement('div');
+    ov.className = 'overlay show';
+    ov.innerHTML = `<div class="modal" style="max-width:400px;">
+      <div class="app-prompt-msg" style="font-weight:700;font-size:14.5px;line-height:1.8;white-space:pre-line;margin-bottom:14px;"></div>
+      <div class="modal-actions" style="display:flex;gap:8px;">
+        <button type="button" class="btn btn-ghost btn-full" data-act="no"></button>
+        <button type="button" class="btn btn-primary btn-full" data-act="yes"></button>
+      </div></div>`;
+    ov.querySelector('.app-prompt-msg').textContent = message;
+    ov.querySelector('[data-act="yes"]').textContent = okLabel || 'تمام';
+    ov.querySelector('[data-act="no"]').textContent = cancelLabel || 'لا';
+    const done = v=>{ ov.remove(); resolve(v); };
+    ov.querySelector('[data-act="yes"]').onclick = ()=>done(true);
+    ov.querySelector('[data-act="no"]').onclick = ()=>done(false);
+    ov.addEventListener('click', e=>{ if(e.target===ov) done(false); });
+    document.body.appendChild(ov);
+  });
+}
+function v2Projects(){ return (state.projects||[]).filter(p=>!p.archived); }
+function v2FmtDay(d){ return d ? new Date(String(d).length===10 ? d+'T00:00:00' : d).toLocaleDateString('ar-EG',{day:'numeric',month:'short',numberingSystem:'latn'}) : ''; }
+function v2Money(n){ return Math.round(Number(n)||0).toLocaleString('en-US') + ' ج.م'; }
+
+/* ===================== 📋 إدارة المشاريع (بدل "تسعير سريع" في الشريط) ===================== */
+{ const _sv = switchView; switchView = function(view){
+  _sv(view);
+  const pm = document.getElementById('view-pm');
+  if(pm) pm.style.display = view==='pm' ? '' : 'none';
+  document.getElementById('nav-pricing').classList.toggle('active', view==='pm' || view==='pricing');
+  if(view==='pm') renderPmHub();
+}; }
+{ const _hb = window.ibtkarHandleBack; window.ibtkarHandleBack = function(){
+  if(_hb && _hb()) return true;
+  if(currentView==='pricing'){ switchView('pm'); return true; }
+  return false;
+}; }
+function renderPmHub(){
+  const el = document.getElementById('pm-projects'); if(!el) return;
+  const list = v2Projects();
+  el.innerHTML = list.length ? list.map(p=>{
+    const sp = stepsProgress(p);
+    return `<div class="pm-proj" onclick="openProjectSteps('${p.id}')">
+      <div style="display:flex;justify-content:space-between;gap:8px;align-items:center;">
+        <b>${escapeHtml(p.name)}</b><span class="pm-pct">${sp.total ? sp.pct + '%' : 'لسه مفيش خطوات'}</span></div>
+      ${sp.total ? `<div class="step-bar"><span style="width:${sp.pct}%"></span></div>
+      <div class="hint">${sp.doing.length ? '🔨 ' + escapeHtml(sp.doing.map(s=>s.title).join('، ')) : (sp.next.length ? '🟢 الجاية: ' + escapeHtml(sp.next[0].title) : '')}</div>` : '<div class="hint">دوس عشان تبدأ خطوات المشروع من القالب</div>'}
+      ${sp.warnings.map(w=>`<div class="step-warn">${escapeHtml(w)}</div>`).join('')}
+    </div>`;
+  }).join('') : '<div class="no-hist">مفيش مشاريع شغالة</div>';
+}
+
+/* ===================== 🪜 خطوات المشروع ===================== */
+let stepsCtx = null;      // { kind:'project', id } | { kind:'template' }
+let stepsEditMode = false;
+let editingStepId = null;
+function stepsList(){
+  if(!stepsCtx) return [];
+  if(stepsCtx.kind==='template') return state.stepTemplate;
+  const p = (state.projects||[]).find(x=>x.id===stepsCtx.id);
+  return p ? (p.steps = p.steps || []) : [];
+}
+function stepsProject(){ return stepsCtx && stepsCtx.kind==='project' ? (state.projects||[]).find(x=>x.id===stepsCtx.id) : null; }
+function stepBlockers(steps, s){ return (s.after||[]).map(id=> steps.find(x=>x.id===id)).filter(x=> x && x.status!=='done'); }
+function stepsProgress(p){
+  const steps = (p && p.steps) || [];
+  const done = steps.filter(s=>s.status==='done');
+  const doing = steps.filter(s=>s.status==='doing');
+  const next = steps.filter(s=> s.status==='todo' && !stepBlockers(steps, s).length);
+  const pct = steps.length ? Math.round((done.length + doing.length*0.5) / steps.length * 100) : 0;
+  const warnings = [];
+  const names = list=> list.length>2 ? list.slice(0,2).map(x=>'"'+x.title+'"').join(' و ') + ` و${list.length-2} كمان` : list.map(x=>'"'+x.title+'"').join(' و ');
+  doing.forEach(s=>{
+    const b = stepBlockers(steps, s);
+    if(b.length) warnings.push(`⚠️ "${s.title}" شغالة قبل ما ${names(b)} تخلص`);
+    const days = s.startedAt ? Math.floor((Date.now() - new Date(s.startedAt))/86400000) : 0;
+    if(days>=10) warnings.push(`⏳ "${s.title}" بقالها ${days} يوم شغالة`);
+  });
+  done.forEach(s=>{
+    const b = stepBlockers(steps, s);
+    if(b.length) warnings.push(`⚠️ "${s.title}" اتعلّم عليها خلصت و${names(b)} لسه`);
+  });
+  return { total: steps.length, done, doing, next, pct, warnings };
+}
+function stepsCloneTemplate(){
+  const map = {};
+  state.stepTemplate.forEach(t=>{ map[t.id] = uid(); });
+  return state.stepTemplate.map(t=>({ id: map[t.id], title: t.title, phase: t.phase, after: (t.after||[]).map(a=>map[a]).filter(Boolean), status:'todo' }));
+}
+async function openProjectSteps(projectId){
+  const id = projectId || activeProjectDashboardId;
+  const p = (state.projects||[]).find(x=>x.id===id); if(!p) return;
+  stepsCtx = { kind:'project', id }; stepsEditMode = false;
+  if(!p.steps || !p.steps.length){ p.steps = stepsCloneTemplate(); await saveState(); }
+  renderProjectSteps();
+  document.getElementById('overlay-project-steps').classList.add('show');
+}
+function openStepsTemplate(){
+  stepsCtx = { kind:'template' }; stepsEditMode = true;
+  renderProjectSteps();
+  document.getElementById('overlay-project-steps').classList.add('show');
+}
+function toggleStepsEditMode(){ stepsEditMode = !stepsEditMode; renderProjectSteps(); }
+function renderProjectSteps(){
+  const steps = stepsList(), p = stepsProject(), tpl = stepsCtx.kind==='template';
+  document.getElementById('ps-title').textContent = tpl ? '🪜 قالب الخطوات (لكل المشاريع الجديدة)' : '🪜 خطوات المشروع';
+  document.getElementById('ps-sub').textContent = tpl ? 'ده الترتيب اللي أي مشروع جديد بيبدأ بيه. "مينفعش تبدأ غير لما…" هي اللي بتخلي البرنامج ينبهك.' : (p ? p.name + ' — اضغط على الدايرة: لسه ← شغالين ← خلصت' : '');
+  document.getElementById('ps-reset-btn').style.display = tpl ? 'none' : '';
+  document.getElementById('ps-edit-toggle').style.display = tpl ? 'none' : '';
+  document.getElementById('ps-edit-toggle').textContent = stepsEditMode ? '✓ خلصت تعديل' : '✏️ ترتيب وتعديل';
+  if(!tpl && p){
+    const sp = stepsProgress(p);
+    document.getElementById('ps-summary').innerHTML = `<div class="ps-sum">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;"><b style="font-size:24px;">${sp.pct}%</b><span class="hint">${sp.done.length} من ${sp.total} خطوة خلصت</span></div>
+      <div class="step-bar"><span style="width:${sp.pct}%"></span></div>
+      ${sp.doing.length ? `<div class="hint" style="margin-top:6px;">🔨 شغالين في: <b>${escapeHtml(sp.doing.map(s=>s.title).join('، '))}</b></div>` : ''}
+      ${sp.next.length ? `<div class="hint">🟢 تقدر تبدأ: ${escapeHtml(sp.next.slice(0,4).map(s=>s.title).join('، '))}</div>` : ''}
+      ${sp.warnings.map(w=>`<div class="step-warn">${escapeHtml(w)}</div>`).join('')}
+    </div>`;
+  } else document.getElementById('ps-summary').innerHTML = '';
+  let lastPhase = null;
+  document.getElementById('ps-list').innerHTML = steps.map((s,i)=>{
+    const b = tpl ? [] : stepBlockers(steps, s);
+    const head = s.phase!==lastPhase ? `<div class="step-phase">${escapeHtml(s.phase||'—')}</div>` : '';
+    lastPhase = s.phase;
+    const afterNames = (s.after||[]).map(id=>{ const x = steps.find(y=>y.id===id); return x ? x.title : null; }).filter(Boolean);
+    let sub = '';
+    if(tpl) sub = afterNames.length ? '↳ بعد: ' + afterNames.join('، ') : 'أول خطوة';
+    else if(s.status==='done') sub = `✅ خلصت ${v2FmtDay(s.doneAt)}${s.doneBy ? ' · ' + s.doneBy : ''}`;
+    else if(s.status==='doing') sub = `🔨 شغالين فيها${s.startedAt ? ' من ' + v2FmtDay(s.startedAt) : ''}${b.length ? ' — ⚠️ قبل ما ' + b.map(x=>x.title).join('، ') + ' تخلص' : ''}`;
+    else sub = b.length ? '🔒 مستنية: ' + b.map(x=>x.title).join('، ') : '🟢 جاهزة تبدأ';
+    const circle = tpl ? `<span class="step-num">${i+1}</span>` :
+      `<button type="button" class="step-dot ${s.status}" onclick="cycleStep('${s.id}')">${s.status==='done'?'✓':s.status==='doing'?'●':''}</button>`;
+    const tools = stepsEditMode ? `<div class="step-tools">
+      <button type="button" onclick="moveStep('${s.id}',-1)">↑</button><button type="button" onclick="moveStep('${s.id}',1)">↓</button>
+      <button type="button" onclick="openStepEditor('${s.id}')">✏️</button></div>` : '';
+    return `${head}<div class="step-row ${tpl?'':s.status} ${!tpl && s.status==='todo' && b.length ? 'blocked' : ''}">
+      ${circle}<div style="flex:1;min-width:0;"><div class="step-t">${escapeHtml(s.title)}</div><div class="step-s">${escapeHtml(sub)}</div></div>${tools}</div>`;
+  }).join('') || '<div class="no-hist">مفيش خطوات — دوس "+ خطوة"</div>';
+}
+async function cycleStep(id){
+  const steps = stepsList(), s = steps.find(x=>x.id===id), p = stepsProject(); if(!s || !p) return;
+  const order = { todo:'doing', doing:'done', done:'todo' };
+  const to = order[s.status||'todo'];
+  if(to!=='todo'){
+    const b = stepBlockers(steps, s);
+    if(b.length){
+      const ok = await v2Confirm(`⚠️ استنى!\n"${s.title}" المفروض متبدأش غير لما دول يخلصوا:\n\n${b.map(x=>'• '+x.title).join('\n')}\n\nتكمل برضه؟`, 'أيوه، كمّل', 'لا، استنى');
+      if(!ok) return;
+    }
+  } else if(!(await v2Confirm(`ترجّع "${s.title}" لـ "لسه"؟`, 'أيوه', 'لا'))) return;
+  const me = getDeviceUser();
+  s.status = to;
+  if(to==='doing'){ s.startedAt = s.startedAt || new Date().toISOString(); }
+  if(to==='done'){ s.doneAt = new Date().toISOString(); s.doneBy = me || ''; }
+  if(to==='todo'){ delete s.doneAt; delete s.doneBy; delete s.startedAt; }
+  const pct = stepsProgress(p).pct; p.progress = pct;
+  renderProjectSteps(); renderPmHub();
+  await saveState();
+  if(to==='done'){
+    const unlocked = steps.filter(x=> x.status==='todo' && (x.after||[]).includes(s.id) && !stepBlockers(steps, x).length);
+    showToast(unlocked.length ? `✅ تمام — كده تقدر تبدأ: ${unlocked.map(x=>x.title).join('، ')}` : `✅ "${s.title}" خلصت`);
+    feedPush(`✅ خلّص "${s.title}" في ${p.name}`);
+  } else if(to==='doing') feedPush(`🔨 بدأ "${s.title}" في ${p.name}`);
+}
+async function moveStep(id, dir){
+  const steps = stepsList(), i = steps.findIndex(x=>x.id===id), j = i + dir;
+  if(i<0 || j<0 || j>=steps.length) return;
+  [steps[i], steps[j]] = [steps[j], steps[i]];
+  // crossing into another phase: the moved step joins the phase of the one it passed
+  if(steps[j].phase!==steps[i].phase) steps[j].phase = steps[i].phase;
+  renderProjectSteps(); await saveState();
+}
+function stepDescendants(steps, id){
+  const out = new Set([id]); let grew = true;
+  while(grew){ grew = false; steps.forEach(s=>{ if(!out.has(s.id) && (s.after||[]).some(a=>out.has(a))){ out.add(s.id); grew = true; } }); }
+  return out;
+}
+function openStepEditor(id){
+  const steps = stepsList(); editingStepId = id;
+  const s = id ? steps.find(x=>x.id===id) : null;
+  document.getElementById('se-title').textContent = s ? 'تعديل خطوة' : 'خطوة جديدة';
+  document.getElementById('seName').value = s ? s.title : '';
+  document.getElementById('sePhase').value = s ? (s.phase||'') : (steps.length ? steps[steps.length-1].phase : V2_PHASES[0]);
+  document.getElementById('sePhaseList').innerHTML = [...new Set([...V2_PHASES, ...steps.map(x=>x.phase).filter(Boolean)])].map(x=>`<option value="${escapeHtml(x)}">`).join('');
+  const blocked = id ? stepDescendants(steps, id) : new Set();
+  document.getElementById('seAfter').innerHTML = steps.filter(x=> !blocked.has(x.id)).map(x=>
+    `<label class="checkbox-label"><input type="checkbox" value="${x.id}" ${s && (s.after||[]).includes(x.id) ? 'checked' : ''}> ${escapeHtml(x.title)}</label>`).join('') || '<div class="hint">مفيش خطوات قبلها</div>';
+  document.getElementById('seDelete').style.display = s ? '' : 'none';
+  document.getElementById('overlay-step-edit').classList.add('show');
+}
+async function saveStep(){
+  const steps = stepsList();
+  const title = document.getElementById('seName').value.trim();
+  if(!title){ showToast('اكتب اسم الخطوة'); return; }
+  const phase = document.getElementById('sePhase').value.trim();
+  const after = [...document.querySelectorAll('#seAfter input:checked')].map(x=>x.value);
+  if(editingStepId){
+    Object.assign(steps.find(x=>x.id===editingStepId), { title, phase, after });
+  } else {
+    const s = { id: uid(), title, phase, after, status:'todo' };
+    if(stepsCtx.kind==='template') delete s.status;
+    // goes after the last step of its phase
+    let at = -1; steps.forEach((x,i)=>{ if(x.phase===phase) at = i; });
+    steps.splice(at>=0 ? at+1 : steps.length, 0, s);
+  }
+  closeModal('overlay-step-edit'); renderProjectSteps(); await saveState();
+}
+async function deleteStep(){
+  const steps = stepsList(), s = steps.find(x=>x.id===editingStepId); if(!s) return;
+  if(!(await v2Confirm(`تمسح "${s.title}"؟`, 'امسح', 'لا'))) return;
+  steps.splice(steps.indexOf(s), 1);
+  steps.forEach(x=>{ x.after = (x.after||[]).filter(a=>a!==s.id); });
+  closeModal('overlay-step-edit'); renderProjectSteps(); await saveState();
+}
+async function resetStepsFromTemplate(){
+  const p = stepsProject(); if(!p) return;
+  if(!(await v2Confirm('هترجّع خطوات المشروع ده زي القالب، واللي اتعلّم عليه هيتمسح. متأكد؟', 'أيوه', 'لا'))) return;
+  p.steps = stepsCloneTemplate(); p.progress = 0;
+  renderProjectSteps(); await saveState();
+}
+
+/* ===================== 🍳 تسعير مطبخ (نسخة أولى) ===================== */
+let editingKitchenId = null;
+function kPrices(){ return state.settings.kitchenPrices; }
+function openKitchenPricing(id){
+  const kp = kPrices();
+  document.getElementById('ktMaterial').innerHTML = Object.keys(kp.materials).map(m=>`<option>${escapeHtml(m)}</option>`).join('');
+  document.getElementById('ktWorktop').innerHTML = Object.keys(kp.worktops).map(m=>`<option>${escapeHtml(m)}</option>`).join('');
+  const k = id ? state.kitchenEstimates.find(x=>x.id===id) : null; editingKitchenId = k ? k.id : null;
+  const set = (i,v)=>{ document.getElementById(i).value = v==null ? '' : v; };
+  set('ktName', k ? k.name : ''); set('ktLower', k ? k.lowerM : ''); set('ktUpper', k ? k.upperM : ''); set('ktTall', k ? k.tall : '');
+  set('ktWorktopM', k ? k.worktopM : ''); set('ktSinks', k ? k.sinks : 1); set('ktAcc', k ? k.acc : ''); set('ktAppl', k ? k.appl : ''); set('ktProfit', k ? k.profit : kp.profit);
+  if(k){ set('ktMaterial', k.material); set('ktWorktop', k.worktop); }
+  renderKitchenPrices(); renderKitchenCalc(); renderKitchenSaved();
+  document.getElementById('overlay-kitchen').classList.add('show');
+}
+function kitchenInput(){
+  const n = i=> parseFloat(document.getElementById(i).value) || 0;
+  return { name: document.getElementById('ktName').value.trim(), material: document.getElementById('ktMaterial').value, worktop: document.getElementById('ktWorktop').value,
+    lowerM: n('ktLower'), upperM: n('ktUpper'), tall: n('ktTall'), worktopM: n('ktWorktopM'), sinks: n('ktSinks'), acc: n('ktAcc'), appl: n('ktAppl'), profit: n('ktProfit') };
+}
+function kitchenCalc(k){
+  const kp = kPrices(), m = kp.materials[k.material] || Object.values(kp.materials)[0], wt = kp.worktops[k.worktop] || 0;
+  const rows = [
+    ['وحدات سفلية', k.lowerM, 'م.ط', m.lower], ['وحدات علوية', k.upperM, 'م.ط', m.upper], ['دواليب طويلة', k.tall, 'عدد', m.tall],
+    ['رخامة ' + (k.worktop||''), k.worktopM, 'م.ط', wt], ['حوض + خلاط', k.sinks, 'عدد', kp.sink]
+  ].filter(r=> r[1]>0).map(r=>({ what:r[0], qty:r[1], unit:r[2], price:r[3], total:r[1]*r[3] }));
+  if(k.acc) rows.push({ what:'إكسسوارات', total:k.acc });
+  if(k.appl) rows.push({ what:'أجهزة', total:k.appl });
+  if(rows.length) rows.push({ what:'تركيب ونقل', total:kp.install });
+  const cost = rows.reduce((s,r)=>s+r.total,0);
+  const profit = Math.round(cost * (k.profit||0) / 100);
+  return { rows, cost, profit, total: cost + profit };
+}
+function kitchenCardHtml(k, c){
+  return `<div id="kt-card" class="kt-card">
+    <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;"><b style="font-size:16px;">🍳 ${escapeHtml(k.name || 'تسعير مطبخ')}</b><span class="hint">${escapeHtml(k.material)}</span></div>
+    ${c.rows.length ? c.rows.map(r=>`<div class="kt-row"><span>${escapeHtml(r.what)}${r.qty ? ` <small>(${r.qty} ${r.unit} × ${v2Money(r.price)})</small>` : ''}</span><b>${v2Money(r.total)}</b></div>`).join('') : '<div class="hint">اكتب المقاسات فوق</div>'}
+    ${c.rows.length ? `<div class="kt-total"><span>الإجمالي</span><b>${v2Money(c.total)}</b></div>` : ''}
+    <div style="font-size:11px;color:#8C8177;margin-top:6px;">${escapeHtml((state.companyInfo && state.companyInfo.name) || 'IBTKAR')} · ${v2FmtDay(new Date().toISOString())}</div>
+  </div>
+  ${c.rows.length ? `<div class="hint">داخلي: التكلفة ${v2Money(c.cost)} + ربح ${v2Money(c.profit)}</div>` : ''}`;
+}
+function renderKitchenCalc(){
+  const k = kitchenInput();
+  document.getElementById('kt-card-wrap').innerHTML = kitchenCardHtml(k, kitchenCalc(k));
+}
+function renderKitchenPrices(){
+  const kp = kPrices();
+  const inp = (path, v)=> `<input type="number" inputmode="decimal" value="${v}" data-kp="${path}" onchange="setKitchenPrice(this)">`;
+  document.getElementById('kt-prices').innerHTML = `
+    <table class="kt-ptable"><tr><th>الخامة</th><th>سفلي/م.ط</th><th>علوي/م.ط</th><th>طويل/وحدة</th></tr>
+    ${Object.entries(kp.materials).map(([m,v])=>`<tr><td>${escapeHtml(m)}</td><td>${inp('materials|'+m+'|lower', v.lower)}</td><td>${inp('materials|'+m+'|upper', v.upper)}</td><td>${inp('materials|'+m+'|tall', v.tall)}</td></tr>`).join('')}</table>
+    <table class="kt-ptable"><tr><th>الرخامة</th><th>سعر م.ط</th></tr>
+    ${Object.entries(kp.worktops).map(([m,v])=>`<tr><td>${escapeHtml(m)}</td><td>${inp('worktops|'+m, v)}</td></tr>`).join('')}</table>
+    <table class="kt-ptable"><tr><td>حوض + خلاط</td><td>${inp('sink', kp.sink)}</td></tr><tr><td>تركيب ونقل</td><td>${inp('install', kp.install)}</td></tr><tr><td>ربح افتراضي %</td><td>${inp('profit', kp.profit)}</td></tr></table>`;
+}
+async function setKitchenPrice(el){
+  const parts = el.dataset.kp.split('|'), v = parseFloat(el.value) || 0;
+  let o = kPrices(); for(let i=0;i<parts.length-1;i++) o = o[parts[i]];
+  o[parts[parts.length-1]] = v;
+  renderKitchenCalc(); await saveState();
+}
+async function saveKitchenEstimate(){
+  const k = kitchenInput(), c = kitchenCalc(k);
+  if(!c.rows.length){ showToast('اكتب المقاسات الأول'); return; }
+  const rec = { ...k, total: c.total, cost: c.cost, date: new Date().toISOString() };
+  if(editingKitchenId) Object.assign(state.kitchenEstimates.find(x=>x.id===editingKitchenId), rec);
+  else { rec.id = uid(); state.kitchenEstimates.unshift(rec); editingKitchenId = rec.id; }
+  renderKitchenSaved(); await saveState(); showToast('✅ اتحفظ');
+}
+function renderKitchenSaved(){
+  const list = state.kitchenEstimates || [];
+  document.getElementById('kt-saved').innerHTML = list.length ? list.map(k=>`<div class="pd-row" style="cursor:pointer;" onclick="openKitchenPricing('${k.id}')">
+    <div class="pd-row-main"><div class="pd-row-title">🍳 ${escapeHtml(k.name || 'بدون اسم')}</div><div class="pd-row-sub">${escapeHtml(k.material||'')} · ${v2FmtDay(k.date)}</div></div>
+    <div class="pd-row-val">${v2Money(k.total)}</div></div>`).join('') : '<div class="no-hist">لسه مفيش</div>';
+}
+async function shareKitchenEstimate(){
+  const card = document.getElementById('kt-card'); if(!card || !window.html2canvas) return;
+  const canvas = await html2canvas(card, { scale:2, backgroundColor:'#ffffff' });
+  await shareCanvasFile(canvas, 'تسعير-مطبخ-' + (kitchenInput().name || '').replace(/\s+/g,'-'), 'jpg', 'تسعير مطبخ');
+}
+
+/* ===================== 🎙️ الكلام: حسابات أو أرشيف ===================== */
+let voiceMode = 'accounts';
+function openVoicePicker(){ document.getElementById('overlay-voice-pick').classList.add('show'); }
+{ const _ove = openVoiceEntry; openVoiceEntry = function(mode){
+  voiceMode = mode === 'archive' ? 'archive' : 'accounts';
+  closeModal('overlay-voice-pick');
+  _ove();
+  const ov = document.getElementById('overlay-voice');
+  ov.querySelector('h2').textContent = voiceMode==='archive' ? '🗂️ أرشيف بالصوت' : '💰 حسابات بالصوت';
+  ov.querySelector('.sub').textContent = voiceMode==='archive'
+    ? 'قول المشروع والملاحظات — مثلاً "النهارده في نيو جيزة، ملحوظة واحد الحمام محتاج ميول، ملحوظة اتنين البواب عايز مفتاح، ملحوظة تلاتة…". هتتحفظ في أرشيف المشروع بعد ما تراجعها.'
+    : 'دوس على المايك وقول اللي حصل — مثلاً "دفعت لعلي ٢٠٠٠ محارة الحمام في نيو جيزة كاش" أو "النهارده علي وحسن اشتغلوا في الخمايل". مفيش حاجة بتتسجل غير لما تراجعها.';
+}; }
+{ const _vu = voiceUnderstand; voiceUnderstand = function(){ return voiceMode==='archive' ? voiceArchiveUnderstand() : _vu(); }; }
+const VOICE_NOTE_MARK = /(?:ملحوظ[ةه]|ملاحظ[ةه]|نقط[ةه]|رقم)\s*(?:[0-9٠-٩]+|واحد[ةه]?|اتنين|اثنين|تلات[ةه]?|ثلاث[ةه]?|اربع[ةه]?|أربع[ةه]?|خمس[ةه]?|ست[ةه]?|سبع[ةه]?|الاول[يى]|الأول[يى]|اول[يى]|أول[يى]|التاني[ةه]|تاني[ةه]|الثاني[ةه]|التالت[ةه]|تالت[ةه]|الثالث[ةه])?|(?:^|\s)(?:اولا|أولا|أولاً|ثانيا|ثانياً|تانيا|ثالثا|ثالثاً|تالتا|رابعا|رابعاً)(?=\s|$)/g;
+function voiceSplitNotes(raw){
+  const text = String(raw||'').trim();
+  const parts = text.split(VOICE_NOTE_MARK).map(x=> x.replace(/^[\s،,.:\-–]+|[\s،,.:\-–]+$/g,'').trim());
+  if(parts.length > 1){
+    const intro = parts.shift();
+    const notes = parts.filter(Boolean);
+    if(intro && intro.split(/\s+/).length > 7) notes.unshift(intro); // كلام حقيقي قبل أول ملحوظة
+    return notes;
+  }
+  return text.split(/\s*(?:[.\n؛]|و\s*كمان|وبعدين)\s*/).map(x=>x.trim()).filter(x=> x.split(/\s+/).length>=2);
+}
+function voiceArchiveUnderstand(){
+  const raw = document.getElementById('voiceText').value;
+  const out = document.getElementById('voiceResult');
+  if(!raw.trim()){ out.innerHTML = ''; return; }
+  const v = voiceParse(raw);
+  const proj = v2Projects().find(p=> v.project && projectMatchesName(p, v.project)) || null;
+  const notes = voiceSplitNotes(raw);
+  out.innerHTML = `<div class="voice-card">
+    <div class="field"><label>المشروع</label><select id="vaProject">${v2Projects().map(p=>`<option value="${p.id}" ${proj && proj.id===p.id ? 'selected' : ''}>${escapeHtml(p.name)}</option>`).join('')}</select>
+      ${proj ? '' : '<div class="hint" style="color:var(--rose);">مسمعتش اسم المشروع — اختاره</div>'}</div>
+    <div class="field"><label>العنوان</label><input type="text" id="vaTitle" value="${escapeHtml('ملاحظات الموقع — ' + v2FmtDay(new Date().toISOString()))}"></div>
+    <div class="field"><label>الملاحظات (${notes.length}) — عدّل براحتك، كل سطر ملحوظة</label>
+      <textarea id="vaNotes" rows="${Math.min(10, notes.length + 2)}">${escapeHtml(notes.join('\n'))}</textarea></div>
+    <button type="button" class="btn btn-primary btn-full" onclick="voiceSaveArchive()">🗂️ احفظ في أرشيف المشروع</button>
+  </div>`;
+}
+async function voiceSaveArchive(){
+  const projectId = document.getElementById('vaProject').value;
+  const lines = document.getElementById('vaNotes').value.split('\n').map(x=>x.trim()).filter(Boolean);
+  if(!projectId){ showToast('اختار المشروع'); return; }
+  if(!lines.length){ showToast('مفيش ملاحظات'); return; }
+  const name = document.getElementById('vaTitle').value.trim() || 'ملاحظات الموقع';
+  state.archiveEntries = state.archiveEntries || [];
+  state.archiveEntries.push({ id: uid(), projectId, name, text: lines.map((l,i)=> `${i+1}. ${l}`).join('\n'), attachments: [], locked:false,
+    createdBy: (typeof bdWhoami!=='undefined' && bdWhoami) || PERSON_CODE[getDeviceUser()] || '', createdAt: Date.now(), byVoice: true });
+  closeModal('overlay-voice');
+  await saveState();
+  const p = (state.projects||[]).find(x=>x.id===projectId);
+  showToast(`🗂️ اتحفظت ${lines.length} ملحوظة في أرشيف ${p ? p.name : 'المشروع'}`);
+}
+
+/* ===================== 🔔 اللي اتعمل (feed) + تنبيه الصبح ===================== */
+const FEED_REF = 'ibtkar_draft_feed';
+const FEED_SKIP = new Set(['notes','payments']);
+let feedQueue = [], feedTimer = null, feedItems = [];
+function feedPush(text){
+  const me = getDeviceUser(); if(!text) return;
+  feedQueue.push({ by: me || '', text: (me ? me + ': ' : '') + text, at: new Date().toISOString() });
+  clearTimeout(feedTimer); feedTimer = setTimeout(feedFlush, 1500);
+}
+function feedFlush(){
+  const q = feedQueue.splice(0);
+  q.slice(-8).forEach(e=>{ try{ fbDB.ref(FEED_REF).push(e).catch(()=>{}); }catch(err){} });
+}
+stampNewRecords = function(){
+  const me = getDeviceUser();
+  forEachRecord((r, key, parent)=>{
+    if(!r.id || knownRecordIds.has(r.id)) return;
+    knownRecordIds.add(r.id);
+    if(me && !r.addedBy){
+      r.addedBy = me; r.addedAt = new Date().toISOString();
+      if(key && !FEED_SKIP.has(key)){
+        try{ const d = describeRecord(r, key, parent); if(d && d[0]!=='all') feedPush(d[1]); }catch(e){}
+      }
+    }
+  });
+};
+let feedStarted = false;
+function startFeed(){
+  if(feedStarted || typeof fbDB==='undefined') return; feedStarted = true;
+  const since = Date.now();
+  try{
+    fbDB.ref(FEED_REF).limitToLast(30).on('child_added', snap=>{
+      const e = snap.val() || {}; e.key = snap.key;
+      feedItems.unshift(e); feedItems = feedItems.slice(0, 30);
+      try{ if(window.IbtkarNative && IbtkarNative.feedSeen) IbtkarNative.feedSeen(snap.key); }catch(err){}
+      const me = getDeviceUser();
+      if(e.by && e.by!==me && new Date(e.at).getTime() > since - 2000){
+        showToast('🔔 ' + e.text);
+        if(document.hidden && 'Notification' in window && Notification.permission==='granted'){ try{ new Notification('🔔 إبتكار', { body: e.text }); }catch(err){} }
+      }
+    });
+  }catch(e){}
+}
+function renderFeedList(){
+  const el = document.getElementById('v2FeedList'); if(!el) return;
+  el.innerHTML = feedItems.length ? feedItems.slice(0,15).map(e=>`<div class="pd-row"><div class="pd-row-main"><div class="pd-row-title" style="font-size:13px;">${escapeHtml(e.text||'')}</div></div><div class="pd-row-sub">${e.at ? fmtDateTime(e.at) : ''}</div></div>`).join('') : '<div class="no-hist">لسه مفيش</div>';
+}
+function morningLines(){
+  const lines = [];
+  v2Projects().forEach(p=>{
+    const sp = stepsProgress(p); if(!sp.total) return;
+    if(sp.doing.length) lines.push(`🔨 ${p.name}: ${sp.doing.map(s=>s.title).join('، ')}`);
+    sp.warnings.slice(0,1).forEach(w=> lines.push(`${p.name}: ${w}`));
+  });
+  let late = 0; try{ v2Projects().forEach(p=> installmentsStatus(p).forEach(i=>{ if(i.late) late++; })); }catch(e){}
+  if(late) lines.push(`⏰ ${late} دفعة عملاء متأخرة`);
+  return lines.slice(0, 5);
+}
+function syncNativeInfo(){
+  if(!(window.IbtkarNative)) return;
+  try{ if(IbtkarNative.setUser) IbtkarNative.setUser(getDeviceUser()); }catch(e){}
+  try{ if(IbtkarNative.setMorningText) IbtkarNative.setMorningText(morningLines().join('\n')); }catch(e){}
+}
+function testMorningNotice(){
+  syncNativeInfo();
+  if(window.IbtkarNative && IbtkarNative.testMorning){ IbtkarNative.testMorning(); showToast('بص على الإشعارات فوق'); return; }
+  showMorningInPage(true);
+}
+function showMorningInPage(force){
+  const today = bdTodayStr();
+  let shown = ''; try{ shown = localStorage.getItem('ibtkar-morning-shown') || ''; }catch(e){}
+  if(!force && shown===today) return;
+  try{ localStorage.setItem('ibtkar-morning-shown', today); }catch(e){}
+  const body = ['افتحوا السيستم وشوفوا عندكم إيه النهارده', ...morningLines()].join('\n');
+  if('Notification' in window){
+    if(Notification.permission==='granted'){ try{ new Notification('☀️ صباح الخير', { body }); }catch(e){} }
+    else if(Notification.permission!=='denied') Notification.requestPermission().catch(()=>{});
+  }
+  v2Confirm('☀️ صباح الخير\n\n' + body, 'يلا', 'بعدين');
+}
+// الكمبيوتر / المتصفح: لو البرنامج مفتوح الساعة ٩ (الموبايل بيعملها من غير ما يبقى مفتوح)
+setInterval(()=>{
+  if(window.IbtkarNative) return;
+  const d = new Date();
+  if(d.getHours()===9 && d.getMinutes()<30) showMorningInPage(false);
+  checkWeeklyEmailDue();
+}, 60000);
+
+/* ===================== 📊 تقرير الأسبوع ===================== */
+function weekRange(end){ end = end || bdTodayStr(); return { from: bdAddDays(end, -6), to: end }; }
+function inRange(d, r){ const x = isoLocalDate(d); return !!x && x>=r.from && x<=r.to; }
+function buildWeeklyData(p, r){
+  const sp = stepsProgress(p);
+  const steps = p.steps || [];
+  const doneWeek = steps.filter(s=> s.status==='done' && inRange(s.doneAt, r));
+  const match = it=> projectMatchesName(p, it);
+  // المخازن
+  const moved = [], tools = [];
+  (state.items||[]).forEach(it=>{
+    (it.log||[]).forEach(h=>{ if(h.type==='out' && match(h.destination) && inRange(h.date, r)) moved.push({ name: it.name, code: it.code, qty: h.qty, unit: it.unit, date: h.date, tool: it.category==='tool' }); });
+    if(it.category==='tool'){
+      const last = (it.log||[]).slice().sort((a,b)=> new Date(b.date)-new Date(a.date))[0];
+      if(last && last.type==='out' && match(last.destination)) tools.push({ name: it.name, code: it.code, since: last.date });
+    }
+  });
+  // العمال
+  const workers = [];
+  (state.workers||[]).forEach(w=>{
+    const logs = (w.logs||[]).filter(l=> match(l.project));
+    const week = logs.filter(l=> inRange(l.date, r)).length, unpaid = logs.filter(l=>!l.paid).length;
+    const paidWeek = (state.expenses||[]).filter(e=> e.workerId===w.id && !e.workerContractId && match(e.project) && inRange(e.date, r)).reduce((s,e)=>s+(Number(e.amount)||0),0);
+    if(week || unpaid || paidWeek) workers.push({ name: w.name, week, unpaid, paidWeek });
+  });
+  // المقاولين (مقاولات العمال + حسابات الموردين على المشروع)
+  const contractors = [];
+  (state.workers||[]).forEach(w=> (w.contracts||[]).filter(c=> match(c.name)).forEach(c=>{
+    const pays = (state.expenses||[]).filter(e=> e.workerId===w.id && e.workerContractId===c.id);
+    const paid = pays.reduce((s,e)=>s+(Number(e.amount)||0),0), ded = computeWorkerContractDeductions(w.id, c.id);
+    contractors.push({ name: w.name, what: c.title || contractLabel(c), total: Number(c.totalValue)||0, paid, ded,
+      paidWeek: pays.filter(e=> inRange(e.date, r)).reduce((s,e)=>s+(Number(e.amount)||0),0),
+      left: c.totalValue ? c.totalValue - paid - ded : null });
+  }));
+  (state.suppliers||[]).forEach(s=> (s.projects||[]).filter(sp2=> match(sp2.name)).forEach(sp2=>{
+    const pays = (state.expenses||[]).filter(e=> e.supplierId===s.id && e.supplierProjectId===sp2.id);
+    const paid = pays.reduce((a,e)=>a+(Number(e.amount)||0),0);
+    contractors.push({ name: s.name, what: '🔧 ' + (sp2.title || contractLabel(sp2)), total: Number(sp2.totalValue)||0, paid, ded: 0,
+      paidWeek: pays.filter(e=> inRange(e.date, r)).reduce((a,e)=>a+(Number(e.amount)||0),0), left: sp2.totalValue ? sp2.totalValue - paid : null });
+  }));
+  // الإيصالات
+  const receipts = (state.expenses||[]).filter(e=> match(e.project) && inRange(e.date, r)).map(e=>{
+    let who = ''; try{ const d = buildReceiptDataForTxn(e, 'expense'); who = d.recipientName + ' — ' + d.recipientRole; }catch(err){ who = e.description || ''; }
+    return { date: e.date, who, amount: Number(e.amount)||0, method: e.method || '', image: e.image || null, desc: e.description || '' };
+  }).sort((a,b)=> new Date(a.date)-new Date(b.date));
+  const incomes = (state.income||[]).filter(e=> match(e.project) && inRange(e.date, r)).map(e=>({ date: e.date, amount: Number(e.amount)||0, method: e.method||'', image: e.image||null }));
+  const quality = (state.siteChecklists||[]).filter(c=>c.projectId===p.id).map(c=>{ const cc = checklistCounts(c.items); return { trade: c.trade, ok: cc.match, bad: cc.mismatch, total: cc.total - cc.na }; });
+  const daily = []; for(let i=0;i<7;i++){ const date = bdAddDays(r.to, -i); try{ const d = buildDailyReportData(p, date); if(d.workers.length) daily.push({ date, n: d.workers.length }); }catch(e){} }
+  return { p, r, sp, doneWeek, moved, tools, workers, contractors, receipts, incomes, quality, daily,
+    spent: receipts.reduce((s,x)=>s+x.amount,0), received: incomes.reduce((s,x)=>s+x.amount,0) };
+}
+function weeklyCardHtml(d){
+  const sec = (t, body)=> body ? `<div class="wr-sec"><div class="wr-h">${t}</div>${body}</div>` : '';
+  const rows = (list, fn)=> list.length ? list.map(fn).join('') : '';
+  const co = (state.companyInfo && state.companyInfo.name) || 'IBTKAR Architecture Development';
+  return `<div class="wr-card">
+    <div class="wr-top"><div><div class="wr-co">${escapeHtml(co)}</div><div class="wr-title">📊 تقرير الأسبوع — ${escapeHtml(d.p.name)}</div>
+      <div class="wr-range">${v2FmtDay(d.r.from)} ← ${v2FmtDay(d.r.to)}${d.p.client ? ' · العميل: ' + escapeHtml(d.p.client) : ''}</div></div>
+      ${d.sp.total ? `<div class="wr-pct">${d.sp.pct}%</div>` : ''}</div>
+    ${d.sp.total ? `<div class="step-bar" style="margin:6px 0 2px;"><span style="width:${d.sp.pct}%"></span></div>` : ''}
+    <div class="wr-kpis">
+      <div><b>${d.daily.reduce((s,x)=>s+x.n,0)}</b><span>يوم عامل</span></div>
+      <div><b>${d.doneWeek.length}</b><span>خطوة خلصت</span></div>
+      <div><b>${v2Money(d.spent)}</b><span>اتصرف</span></div>
+      <div><b>${v2Money(d.received)}</b><span>اتقبض</span></div>
+    </div>
+    ${sec('🪜 وصلنا لفين', d.sp.total ? `
+      ${d.doneWeek.length ? `<div>✅ خلص الأسبوع ده: <b>${escapeHtml(d.doneWeek.map(s=>s.title).join('، '))}</b></div>` : '<div class="hint">مفيش خطوات خلصت الأسبوع ده</div>'}
+      ${d.sp.doing.length ? `<div>🔨 شغالين في: ${escapeHtml(d.sp.doing.map(s=>s.title).join('، '))}</div>` : ''}
+      ${d.sp.next.length ? `<div>⏭️ الجاي: ${escapeHtml(d.sp.next.slice(0,3).map(s=>s.title).join('، '))}</div>` : ''}
+      ${d.sp.warnings.map(w=>`<div class="step-warn">${escapeHtml(w)}</div>`).join('')}` : '<div class="hint">لسه مفيش خطوات للمشروع</div>')}
+    ${sec('✅ مراجعات الجودة', rows(d.quality, q=>`<div class="wr-row"><span>${escapeHtml(q.trade)}</span><span>${q.ok} مطابق من ${q.total}${q.bad ? ` · <b style="color:#C2547A">${q.bad} مش مطابق</b>` : ''}</span></div>`))}
+    ${sec('📦 اللي خرج من المخازن للمشروع', rows(d.moved, m=>`<div class="wr-row"><span>${m.tool?'🔧':'📦'} ${escapeHtml(m.name||'')} <small>${escapeHtml(m.code||'')}</small></span><span>${m.qty||''} ${escapeHtml(m.unit||'')} · ${v2FmtDay(m.date)}</span></div>`) || '<div class="hint">مفيش حاجة خرجت الأسبوع ده</div>')}
+    ${sec('🔧 العدد اللي في الموقع دلوقتي', rows(d.tools, t=>`<div class="wr-row"><span>${escapeHtml(t.name||'')} <small>${escapeHtml(t.code||'')}</small></span><span>من ${v2FmtDay(t.since)}</span></div>`) || '<div class="hint">مفيش عدد مسجلة هناك</div>')}
+    ${sec('👷 العمال', rows(d.workers, w=>`<div class="wr-row"><span>${escapeHtml(w.name)}</span><span>${w.week} يوم الأسبوع ده${w.unpaid ? ` · <b style="color:#C2547A">ليه ${w.unpaid} يوم لسه</b>` : ''}${w.paidWeek ? ' · اتدفعله ' + v2Money(w.paidWeek) : ''}</span></div>`))}
+    ${sec('🏗️ المقاولين والموردين', rows(d.contractors, c=>`<div class="wr-row"><span>${escapeHtml(c.name)} <small>${escapeHtml(c.what||'')}</small></span><span>${c.total ? `${v2Money(c.paid)} من ${v2Money(c.total)}` : v2Money(c.paid)}${c.paidWeek ? ` · الأسبوع ده ${v2Money(c.paidWeek)}` : ''}${c.left!=null ? ` · <b>فاضل ${v2Money(c.left)}</b>` : ''}</span></div>`))}
+    ${sec('🧾 الإيصالات (اللي اتدفع)', rows(d.receipts, x=>`<div class="wr-row"><span>${v2FmtDay(x.date)} · ${escapeHtml(x.who)}${x.method ? ' · ' + escapeHtml(x.method) : ''}${x.image ? ' 📎' : ''}</span><b>${v2Money(x.amount)}</b></div>`) || '<div class="hint">مفيش مصروفات الأسبوع ده</div>')}
+    ${d.receipts.some(x=>x.image) ? `<div class="wr-imgs">${d.receipts.filter(x=>x.image).slice(0,9).map(x=>`<img src="${x.image}" crossorigin="anonymous">`).join('')}</div>` : ''}
+    ${sec('💰 اللي اتقبض من العميل', rows(d.incomes, x=>`<div class="wr-row"><span>${v2FmtDay(x.date)}${x.method ? ' · ' + escapeHtml(x.method) : ''}${x.image ? ' 📎' : ''}</span><b>${v2Money(x.amount)}</b></div>`))}
+    <div class="wr-foot">اتعمل أوتوماتيك من البرنامج · ${fmtDateTime(new Date().toISOString())}</div>
+  </div>`;
+}
+function openWeeklyReport(projectId){
+  const sel = document.getElementById('wrProject');
+  sel.innerHTML = v2Projects().map(p=>`<option value="${p.id}">${escapeHtml(p.name)}</option>`).join('');
+  sel.value = projectId || activeProjectDashboardId || (v2Projects()[0] || {}).id || '';
+  document.getElementById('wrEnd').value = bdTodayStr();
+  renderWeeklyReport();
+  document.getElementById('overlay-weekly-report').classList.add('show');
+}
+function renderWeeklyReport(){
+  const p = (state.projects||[]).find(x=>x.id===document.getElementById('wrProject').value);
+  document.getElementById('wrPreview').innerHTML = p ? `<div id="wr-card-wrap">${weeklyCardHtml(buildWeeklyData(p, weekRange(document.getElementById('wrEnd').value)))}</div>` : '<div class="no-hist">مفيش مشروع</div>';
+}
+async function renderCardsToPdf(htmlList){
+  const host = document.getElementById('wr-render-host');
+  const { jsPDF } = window.jspdf; let pdf = null;
+  for(const html of htmlList){
+    host.innerHTML = html;
+    await Promise.all([...host.querySelectorAll('img')].map(img=> img.complete ? null : new Promise(r=>{ img.onload = img.onerror = r; setTimeout(r, 5000); })));
+    const canvas = await html2canvas(host.firstElementChild, { scale:1.6, useCORS:true, backgroundColor:'#ffffff' });
+    const w = 595.28, h = canvas.height * w / canvas.width;
+    if(!pdf) pdf = new jsPDF({ unit:'pt', format:[w, h] }); else pdf.addPage([w, h]);
+    pdf.addImage(canvas.toDataURL('image/jpeg', 0.85), 'JPEG', 0, 0, w, h);
+  }
+  host.innerHTML = '';
+  return pdf ? pdf.output('blob') : null;
+}
+async function exportWeeklyReport(format){
+  const card = document.querySelector('#wr-card-wrap .wr-card'); if(!card || !window.html2canvas) return;
+  showToast('جاري تجهيز التقرير...');
+  const p = (state.projects||[]).find(x=>x.id===document.getElementById('wrProject').value);
+  const base = `تقرير-أسبوع-${(p && p.name || '').replace(/\s+/g,'-')}-${document.getElementById('wrEnd').value}`;
+  if(format==='pdf'){
+    const blob = await renderCardsToPdf([card.outerHTML]);
+    await shareBlob(blob, base + '.pdf', 'application/pdf', 'تقرير الأسبوع', null);
+  } else {
+    const canvas = await html2canvas(card, { scale:2, useCORS:true, backgroundColor:'#ffffff' });
+    await shareCanvasFile(canvas, base, 'jpg', 'تقرير الأسبوع');
+  }
+}
+function blobToB64(blob){ return new Promise((res, rej)=>{ const r = new FileReader(); r.onload = ()=>{ const s = String(r.result); res(s.slice(s.indexOf(',')+1)); }; r.onerror = rej; r.readAsDataURL(blob); }); }
+async function shareBlob(blob, filename, mime, title, email, bodyText){
+  if(window.IbtkarNative && IbtkarNative.share){
+    const b64 = await blobToB64(blob);
+    IbtkarNative.share(JSON.stringify({ title, text: bodyText || '', email: email || '', files: [{ b64, name: filename, mime }] }));
+    return true;
+  }
+  const file = new File([blob], filename, { type: mime });
+  if(navigator.canShare && navigator.canShare({ files:[file] })){
+    try{ await navigator.share({ files:[file], title, text: bodyText || '' }); return true; }catch(e){ if(e && e.name==='AbortError') return false; }
+  }
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = filename; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=> URL.revokeObjectURL(url), 5000);
+  if(email) window.open(`mailto:${encodeURIComponent(email)}?subject=${encodeURIComponent(title)}&body=${encodeURIComponent((bodyText||'') + '\n\n(الملف اتحمّل على الجهاز: ' + filename + ' — ضيفه للميل)')}`);
+  return true;
+}
+function weeklyKey(d){ d = d || new Date(); const back = (d.getDay() - 4 + 7) % 7; const t = new Date(d); t.setDate(d.getDate() - back); return bdTodayStr(t); }
+async function sendWeeklyEmail(auto){
+  let email = (state.settings && state.settings.reportEmail) || '';
+  if(!email){
+    email = (await appPrompt('📧 اكتب الإيميل اللي يتبعتله تقرير الأسبوع', '') || '').trim();
+    if(!email) return;
+    state.settings.reportEmail = email; saveState();
+  }
+  const end = weeklyKey();
+  const r = weekRange(end);
+  const list = v2Projects();
+  if(!list.length){ showToast('مفيش مشاريع شغالة'); return; }
+  showToast('جاري تجهيز تقرير ' + list.length + ' مشروع...');
+  const datas = list.map(p=> buildWeeklyData(p, r));
+  const blob = await renderCardsToPdf(datas.map(weeklyCardHtml));
+  const lines = datas.map(d=> `• ${d.p.name}: ${d.sp.total ? d.sp.pct + '% · ' : ''}اتصرف ${v2Money(d.spent)} · اتقبض ${v2Money(d.received)}${d.doneWeek.length ? ' · خلص: ' + d.doneWeek.map(s=>s.title).join('، ') : ''}`);
+  const ok = await shareBlob(blob, `تقرير-الأسبوع-${end}.pdf`, 'application/pdf', `تقرير الأسبوع — ${v2FmtDay(r.from)} لـ ${v2FmtDay(r.to)}`, email,
+    `تقرير الأسبوع لكل المشاريع (${v2FmtDay(r.from)} – ${v2FmtDay(r.to)})\n\n${lines.join('\n')}\n\nالتفاصيل والإيصالات في الملف المرفق.`);
+  if(ok){ state.settings.weeklyReportSent = end; await saveState(); if(auto) feedPush('📧 بعت تقرير الأسبوع على الميل'); }
+}
+let weeklyAsking = false;
+async function checkWeeklyEmailDue(){
+  if(weeklyAsking || !state || !state.settings) return;
+  const d = new Date(), day = d.getDay();
+  const due = (day===4 && d.getHours()>=16) || day===5 || day===6; // الخميس آخر النهار، أو لو اتنسى: الجمعة/السبت
+  if(!due) return;
+  const key = weeklyKey(d);
+  if(state.settings.weeklyReportSent === key) return;
+  let snooze = 0; try{ snooze = Number(localStorage.getItem('ibtkar-weekly-snooze')) || 0; }catch(e){}
+  if(Date.now() < snooze) return;
+  weeklyAsking = true;
+  const ok = await v2Confirm('📧 النهارده آخر الأسبوع\nأجهّزلك تقرير الأسبوع لكل المشاريع (وصلنا لفين، المخازن، العمال، المقاولين، والإيصالات) وأفتحلك الميل جاهز تبعته؟', '📧 ابعت', 'بعدين');
+  weeklyAsking = false;
+  if(ok) sendWeeklyEmail(true);
+  else { try{ localStorage.setItem('ibtkar-weekly-snooze', String(Date.now() + 2*3600000)); }catch(e){} }
+}
+function openV2Settings(){
+  document.getElementById('v2Email').value = (state.settings && state.settings.reportEmail) || '';
+  renderFeedList();
+  document.getElementById('overlay-v2-settings').classList.add('show');
+}
+async function saveReportEmail(){
+  state.settings.reportEmail = document.getElementById('v2Email').value.trim();
+  await saveState(); showToast('اتحفظ الإيميل');
+}
+
+/* ===================== 🏠 الرئيسية: الخطوات والتنبيهات ===================== */
+function renderHomeSteps(){
+  const el = document.getElementById('home-steps-wrap'); if(!el) return;
+  const items = v2Projects().map(p=>({ p, sp: stepsProgress(p) })).filter(x=> x.sp.total);
+  if(!items.length){ el.innerHTML = ''; return; }
+  el.innerHTML = `<div class="card" style="padding:14px 16px;margin-bottom:16px;border:2px dashed var(--gold);">
+    <div style="font-weight:900;font-size:15px;margin-bottom:8px;">🆕 🪜 المشاريع وصلت لفين</div>
+    ${items.map(({p,sp})=>`<div class="pm-proj" onclick="openProjectSteps('${p.id}')" style="margin-bottom:8px;">
+      <div style="display:flex;justify-content:space-between;"><b>${escapeHtml(p.name)}</b><span class="pm-pct">${sp.pct}%</span></div>
+      <div class="step-bar"><span style="width:${sp.pct}%"></span></div>
+      <div class="hint">${sp.doing.length ? '🔨 ' + escapeHtml(sp.doing.map(s=>s.title).join('، ')) : ''}${sp.next.length ? (sp.doing.length ? ' · ' : '') + '🟢 الجاية: ' + escapeHtml(sp.next[0].title) : ''}</div>
+      ${sp.warnings.map(w=>`<div class="step-warn">${escapeHtml(w)}</div>`).join('')}
+    </div>`).join('')}
+  </div>`;
+}
+{ const _rh = renderHome; renderHome = function(){
+  _rh();
+  try{ renderHomeSteps(); }catch(e){ console.error(e); }
+  try{ syncNativeInfo(); }catch(e){}
+  try{ startFeed(); }catch(e){}
+  setTimeout(()=>{ try{ checkWeeklyEmailDue(); }catch(e){} }, 4000);
+}; }
+{ const _adu = applyDeviceUser; applyDeviceUser = function(){ _adu(); try{ syncNativeInfo(); }catch(e){} }; }
+
+/* ===================== 🔗 صفحة العميل — تفاصيل أكتر ===================== */
+PORTAL_PARTS.splice(1, 0, ['steps','🪜 مراحل المشروع (وصلنا لفين)',true], ['week','📅 ملخص الأسبوع',true]);
+PORTAL_PARTS.push(['receipts','🧾 إيصالات الدفعات (صورها)',true], ['quality','✅ مراجعات الجودة (التشيك ليست)',true]);
+function resizeDataUrl(src, max, q){
+  return new Promise(res=>{
+    if(!src || !/^data:image\//.test(src)) return res(src || null);
+    const img = new Image();
+    img.onload = ()=>{ const k = Math.min(1, max / Math.max(img.width, img.height)); const c = document.createElement('canvas');
+      c.width = Math.round(img.width*k); c.height = Math.round(img.height*k); c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+      res(c.toDataURL('image/jpeg', q || 0.7)); };
+    img.onerror = ()=> res(null); img.src = src;
+  });
+}
+{ const _bps = buildPortalSnapshot; buildPortalSnapshot = function(p){
+  const snap = _bps(p); snap.v = 2;
+  const on = k=> !!(p.portal && p.portal[k]);
+  const sp = stepsProgress(p);
+  if(sp.total){
+    if(on('progress')) snap.progress = sp.pct;
+    snap.now = sp.doing.map(s=>s.title); snap.next = sp.next.slice(0,3).map(s=>s.title);
+    if(on('steps')) snap.steps = (p.steps||[]).map(s=>({ t: s.title, ph: s.phase || '', s: s.status || 'todo', d: s.doneAt ? isoLocalDate(s.doneAt) : '' }));
+  }
+  const r = weekRange(bdTodayStr());
+  if(on('week')){
+    const d = buildWeeklyData(p, r);
+    snap.week = { from: r.from, to: r.to, days: d.daily.length, done: d.doneWeek.map(s=>s.title), paid: d.received };
+  }
+  if(on('quality')) snap.quality = (state.siteChecklists||[]).filter(c=>c.projectId===p.id).map(c=>{
+    const cc = checklistCounts(c.items);
+    return { trade: c.trade, ok: cc.match, total: cc.total - cc.na, last: c.items.filter(i=>i.status==='match').slice(-4).map(i=> i.text || '') };
+  });
+  return snap;
+}; }
+{ const _pub = publishClientPortal; publishClientPortal = async function(){
+  const p = portalProject(); if(!p) return;
+  // receipts are added here (images need resizing, which is async)
+  p.portal = p.portal || {};
+  const receiptsOn = document.getElementById('pt-receipts') ? document.getElementById('pt-receipts').checked : true;
+  const r = weekRange(bdTodayStr());
+  let receipts = [];
+  if(receiptsOn){
+    const list = (state.income||[]).filter(e=> projectMatchesName(p, e.project)).sort((a,b)=> new Date(b.date)-new Date(a.date)).slice(0, 12);
+    let n = (state.income||[]).filter(e=> projectMatchesName(p, e.project)).length;
+    for(const [i, e] of list.entries()){
+      receipts.push({ no: n - i, date: isoLocalDate(e.date), amount: Number(e.amount)||0, method: e.method || '', week: inRange(e.date, r),
+        img: i < 6 ? await resizeDataUrl(e.image, 800, 0.7) : null });
+    }
+  }
+  window.__portalReceipts = receipts;
+  return _pub();
+}; }
+{ const _bps2 = buildPortalSnapshot; buildPortalSnapshot = function(p){
+  const snap = _bps2(p);
+  if(p.portal && p.portal.receipts && window.__portalReceipts) snap.receipts = window.__portalReceipts;
+  return snap;
+}; }
+{ const _ocp = openClientPortal; openClientPortal = function(){
+  _ocp();
+  const p = portalProject(); if(!p) return;
+  const sp = stepsProgress(p);
+  if(sp.total){
+    document.getElementById('ptProgress').value = sp.pct;
+    document.getElementById('ptProgressLabel').textContent = sp.pct + '% (من خطوات المشروع)';
+  }
+}; }
+
 </script>
 </body>
 </html>

@@ -33,6 +33,33 @@ h1{margin:2px 0 0;font-size:22px;font-weight:900}
 .day ul{margin:2px 0 0;padding-inline-start:18px;font-size:13.5px}
 .muted{color:var(--muted);font-size:12.5px}
 .foot{text-align:center;color:var(--muted);font-size:12px;padding-top:6px}
+.hero{text-align:center}
+.hero .big{font-size:40px}
+.now{margin-top:8px;font-size:14px}
+.now b{color:var(--green)}
+.chips{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:4px}
+.chips div{background:var(--bg);border-radius:12px;padding:8px 4px;text-align:center}
+.chips b{display:block;font-size:17px}
+.chips span{font-size:11.5px;color:var(--muted)}
+details{border-top:1px solid var(--line);padding:6px 0}
+details:first-of-type{border-top:none}
+summary{cursor:pointer;font-weight:700;font-size:14px;list-style:none;display:flex;justify-content:space-between;gap:8px}
+summary::-webkit-details-marker{display:none}
+summary .muted{font-weight:400}
+.st{display:flex;gap:8px;align-items:center;padding:4px 0;font-size:13.5px}
+.st i{font-style:normal;width:20px;text-align:center}
+.st.done{color:var(--muted)}
+.st.doing{font-weight:700}
+.rc{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);cursor:pointer;font-size:14px}
+.rc:last-child{border-bottom:none}
+.rc .new{background:#EEF3EC;color:var(--green);font-size:11px;font-weight:700;border-radius:8px;padding:1px 6px;margin-inline-start:6px}
+.qbar{height:6px;border-radius:6px;background:#E9E2D9;overflow:hidden;margin-top:4px}
+.qbar div{height:100%;background:var(--gold)}
+#rcpt{position:fixed;inset:0;background:rgba(20,18,19,.6);display:none;align-items:center;justify-content:center;padding:16px}
+#rcpt.show{display:flex}
+#rcpt .paper{background:#fff;border-radius:16px;padding:20px;max-width:380px;width:100%;max-height:90vh;overflow:auto}
+#rcpt .paper img{width:100%;border-radius:10px;margin-top:10px}
+.rrow{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px dashed var(--line);font-size:14px}
 #viewer{position:fixed;inset:0;background:rgba(20,18,19,.95);display:none;align-items:center;justify-content:center;padding:16px}
 #viewer.show{display:flex}
 #viewer img{max-width:100%;max-height:100%;object-fit:contain}
@@ -41,6 +68,7 @@ h1{margin:2px 0 0;font-size:22px;font-weight:900}
 <body>
 <div class="wrap" id="app"><div class="card" style="text-align:center">جاري التحميل…</div></div>
 <div id="viewer" onclick="this.classList.remove('show')"><img alt=""></div>
+<div id="rcpt" onclick="if(event.target===this)this.classList.remove('show')"><div class="paper"></div></div>
 
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-database-compat.js"></script>
@@ -57,6 +85,15 @@ const money = n=> Number(n||0).toLocaleString('en-US') + ' ج.م';
 const fmt = d=> d ? new Date(d.length===10 ? d+'T00:00:00' : d).toLocaleDateString('ar-EG',{day:'numeric',month:'long',numberingSystem:'latn'}) : '';
 const token = new URLSearchParams(location.search).get('t');
 const app = document.getElementById('app');
+function receipt(i){
+  const p = window.__p, r = p.receipts[i], box = document.getElementById('rcpt');
+  box.querySelector('.paper').innerHTML = `<div style="text-align:center"><div class="brand">${esc(p.company)}</div><h2 style="margin:4px 0 2px">🧾 إيصال استلام رقم ${r.no}</h2><div class="muted">${esc(p.project)}</div></div>
+    <div style="margin-top:12px"><div class="rrow"><span>استلمنا من</span><b>${esc(p.client || 'العميل')}</b></div><div class="rrow"><span>المبلغ</span><b>${money(r.amount)}</b></div>
+    <div class="rrow"><span>التاريخ</span><b>${fmt(r.date)}</b></div>${r.method ? `<div class="rrow"><span>طريقة الدفع</span><b>${esc(r.method)}</b></div>` : ''}</div>
+    ${r.img ? `<img src="${r.img}" alt="">` : ''}
+    <button onclick="document.getElementById('rcpt').classList.remove('show')" style="margin-top:14px;width:100%;border:none;border-radius:12px;padding:11px;background:var(--gold);color:#fff;font:700 15px Tajawal,sans-serif">قفل</button>`;
+  box.classList.add('show');
+}
 function show(src){ const v = document.getElementById('viewer'); v.querySelector('img').src = src; v.classList.add('show'); }
 
 if(!token){ app.innerHTML = '<div class="card">اللينك ناقص — اطلب اللينك تاني من الشركة.</div>'; }
@@ -66,13 +103,51 @@ else {
     const p = snap.val();
     if(!p){ app.innerHTML = '<div class="card">الصفحة دي مش متاحة دلوقتي — اطلب اللينك تاني من الشركة.</div>'; return; }
     let h = `<div class="head"><div class="brand">${esc(p.company)}</div><h1>${esc(p.project)}</h1>${p.client ? `<div class="hello">أهلاً ${esc(p.client)}</div>` : ''}</div>`;
-    if(p.progress!=null) h += `<div class="card"><h2>📈 الإنجاز</h2><div class="big">${p.progress}%</div><div class="bar"><div style="width:${p.progress}%"></div></div></div>`;
-    if(p.photos && p.photos.length) h += `<div class="card"><h2>📸 من الموقع</h2><div class="photos">${p.photos.map(src=>`<img src="${src}" onclick="show(this.src)" alt="">`).join('')}</div></div>`;
-    if(p.reports && p.reports.length) h += `<div class="card"><h2>📄 آخر الأيام</h2>${p.reports.map(r=>`<div class="day"><b>${fmt(r.date)}</b> <span class="muted">· ${r.onSite} في الموقع</span>${r.done && r.done.length ? `<ul>${r.done.map(x=>`<li>✅ ${esc(x)}</li>`).join('')}</ul>` : ''}${r.next && r.next.length ? `<ul>${r.next.map(x=>`<li>⏭️ ${esc(x)}</li>`).join('')}</ul>` : ''}</div>`).join('')}</div>`;
-    if(p.payments){
-      h += `<div class="card"><h2>💰 الدفعات</h2>${p.payments.map(x=>`<div class="row"><span>${esc(x.what)}${x.due ? ` <span class="muted">· ${fmt(x.due)}</span>` : ''}</span><span class="n ${x.left>0?'due':'ok'}">${x.left>0 ? money(x.left) + ' فاضل' : '✓ مدفوعة'}</span></div>`).join('') || '<div class="muted">مفيش دفعات متسجلة</div>'}
-        <div class="muted" style="margin-top:6px">إجمالي اللي اتدفع: ${money(p.received)}</div></div>`;
+    window.__p = p;
+    // ① وصلنا لفين
+    if(p.progress!=null || (p.now && p.now.length)){
+      h += `<div class="card hero"><h2>📈 وصلنا لفين</h2>${p.progress!=null ? `<div class="big">${p.progress}%</div><div class="bar"><div style="width:${p.progress}%"></div></div>` : ''}
+        ${p.now && p.now.length ? `<div class="now">🔨 شغالين دلوقتي في: <b>${p.now.map(esc).join('، ')}</b></div>` : ''}
+        ${p.next && p.next.length ? `<div class="muted">⏭️ اللي جاي: ${p.next.map(esc).join('، ')}</div>` : ''}</div>`;
     }
+    // ② الأسبوع ده
+    if(p.week){
+      const w = p.week;
+      h += `<div class="card"><h2>📅 الأسبوع ده <span class="muted">${fmt(w.from)} – ${fmt(w.to)}</span></h2>
+        <div class="chips"><div><b>${w.days}</b><span>يوم شغل في الموقع</span></div><div><b>${(w.done||[]).length}</b><span>مرحلة خلصت</span></div><div><b>${Number(w.paid||0).toLocaleString('en-US')}</b><span>ج.م دفعتها</span></div></div>
+        ${(w.done||[]).length ? `<div style="margin-top:8px;font-size:14px">✅ خلصنا: ${w.done.map(esc).join('، ')}</div>` : ''}</div>`;
+    }
+    // ③ مراحل المشروع
+    if(p.steps && p.steps.length){
+      const phases = []; p.steps.forEach(s=>{ let g = phases.find(x=>x.ph===s.ph); if(!g){ g = {ph:s.ph, list:[]}; phases.push(g); } g.list.push(s); });
+      h += `<div class="card"><h2>🪜 مراحل المشروع</h2>${phases.map(g=>{
+        const done = g.list.filter(s=>s.s==='done').length, active = g.list.some(s=>s.s==='doing');
+        const icon = done===g.list.length ? '✅' : active || done ? '🔨' : '⚪';
+        return `<details ${active ? 'open' : ''}><summary><span>${icon} ${esc(g.ph||'')}</span><span class="muted">${done} من ${g.list.length}</span></summary>
+          ${g.list.map(s=>`<div class="st ${s.s}"><i>${s.s==='done'?'✅':s.s==='doing'?'🔨':'⚪'}</i><span>${esc(s.t)}${s.s==='done' && s.d ? ` <span class="muted">· ${fmt(s.d)}</span>` : ''}</span></div>`).join('')}</details>`;
+      }).join('')}</div>`;
+    }
+    if(p.photos && p.photos.length) h += `<div class="card"><h2>📸 من الموقع</h2><div class="photos">${p.photos.map(src=>`<img src="${src}" onclick="show(this.src)" alt="">`).join('')}</div></div>`;
+    // ④ الدفعات والإيصالات
+    if(p.payments || p.receipts){
+      h += `<div class="card"><h2>💰 الدفعات</h2>`;
+      if(p.payments){
+        h += p.payments.map(x=>`<div class="row"><span>${esc(x.what)}${x.due ? ` <span class="muted">· ${fmt(x.due)}</span>` : ''}</span><span class="n ${x.left>0?'due':'ok'}">${x.left>0 ? money(x.left) + ' فاضل' : '✓ مدفوعة'}</span></div>`).join('') || '';
+        h += `<div class="muted" style="margin:6px 0 4px">إجمالي اللي اتدفع: ${money(p.received)}</div>`;
+      }
+      if(p.receipts && p.receipts.length){
+        h += `<div style="font-weight:900;font-size:14px;margin-top:10px">🧾 الإيصالات — دوس على أي واحد</div>` +
+          p.receipts.map((r,i)=>`<div class="rc" onclick="receipt(${i})"><span>🧾 إيصال رقم ${r.no} <span class="muted">· ${fmt(r.date)}</span>${r.week ? '<span class="new">الأسبوع ده</span>' : ''}</span><b class="n">${money(r.amount)}</b></div>`).join('');
+      }
+      h += `</div>`;
+    }
+    // ⑤ الجودة
+    if(p.quality && p.quality.length){
+      h += `<div class="card"><h2>✅ مراجعات الجودة</h2><div class="muted" style="margin-bottom:6px">كل بند بنراجعه في الموقع على المواصفات</div>${p.quality.map(q=>`<details><summary><span>${esc(q.trade)}</span><span class="muted">${q.ok} من ${q.total} اتراجع</span></summary>
+        <div class="qbar"><div style="width:${q.total ? Math.round(q.ok/q.total*100) : 0}%"></div></div>
+        ${(q.last||[]).length ? `<ul style="margin:6px 0 0;padding-inline-start:18px;font-size:13px">${q.last.map(x=>`<li>✓ ${esc(x)}</li>`).join('')}</ul>` : ''}</details>`).join('')}</div>`;
+    }
+    if(p.reports && p.reports.length) h += `<div class="card"><details><summary><span>📄 آخر الأيام في الموقع</span><span class="muted">${p.reports.length} يوم</span></summary>${p.reports.map(r=>`<div class="day"><b>${fmt(r.date)}</b> <span class="muted">· ${r.onSite} في الموقع</span>${r.done && r.done.length ? `<ul>${r.done.map(x=>`<li>✅ ${esc(x)}</li>`).join('')}</ul>` : ''}${r.next && r.next.length ? `<ul>${r.next.map(x=>`<li>⏭️ ${esc(x)}</li>`).join('')}</ul>` : ''}</div>`).join('')}</details></div>`;
     if(p.choices && p.choices.length) h += `<div class="card"><h2>🎯 اختياراتك</h2>${p.choices.map(c=>`<div class="row"><span>${esc(c.category)}${c.category&&c.name?': ':''}${esc(c.name)}</span><span class="${c.confirmed?'ok':'muted'}">${c.confirmed?'✓ متأكد':'⏳ مستني ردك'}</span></div>`).join('')}</div>`;
     h += `<div class="foot">آخر تحديث: ${fmt(p.updatedAt)} · صفحة للعرض بس</div>`;
     app.innerHTML = h;
