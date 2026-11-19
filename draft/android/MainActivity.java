@@ -47,6 +47,7 @@ public class MainActivity extends Activity {
     private static final int REQ_SPEECH = 1002;
 
     private WebView web;
+    private String launchAction = null;
     private WebViewAssetLoader assetLoader;
     private ValueCallback<Uri[]> fileCallback;
     private Uri cameraOutputUri;
@@ -85,6 +86,7 @@ public class MainActivity extends Activity {
             requestPermissions(new String[]{"android.permission.POST_NOTIFICATIONS"}, 1003);
         }
         NotifyReceiver.schedule(this);
+        if (getIntent() != null) launchAction = getIntent().getStringExtra("launchAction");
 
         web.setWebViewClient(new WebViewClient() {
             @Override
@@ -465,6 +467,61 @@ public class MainActivity extends Activity {
             if (key.compareTo(p.getString("lastKey", "")) > 0) p.edit().putString("lastKey", key).apply();
         }
 
+        /** أول ما الصفحة تجهز: لو البرنامج اتفتح من المنبّه، يفتح "شغل النهارده". */
+        @JavascriptInterface
+        public String takeLaunchAction() {
+            String a = launchAction; launchAction = null; return a == null ? "" : a;
+        }
+
+        /** حالة المنبّه: الإشعارات، بالظبط، الشاشة الكاملة، البطارية، والميعاد الجاي. */
+        @JavascriptInterface
+        public String alarmStatus() {
+            try {
+                JSONObject o = new JSONObject();
+                o.put("notif", androidx.core.app.NotificationManagerCompat.from(MainActivity.this).areNotificationsEnabled());
+                o.put("exact", NotifyReceiver.canExact(MainActivity.this));
+                o.put("fullscreen", NotifyReceiver.canFullScreen(MainActivity.this));
+                android.os.PowerManager pm = (android.os.PowerManager) getSystemService(POWER_SERVICE);
+                o.put("battery", pm == null || pm.isIgnoringBatteryOptimizations(getPackageName()));
+                o.put("next", getSharedPreferences(NotifyReceiver.PREFS, MODE_PRIVATE).getLong("nextMorning", 0));
+                o.put("brand", Build.MANUFACTURER);
+                return o.toString();
+            } catch (Exception e) { return "{}"; }
+        }
+
+        /** يفتح صفحة الإعداد المطلوبة: notif / exact / fullscreen / battery / autostart */
+        @JavascriptInterface
+        public void alarmSetup(String which) {
+            runOnUiThread(() -> {
+                String pkg = getPackageName();
+                Intent i = null;
+                try {
+                    if ("notif".equals(which)) {
+                        if (Build.VERSION.SDK_INT >= 33) { requestPermissions(new String[]{"android.permission.POST_NOTIFICATIONS"}, 1003); }
+                        i = new Intent(android.provider.Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(android.provider.Settings.EXTRA_APP_PACKAGE, pkg);
+                    } else if ("exact".equals(which) && Build.VERSION.SDK_INT >= 31) {
+                        i = new Intent(android.provider.Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, Uri.parse("package:" + pkg));
+                    } else if ("fullscreen".equals(which) && Build.VERSION.SDK_INT >= 34) {
+                        i = new Intent(android.provider.Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT, Uri.parse("package:" + pkg));
+                    } else if ("battery".equals(which)) {
+                        i = new Intent(android.provider.Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, Uri.parse("package:" + pkg));
+                    } else if ("autostart".equals(which)) {
+                        i = new Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:" + pkg));
+                    }
+                    if (i != null) startActivity(i);
+                } catch (Exception e) {
+                    try { startActivity(new Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:" + pkg))); } catch (Exception ignored) { }
+                }
+                NotifyReceiver.schedule(MainActivity.this);
+            });
+        }
+
+        /** تجربة: يفتح شاشة المنبّه بالرنّة دلوقتي. */
+        @JavascriptInterface
+        public void testAlarm() {
+            runOnUiThread(() -> startActivity(new Intent(MainActivity.this, AlarmActivity.class)));
+        }
+
         /** تجربة: يطلّع تنبيه الصبح دلوقتي. */
         @JavascriptInterface
         public void testMorning() {
@@ -480,6 +537,16 @@ public class MainActivity extends Activity {
         web.evaluateJavascript("(window.__ibtkarBack ? window.__ibtkarBack() : false)", value -> {
             if (!"true".equals(value)) moveTaskToBack(true);
         });
+    }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        String a = intent == null ? null : intent.getStringExtra("launchAction");
+        if (a != null && web != null) {
+            launchAction = null;
+            web.evaluateJavascript("window.ibtkarLaunchAction && window.ibtkarLaunchAction('" + a.replace("'", "") + "')", null);
+        }
     }
 
     @Override

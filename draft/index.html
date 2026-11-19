@@ -935,6 +935,11 @@ body.ks-on .bottom-nav,body.ks-on #settings-fab{display:none;}
   .ks-side{overflow:visible;border:none;}
   .ks-acts{margin-inline-start:0;}
 }
+
+.alarm-list{display:grid;gap:6px;}
+.alarm-row{display:grid;grid-template-columns:24px 1fr auto;gap:8px;align-items:center;background:var(--blush);border-radius:10px;padding:8px 10px;font-size:13.5px;}
+.alarm-row.ok{background:#EEF3EC;}
+.alarm-row small{display:block;color:var(--muted);}
 /* ===================== IBTKAR GE 2026 — الهوية البصرية (DRAFT) =====================
    ألوان الدليل، تصميم مسطح من غير ظلال، كروت Blush من غير إطار، خط دهبي تحت العناوين،
    جداول بهيدر روز وصفوف متبادلة، والإجمالي فحمي بأرقام دهبي. */
@@ -2912,7 +2917,7 @@ async function deleteReferenceSupplier(id){
     <button class="modal-close" onclick="closeModal('overlay-settings')">×</button>
     <h2>⚙️ الإعدادات</h2>
     <div class="modal-actions"><button class="btn btn-primary btn-full" onclick="openDeviceUserSettings()" id="settings-device-user-btn">👤 أنا مين على الجهاز ده</button></div>
-    <div class="modal-actions"><button class="btn btn-gold btn-full" onclick="closeModal('overlay-settings');openV2Settings()">🔔 التنبيهات والتقرير الأسبوعي</button></div>
+    <div class="modal-actions"><button class="btn btn-gold btn-full" onclick="closeModal('overlay-settings');openV2Settings()">⏰ منبّه ٩ الصبح والتنبيهات والتقرير</button></div>
     <div class="modal-actions"><button class="btn btn-gold btn-full" onclick="openChecklistTemplateEditor()">🏗️ إدارة تشيك ليست الجودة</button></div>
     <div class="modal-actions"><button class="btn btn-gold btn-full" onclick="openStatementCategoriesEditor()">💰 بنود كشف حساب العميل</button></div>
     <div class="modal-actions"><button class="btn btn-gold btn-full" onclick="openStatementTypesEditor()">🏷️ أنواع البنود (توريد / مصنعية / مقاولة...)</button></div>
@@ -12769,9 +12774,10 @@ initAppLock();
     <h2>🔔 التنبيهات والتقرير الأسبوعي</h2>
     <div class="field"><label>📧 الإيميل اللي يتبعتله تقرير الأسبوع</label><input type="email" inputmode="email" autocomplete="email" dir="ltr" id="v2Email" placeholder="name@gmail.com" onchange="saveReportEmail()"></div>
     <div class="hint" style="margin-bottom:10px;">كل خميس بعد ٤ العصر، أول موبايل يفتح البرنامج يسألك: "أبعت تقرير الأسبوع؟" — تدوس ابعت، يتجهز ملف PDF لكل مشروع اتشغل فيه الأسبوع ده ويفتحلك الميل جاهز. ولو اتبعت من موبايل مش هيسأل التاني.</div>
-    <div class="hint" style="margin-bottom:10px;">☀️ كل يوم ٩ الصبح بيجيلكم إشعار "افتحوا السيستم". 🔔 ولما حد فيكم يسجل حاجة، التاني بيجيله إشعار.</div>
+    <div class="sub" style="margin-top:4px;">⏰ منبّه ٩ الصبح — لازم كله يبقى ✅</div>
+    <div id="alarm-setup"></div>
+    <div class="hint" style="margin:10px 0;">🔔 ولما حد فيكم يسجل حاجة، التاني بيجيله إشعار.</div>
     <div class="modal-actions" style="display:flex;gap:8px;flex-wrap:wrap;">
-      <button type="button" class="btn btn-gold btn-full" onclick="testMorningNotice()">☀️ جرّب تنبيه الصبح</button>
       <button type="button" class="btn btn-ghost btn-full" onclick="sendWeeklyEmail(false)">📧 جرّب تقرير الأسبوع</button>
     </div>
     <div class="sub" style="margin-top:12px;">🔔 آخر اللي اتعمل</div>
@@ -14992,6 +14998,53 @@ kPdf = async function(){
   const blob = await renderCardsToPdf(cards);
   await shareBlob(blob, `كات-ليست-${(k.name||'مطبخ').replace(/\s+/g,'-')}.pdf`, 'application/pdf', 'كات ليست المطبخ', null);
 };
+
+</script>
+<script>
+
+/* =====================================================================================
+   ⏰ منبّه ٩ الصبح (DRAFT): الإعداد من جوّه البرنامج + لما تفتح من المنبّه يفتح "شغل النهارده"
+   ===================================================================================== */
+window.ibtkarLaunchAction = function(a){ if(a==='dayplan'){ try{ localStorage.setItem('ibtkar-dayplan-asked', bdTodayStr()); }catch(e){} setTimeout(()=>{ if(typeof openDayPlan==='function') openDayPlan(); }, 400); } };
+let alarmLaunchChecked = false;
+{ const _rh3 = renderHome; renderHome = function(){
+  _rh3();
+  if(!alarmLaunchChecked && state && state.projects && window.IbtkarNative && IbtkarNative.takeLaunchAction){
+    alarmLaunchChecked = true;
+    try{ const a = IbtkarNative.takeLaunchAction(); if(a) window.ibtkarLaunchAction(a); }catch(e){}
+    setTimeout(alarmMaybeWarn, 2500);
+  }
+}; }
+const ALARM_STEPS = [
+  ['notif','🔔 الإشعارات','لازم تكون مسموحة'],
+  ['exact','⏰ المنبّه بالظبط الساعة ٩','"Alarms & reminders" — اسمح'],
+  ['fullscreen','📱 الشاشة الكاملة فوق قفل الموبايل','"Full screen notifications" — اسمح'],
+  ['battery','🔋 من غير توفير بطارية للبرنامج','اختار "Allow" / "Unrestricted"']
+];
+function alarmStatus(){ try{ return JSON.parse(IbtkarNative.alarmStatus()); }catch(e){ return null; } }
+function renderAlarmSetup(){
+  const el = document.getElementById('alarm-setup'); if(!el) return;
+  if(!(window.IbtkarNative && IbtkarNative.alarmStatus)){ el.innerHTML = '<div class="hint">المنبّه بيشتغل على الموبايل. على الكمبيوتر بيطلع تنبيه لو البرنامج مفتوح الساعة ٩.</div>'; return; }
+  const st = alarmStatus() || {};
+  const next = st.next ? new Date(st.next).toLocaleString('ar-EG',{weekday:'long', hour:'2-digit', minute:'2-digit', numberingSystem:'latn'}) : '—';
+  const brand = String(st.brand||'').toLowerCase();
+  const chinese = /xiaomi|redmi|poco|oppo|realme|vivo|huawei|honor|infinix|tecno|itel|oneplus/.test(brand);
+  el.innerHTML = `<div class="alarm-list">${ALARM_STEPS.map(([k,l,h])=>`<div class="alarm-row ${st[k] ? 'ok' : 'bad'}"><span>${st[k] ? '✅' : '⚠️'}</span><div><b>${l}</b>${st[k] ? '' : `<small>${h}</small>`}</div>${st[k] ? '' : `<button type="button" class="btn btn-gold btn-sm" onclick="IbtkarNative.alarmSetup('${k}');setTimeout(renderAlarmSetup,1500)">ظبّطها</button>`}</div>`).join('')}
+    ${chinese ? `<div class="alarm-row bad"><span>📌</span><div><b>${escapeHtml(st.brand)}: "التشغيل التلقائي" (Autostart)</b><small>الموبايلات دي بتقفل التطبيقات في الخلفية — فعّل Autostart للبرنامج من صفحته</small></div><button type="button" class="btn btn-ghost btn-sm" onclick="IbtkarNative.alarmSetup('autostart')">افتح</button></div>` : ''}</div>
+    <div class="hint" style="margin-top:6px;">⏰ المنبّه الجاي: <b>${escapeHtml(next)}</b> (مش بيرن يوم الجمعة)</div>
+    <button type="button" class="btn btn-primary btn-full" style="margin-top:8px;" onclick="IbtkarNative.testAlarm()">🔔 جرّب المنبّه دلوقتي (بالرنّة)</button>`;
+}
+function alarmMaybeWarn(){
+  if(!(window.IbtkarNative && IbtkarNative.alarmStatus)) return;
+  const st = alarmStatus(); if(!st) return;
+  const missing = ALARM_STEPS.filter(([k])=> !st[k]);
+  let warned = ''; try{ warned = localStorage.getItem('ibtkar-alarm-warned') || ''; }catch(e){}
+  if(!missing.length || warned===bdTodayStr() || document.querySelector('.overlay.show')) return;
+  try{ localStorage.setItem('ibtkar-alarm-warned', bdTodayStr()); }catch(e){}
+  v2Confirm(`⏰ منبّه ٩ الصبح مش هيرن صح\nناقص:\n${missing.map(m=>'• ' + m[1]).join('\n')}\n\nنظبطها دلوقتي؟ (دقيقة واحدة)`, 'ظبّطها', 'بعدين').then(ok=>{ if(ok) openV2Settings(); });
+}
+{ const _o2 = openV2Settings; openV2Settings = function(){ _o2(); renderAlarmSetup(); }; }
+document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && document.getElementById('overlay-v2-settings') && document.getElementById('overlay-v2-settings').classList.contains('show')) renderAlarmSetup(); });
 
 </script>
 </body>

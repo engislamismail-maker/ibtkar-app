@@ -36,6 +36,7 @@ public class NotifyReceiver extends BroadcastReceiver {
 
     static final String ACTION_MORNING = "com.ibtkar.app.MORNING";
     static final String ACTION_FEED = "com.ibtkar.app.FEED_CHECK";
+    static final String ACTION_SNOOZE = "com.ibtkar.app.MORNING_SNOOZE";
     static final String PREFS = "ibtkar_notify";
     static final String CH_MORNING = "morning_alarm";
     static final String CH_FEED = "activity";
@@ -48,6 +49,8 @@ public class NotifyReceiver extends BroadcastReceiver {
         if (ACTION_MORNING.equals(a)) {
             showMorning(ctx);
             scheduleMorning(ctx); // اللي بعده بكرة
+        } else if (ACTION_SNOOZE.equals(a)) {
+            showMorningNow(ctx);
         } else if (ACTION_FEED.equals(a)) {
             final PendingResult pr = goAsync();
             new Thread(() -> {
@@ -78,8 +81,37 @@ public class NotifyReceiver extends BroadcastReceiver {
         c.set(Calendar.SECOND, 0);
         c.set(Calendar.MILLISECOND, 0);
         if (c.getTimeInMillis() <= System.currentTimeMillis() + 5_000L) c.add(Calendar.DAY_OF_YEAR, 1);
-        // نافذة ٥ دقايق: مش محتاجة صلاحية "منبّه بالظبط" وبتيجي ٩:٠٠ – ٩:٠٥
-        am.setWindow(AlarmManager.RTC_WAKEUP, c.getTimeInMillis(), 5 * 60_000L, pending(ctx, ACTION_MORNING, 1));
+        setAlarm(ctx, c.getTimeInMillis(), pending(ctx, ACTION_MORNING, 1));
+        ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putLong("nextMorning", c.getTimeInMillis()).apply();
+    }
+
+    /** فكّرني بعد كام دقيقة (من شاشة المنبّه). */
+    static void snooze(Context ctx, int minutes) {
+        setAlarm(ctx, System.currentTimeMillis() + minutes * 60_000L, pending(ctx, ACTION_SNOOZE, 3));
+    }
+
+    /** منبّه بالظبط زي تطبيقات المنبّه (setAlarmClock) — ولو مفيش صلاحية، أقرب حاجة ليه. */
+    static void setAlarm(Context ctx, long when, PendingIntent pi) {
+        AlarmManager am = (AlarmManager) ctx.getSystemService(Context.ALARM_SERVICE);
+        if (am == null) return;
+        try {
+            if (Build.VERSION.SDK_INT < 31 || am.canScheduleExactAlarms()) {
+                am.setAlarmClock(new AlarmManager.AlarmClockInfo(when, openApp(ctx)), pi);
+                return;
+            }
+        } catch (SecurityException ignored) { }
+        am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, when, pi);
+    }
+
+    static boolean canExact(Context ctx) {
+        AlarmManager am = (AlarmManager) ctx.getSystemService(Context.ALARM_SERVICE);
+        return am != null && (Build.VERSION.SDK_INT < 31 || am.canScheduleExactAlarms());
+    }
+
+    static boolean canFullScreen(Context ctx) {
+        if (Build.VERSION.SDK_INT < 34) return true;
+        NotificationManager nm = ctx.getSystemService(NotificationManager.class);
+        return nm != null && nm.canUseFullScreenIntent();
     }
 
     private static PendingIntent pending(Context ctx, String action, int code) {
@@ -110,6 +142,17 @@ public class NotifyReceiver extends BroadcastReceiver {
         nm.createNotificationChannel(morning);
         nm.createNotificationChannel(new NotificationChannel(CH_FEED, "اللي اتعمل في السيستم",
                 NotificationManager.IMPORTANCE_DEFAULT));
+    }
+
+    private static PendingIntent openDayPlan(Context ctx) {
+        Intent i = new Intent(ctx, MainActivity.class).putExtra("launchAction", "dayplan")
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+        return PendingIntent.getActivity(ctx, 11, i, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+    }
+
+    private static PendingIntent alarmScreen(Context ctx) {
+        Intent i = new Intent(ctx, AlarmActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_NO_USER_ACTION);
+        return PendingIntent.getActivity(ctx, 12, i, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
     }
 
     private static PendingIntent openApp(Context ctx) {
@@ -154,7 +197,23 @@ public class NotifyReceiver extends BroadcastReceiver {
         List<String> lines = new ArrayList<>();
         lines.add("افتح البرنامج وسجّل شغل النهارده: المشاريع الشغالة وفيها إيه");
         if (!extra.isEmpty()) Collections.addAll(lines, extra.split("\n"));
-        post(ctx, 901, CH_MORNING, "☀️ صباح الخير" + (user.isEmpty() ? "" : " يا " + user), lines);
+        ensureChannels(ctx);
+        NotificationCompat.Builder b = new NotificationCompat.Builder(ctx, CH_MORNING)
+                .setSmallIcon(R.mipmap.ic_launcher)
+                .setContentTitle("☀️ صباح الخير" + (user.isEmpty() ? "" : " يا " + user))
+                .setContentText(lines.get(0))
+                .setStyle(new NotificationCompat.BigTextStyle().bigText(android.text.TextUtils.join("\n", lines)))
+                .setAutoCancel(true)
+                .setPriority(NotificationCompat.PRIORITY_MAX)
+                .setCategory(NotificationCompat.CATEGORY_ALARM)
+                .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+                .setContentIntent(openDayPlan(ctx))
+                // الشاشة الكاملة بالرنّة — لو الموبايل مقفول بتفتح لوحدها، ولو مفتوح بتنزل من فوق
+                .setFullScreenIntent(alarmScreen(ctx), true)
+                .addAction(0, "افتح البرنامج", openDayPlan(ctx));
+        try {
+            NotificationManagerCompat.from(ctx).notify(901, b.build());
+        } catch (SecurityException ignored) { }
     }
 
     static void checkFeed(Context ctx) throws Exception {

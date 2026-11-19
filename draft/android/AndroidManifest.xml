@@ -5,6 +5,13 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <!-- منبّه ٩ الصبح: بالظبط زي تطبيقات المنبّه، وبشاشة كاملة فوق قفل الشاشة -->
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" android:maxSdkVersion="32" />
+    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
+    <uses-permission android:name="android.permission.VIBRATE" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
 
     <!-- يسمح بفتح الكاميرا/المعرض/الملفات ولينكات الواتساب والتليفون من جوّه التطبيق -->
     <queries>
@@ -48,6 +55,17 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <activity
+            android:name=".AlarmActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:launchMode="singleInstance"
+            android:taskAffinity=""
+            android:showWhenLocked="true"
+            android:turnScreenOn="true"
+            android:screenOrientation="portrait"
+            android:theme="@android:style/Theme.Material.NoActionBar.Fullscreen" />
 
         <!-- تنبيه ٩ الصبح + إشعارات اللي اتعمل في السيستم (نسخة تجريبية) -->
         <receiver
