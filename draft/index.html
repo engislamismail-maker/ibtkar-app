@@ -981,6 +981,23 @@ body.ks-on .bottom-nav,body.ks-on #settings-fab{display:none;}
 .sv-k.main{grid-column:1 / 3;background:var(--charcoal);color:#fff;}
 .sv-k.main small{color:#E7D9DD;}
 .sv-k.main b{color:var(--gold);font-size:24px;}
+
+.safe-tile{background:#fff;color:var(--charcoal);border:2px solid var(--charcoal);}
+.safe-tile .sv-txt small{color:var(--muted);}
+.safe-tile .sv-txt b{color:var(--charcoal);}
+.safe-list{display:grid;gap:6px;margin:10px 0 8px;}
+.safe-row{display:grid;grid-template-columns:30px 1fr 120px auto auto;gap:8px;align-items:center;background:var(--blush);border-radius:12px;padding:8px 10px;}
+.safe-ic{font-size:22px;text-align:center;}
+.safe-main{display:grid;min-width:0;}
+.safe-main small{color:var(--muted);font-size:11.5px;}
+.safe-row input{width:100%;padding:8px;border:1.5px solid var(--line);border-radius:9px;font:900 15px Tajawal,sans-serif;text-align:center;background:#fff;}
+.safe-result{margin-top:8px;border-radius:12px;padding:10px 12px;font-weight:900;text-align:center;}
+.safe-result.ok{background:#EEF3EC;color:var(--green);}
+.safe-result.more{background:#FBF3EC;color:#B9783F;}
+.safe-result.less{background:#FBEFF3;color:var(--deep-rose);}
+.safe-det{margin-top:8px;} .safe-det summary{cursor:pointer;font-weight:700;font-size:13.5px;}
+.wr-t td.v.bad{color:var(--deep-rose);}
+@media (max-width:480px){ .safe-row{grid-template-columns:28px 1fr 96px auto;} .safe-row .btn{display:none;} }
 /* ===================== IBTKAR GE 2026 — الهوية البصرية (DRAFT) =====================
    ألوان الدليل، تصميم مسطح من غير ظلال، كروت Blush من غير إطار، خط دهبي تحت العناوين،
    جداول بهيدر روز وصفوف متبادلة، والإجمالي فحمي بأرقام دهبي. */
@@ -1317,6 +1334,7 @@ table.wr-kpis b{color:var(--charcoal);}
     <div class="topbar-actions">
       <button class="btn btn-primary" onclick="openAddExpense()">+ مصروف</button>
       <button class="btn btn-gold" onclick="openAddIncome()">+ قبض</button>
+      <button class="btn btn-ghost" onclick="openSafe()">🏦 الخزنة</button>
     </div>
   </div>
 
@@ -3824,6 +3842,7 @@ function describeRecord(r, key, parent){
     case 'warranties': return ['projects', `🛡️ ضمان: ${r.item||r.name||''}`];
     case 'clientChoices': return ['projects', `🎯 اختيار عميل: ${r.name||r.choice||''}`];
     case 'archiveEntries': return ['projects', `🗄️ أرشيف: ${r.name||r.title||''}`];
+    case 'safeAccounts': return ['money', `🏦 حساب في الخزنة: ${r.name||''}`];
     case 'supervisionWithdrawals': return ['money', `💸 سحب نسبة إشراف ${money(r.amount)}`];
     case 'matLog': return ['projects', `🧱 خامة جت الموقع: ${r.qty||''} — ${pn}${r.note ? ' — ' + r.note : ''}`];
     case 'dayPlans': return ['projects', `☀️ شغل النهارده (${r.date||''})`];
@@ -12834,6 +12853,14 @@ initAppLock();
     <div id="sv-body"></div>
   </div>
 </div>
+<div class="overlay" id="overlay-safe">
+  <div class="modal" style="max-width:560px;">
+    <button class="modal-close" onclick="closeModal('overlay-safe')">×</button>
+    <h2>🏦 الخزنة</h2>
+    <div class="sub">اكتب رصيد كل حساب بإيدك — الإجمالي بيتحسب لوحده</div>
+    <div id="safe-body"></div>
+  </div>
+</div>
 <div class="overlay" id="overlay-notifs">
   <div class="modal" style="max-width:460px;">
     <button class="modal-close" onclick="closeModal('overlay-notifs')">×</button>
@@ -15258,6 +15285,8 @@ function projectMoney(p){
   const cs = ensureClientStatement(p), t = computeClientStatementTotals(cs);
   const pct = Number(cs.adminPercent) || 0;
   const supervision = s.totalExpense * pct / 100;
+  // دفعات العميل: المتسجلة كـ"قبض" أو في كشف الحساب — الأكبر فيهم (عشان القديم اللي اتسجل في الكشف بس)
+  s.totalIncome = Math.max(s.totalIncome, Number(t.totalPayments) || 0);
   return { received: s.totalIncome, spent: s.totalExpense, pct, supervision, left: s.totalIncome - s.totalExpense - supervision,
     statementTotal: t.grandTotal, statementLeft: t.remaining, statementWork: t.workTotal };
 }
@@ -15443,6 +15472,76 @@ async function deleteSupervisionWithdrawal(id){
   state.supervisionWithdrawals = (state.supervisionWithdrawals||[]).filter(w=>w.id!==id);
   await saveState(); renderSupervision(); renderHomeSupervision();
 }
+
+</script>
+<script>
+
+/* =====================================================================================
+   🏦 الخزنة (DRAFT) — البنوك والمحفظة والكاش، رصيد كل واحد بيتكتب بالإيد،
+   والإجمالي فوق، ومعادلة: اللي في الخزنة = فلوس العملاء اللي لسه ما اتصرفتش + رصيد الإشراف.
+   ===================================================================================== */
+const SAFE_DEFAULT = [['🏦','بنك العربي الأفريقي — حساب ١'],['🏦','بنك العربي الأفريقي — حساب ٢'],['🏦','التجاري وفا'],['📱','محفظة فودافون كاش'],['💵','الكاش']];
+{ const _n6 = normalizeState; normalizeState = function(){ _n6();
+  if(!Array.isArray(state.safeAccounts) || !state.safeAccounts.length) state.safeAccounts = SAFE_DEFAULT.map(([icon,name])=>({ id: uid(), icon, name, balance: 0, updatedAt: null, history: [] }));
+  state.safeAccounts.forEach(a=>{ a.history = a.history || []; });
+}; }
+function safeTotal(){ return (state.safeAccounts||[]).reduce((s,a)=> s + (Number(a.balance)||0), 0); }
+function safeEquation(){
+  const clients = (state.projects||[]).filter(p=>!p.archived).map(p=>{ const m = projectMoney(p); return { p, left: m.left }; });
+  const clientMoney = clients.reduce((s,c)=> s + c.left, 0);
+  const sup = supervisionEarnings().balance;
+  const expected = clientMoney + sup, actual = safeTotal();
+  return { clients, clientMoney, sup, expected, actual, diff: Math.round((actual - expected)*100)/100 };
+}
+function openSafe(){ renderSafe(); document.getElementById('overlay-safe').classList.add('show'); }
+function renderSafe(){
+  const accs = state.safeAccounts || [], eq = safeEquation();
+  const ago = d=> d ? fmtDateTime(d) : 'لسه ما اتكتبش';
+  document.getElementById('safe-body').innerHTML = `
+    <div class="sv-k main"><small>إجمالي الخزنة</small><b>${fmtMoney(safeTotal())}</b></div>
+    <div class="safe-list">${accs.map(a=>`<div class="safe-row">
+      <span class="safe-ic">${a.icon || '🏦'}</span>
+      <div class="safe-main"><b>${escapeHtml(a.name)}</b><small>آخر تحديث: ${ago(a.updatedAt)}${a.updatedBy ? ' · ' + escapeHtml(a.updatedBy) : ''}</small></div>
+      <input type="number" inputmode="decimal" value="${a.balance || ''}" placeholder="0" onchange="safeSetBalance('${a.id}', this.value)">
+      <button type="button" class="btn btn-ghost btn-sm" onclick="safeRename('${a.id}')">✏️</button>
+      <button type="button" class="qe-row-del" onclick="deleteSafeAccount('${a.id}')">✕</button></div>`).join('')}</div>
+    <button type="button" class="btn btn-ghost btn-sm" onclick="safeAdd()">+ حساب تاني (بنك / محفظة / خزنة)</button>
+    <div class="dp-q">⚖️ المعادلة — فيه عجز ولا زيادة؟</div>
+    <table class="wr-t">
+      <tr><td>فلوس العملاء اللي لسه ما اتصرفتش (الفاضل بعد الإشراف)</td><td class="v">${fmtMoney(eq.clientMoney)}</td></tr>
+      <tr><td>+ رصيد الإشراف اللي لسه ما اتسحبش</td><td class="v">${fmtMoney(eq.sup)}</td></tr>
+      <tr><td><b>= المفروض يكون في الخزنة</b></td><td class="v"><b>${fmtMoney(eq.expected)}</b></td></tr>
+      <tr><td><b>اللي في الخزنة فعلاً</b></td><td class="v"><b>${fmtMoney(eq.actual)}</b></td></tr>
+    </table>
+    <div class="safe-result ${Math.abs(eq.diff) < 1 ? 'ok' : eq.diff > 0 ? 'more' : 'less'}">${Math.abs(eq.diff) < 1 ? '✅ متطابقين — مفيش عجز ولا زيادة' : eq.diff > 0 ? `زيادة ${fmtMoney(eq.diff)} في الخزنة عن المفروض` : `⚠️ عجز ${fmtMoney(-eq.diff)} — الخزنة أقل من المفروض`}</div>
+    <details class="safe-det"><summary>فلوس كل عميل لسه ما اتصرفتش</summary><table class="wr-t">${eq.clients.map(c=>`<tr><td>${escapeHtml(c.p.name)} <small dir="ltr">#${escapeHtml(c.p.projectCode||'')}</small></td><td class="v ${c.left < 0 ? 'bad' : ''}">${fmtMoney(c.left)}</td></tr>`).join('')}</table></details>
+    <div class="hint" style="margin-top:6px;">لو المعادلة مش مظبوطة، غالباً فيه مصروف أو قبض ما اتسجلش، أو مصروف متسجل من غير مشروع، أو رصيد حساب محتاج يتحدّث.</div>`;
+}
+async function safeSetBalance(id, v){
+  const a = (state.safeAccounts||[]).find(x=>x.id===id); if(!a) return;
+  const nv = parseFloat(v) || 0; if(nv === Number(a.balance||0)) return;
+  a.history.push({ at: new Date().toISOString(), from: Number(a.balance)||0, to: nv, by: getDeviceUser() || '' });
+  a.balance = nv; a.updatedAt = new Date().toISOString(); a.updatedBy = getDeviceUser() || '';
+  await saveState(); renderSafe(); renderHomeSafe();
+}
+async function safeRename(id){
+  const a = (state.safeAccounts||[]).find(x=>x.id===id); if(!a) return;
+  const n = ((await appPrompt('اسم الحساب', a.name)) || '').trim(); if(!n) return;
+  a.name = n; await saveState(); renderSafe();
+}
+async function safeAdd(){
+  const n = ((await appPrompt('اسم الحساب (مثلاً: بنك مصر، إنستاباي، خزنة المكتب)', '')) || '').trim(); if(!n) return;
+  state.safeAccounts.push({ id: uid(), icon: /محفظ|فودافون|اتصالات|اورنج|إنستا|انستا/i.test(n) ? '📱' : /كاش|خزن/i.test(n) ? '💵' : '🏦', name: n, balance: 0, updatedAt: null, history: [] });
+  await saveState(); renderSafe();
+}
+async function deleteSafeAccount(id){ state.safeAccounts = (state.safeAccounts||[]).filter(a=>a.id!==id); await saveState(); renderSafe(); renderHomeSafe(); }
+function renderHomeSafe(){
+  const wrap = document.getElementById('home-superv-wrap'); if(!wrap) return;
+  let el = document.getElementById('home-safe-tile');
+  if(!el){ el = document.createElement('button'); el.type = 'button'; el.id = 'home-safe-tile'; el.className = 'sv-tile safe-tile'; el.onclick = openSafe; wrap.appendChild(el); }
+  el.innerHTML = `<span class="sv-ic">🏦</span><span class="sv-txt"><small>إجمالي الخزنة (بنوك + محفظة + كاش)</small><b>${fmtMoney(safeTotal())}</b></span>`;
+}
+{ const _rh5 = renderHome; renderHome = function(){ _rh5(); try{ renderHomeSafe(); }catch(e){ console.error(e); } }; }
 
 </script>
 </body>
