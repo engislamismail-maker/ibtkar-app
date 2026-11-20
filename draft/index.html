@@ -15182,7 +15182,7 @@ function txAssignCodes(fresh){
 }
 let txCodesMigrated = false;
 { const _ss = saveState; saveState = async function(){
-  try{ txAssignCodes(txCodesMigrated); txCodesMigrated = true; if(txJustCoded.length) setTimeout(txShowCode, 400); }catch(e){}
+  try{ txAssignCodes(txCodesMigrated); txCodesMigrated = true; txJustCoded = txJustCoded.slice(-5); }catch(e){}
   try{ projAssignCodes(); }catch(e){}
   return _ss.apply(this, arguments);
 }; }
@@ -15234,14 +15234,20 @@ function projectMoney(p){
   const pct = Number(cs.adminPercent) || 0;
   const supervision = s.totalExpense * pct / 100;
   return { received: s.totalIncome, spent: s.totalExpense, pct, supervision, left: s.totalIncome - s.totalExpense - supervision,
-    statementTotal: t.grandTotal, statementLeft: t.remaining };
+    statementTotal: t.grandTotal, statementLeft: t.remaining, statementWork: t.workTotal };
 }
 { const _opd = openProjectDashboard; openProjectDashboard = function(id){
   _opd(id);
   const p = (state.projects||[]).find(x=>x.id===id); if(!p) return;
   const m = projectMoney(p);
   const stats = document.getElementById('pd-stats');
-  stats.querySelectorAll('.stat span').forEach(sp=>{ if(sp.textContent==='الصافي لحد دلوقتي') sp.textContent = 'الصافي قبل نسبة الإشراف'; });
+  stats.querySelectorAll('.stat').forEach(st=>{
+    const sp = st.querySelector('span'), b = st.querySelector('b'); if(!sp || !b) return;
+    const lbl = sp.textContent;
+    if(lbl==='إجمالي المصروف') b.textContent = fmtMoney(m.spent);
+    if(lbl==='إجمالي المقبوض') b.textContent = fmtMoney(m.received);
+    if(lbl==='الصافي لحد دلوقتي' || lbl==='الصافي قبل نسبة الإشراف'){ sp.textContent = 'الصافي قبل نسبة الإشراف'; const net = m.received - m.spent; b.textContent = fmtMoney(net); b.style.color = net >= 0 ? 'var(--green)' : 'var(--rose)'; }
+  });
   let box = document.getElementById('pd-money'); if(!box){ box = document.createElement('div'); box.id = 'pd-money'; stats.after(box); }
   box.innerHTML = `<div class="pd-money">
     <div class="pd-money-h"><span>💰 فلوس المشروع</span><span class="pd-code" dir="ltr">#${escapeHtml(p.projectCode || '')}</span></div>
@@ -15249,7 +15255,10 @@ function projectMoney(p){
     <div class="pd-money-row"><span>اتصرف على المشروع</span><b class="bad">${fmtMoney(m.spent)}</b></div>
     <div class="pd-money-row"><span>نسبة الإشراف ${m.pct}٪ (على اللي اتصرف)</span><b class="gold">${fmtMoney(m.supervision)}</b></div>
     <div class="pd-money-row big"><span>الفاضل الحقيقي للمشروع (بعد الإشراف)</span><b class="${m.left>=0 ? 'ok' : 'bad'}">${fmtMoney(m.left)}</b></div>
-    ${m.statementTotal ? `<div class="pd-money-row sub"><span>المستخلص كله (بالإشراف)</span><b>${fmtMoney(m.statementTotal)}</b></div><div class="pd-money-row sub"><span>لسه على العميل في المستخلص</span><b>${fmtMoney(m.statementLeft)}</b></div>` : ''}
+    ${m.statementTotal ? `<div class="pd-money-row sub"><span>المستخلص كله (بالإشراف)</span><b>${fmtMoney(m.statementTotal)}</b></div>
+      ${m.statementLeft >= 0 ? `<div class="pd-money-row sub"><span>لسه على العميل في المستخلص</span><b>${fmtMoney(m.statementLeft)}</b></div>`
+        : `<div class="pd-money-row sub"><span>العميل دافع زيادة عن المستخلص (رصيد مقدم ليه)</span><b class="ok">${fmtMoney(-m.statementLeft)}</b></div>`}
+      ${Math.abs(m.spent - m.statementWork) >= 1 ? `<div class="step-warn">${m.spent > m.statementWork ? `⚠️ فيه ${fmtMoney(m.spent - m.statementWork)} مصروفات مش متسجلة في المستخلص` : `⚠️ المستخلص فيه ${fmtMoney(m.statementWork - m.spent)} زيادة عن المصروفات المسجلة`} — عشان كده "الفاضل" و"الرصيد" مش نفس الرقم.</div>` : ''}` : ''}
     <div class="hint">النسبة بتتغير من 🧾 كشف حساب العميل.</div></div>`;
 }; }
 
