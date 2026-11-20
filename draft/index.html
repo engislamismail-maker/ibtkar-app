@@ -940,6 +940,32 @@ body.ks-on .bottom-nav,body.ks-on #settings-fab{display:none;}
 .alarm-row{display:grid;grid-template-columns:24px 1fr auto;gap:8px;align-items:center;background:var(--blush);border-radius:10px;padding:8px 10px;font-size:13.5px;}
 .alarm-row.ok{background:#EEF3EC;}
 .alarm-row small{display:block;color:var(--muted);}
+
+#overlay-confirm-delete{z-index:600 !important;}
+.pd-money{background:var(--blush);border-radius:14px;padding:12px 14px;margin-top:12px;display:grid;gap:4px;}
+.pd-money-h{display:flex;justify-content:space-between;align-items:center;font-weight:900;font-size:15px;margin-bottom:4px;}
+.pd-code{background:var(--charcoal);color:var(--gold);border-radius:8px;padding:2px 10px;font-size:13px;font-weight:900;letter-spacing:.5px;}
+.pd-money-row{display:flex;justify-content:space-between;gap:10px;font-size:13.5px;padding:3px 0;}
+.pd-money-row b{font-variant-numeric:tabular-nums;white-space:nowrap;}
+.pd-money-row.big{border-top:1px solid var(--line);padding-top:8px;margin-top:4px;font-size:15px;font-weight:900;}
+.pd-money-row.sub{font-size:12.5px;color:var(--muted);}
+.pd-money .ok{color:var(--green);} .pd-money .bad{color:var(--deep-rose);} .pd-money .gold{color:#B9783F;}
+#tx-code-bar{position:fixed;bottom:calc(84px + env(safe-area-inset-bottom,0px));left:12px;right:12px;max-width:440px;margin:0 auto;z-index:700;background:var(--charcoal);color:#fff;border-radius:14px;padding:10px 12px;display:none;align-items:center;gap:8px;}
+#tx-code-bar.show{display:flex;}
+#tx-code-bar > div{flex:1;display:grid;}
+#tx-code-bar small{color:#E7D9DD;font-size:11.5px;}
+#tx-code-bar b{font-size:20px;color:var(--gold);letter-spacing:1px;}
+#tx-code-bar button{border:none;background:#4A4346;color:#fff;border-radius:8px;padding:7px 10px;font:700 13px Tajawal,sans-serif;cursor:pointer;}
+.tx-code-chip{display:inline-block;margin-top:6px;background:var(--charcoal);color:var(--gold);border-radius:8px;padding:3px 10px;font-weight:900;letter-spacing:.5px;}
+.mat-t td{vertical-align:middle;}
+.mat-in{width:80px;padding:6px;border:1.5px solid var(--line);border-radius:8px;font:700 13.5px Tajawal,sans-serif;text-align:center;background:#fff;}
+.mat-unit{width:86px;}
+.mat-sum td{background:var(--charcoal) !important;color:#fff;}
+.mat-sum td b{color:var(--gold);}
+.mat-form{display:grid;grid-template-columns:130px 1fr 90px;gap:6px;}
+.mat-form input,.mat-form select{padding:9px;border:1.5px solid var(--line);border-radius:9px;font:14px Tajawal,sans-serif;background:var(--cream);min-width:0;}
+.mat-form #matNote{grid-column:1 / 3;}
+@media (max-width:480px){ .mat-form{grid-template-columns:1fr 1fr;} .mat-form #matNote{grid-column:1 / 3;} .mat-in{width:64px;} }
 /* ===================== IBTKAR GE 2026 — الهوية البصرية (DRAFT) =====================
    ألوان الدليل، تصميم مسطح من غير ظلال، كروت Blush من غير إطار، خط دهبي تحت العناوين،
    جداول بهيدر روز وصفوف متبادلة، والإجمالي فحمي بأرقام دهبي. */
@@ -2439,6 +2465,7 @@ async function deleteReferenceSupplier(id){
     <div class="new-tools">
       <div class="new-tools-title">🆕 جديد</div>
       <button class="btn btn-gold btn-full" onclick="openWeeklyReport()">📊 تقرير الأسبوع — بالإيصالات</button>
+      <button class="btn btn-gold btn-full" onclick="openProjectMaterials()">🧱 الخامات — أسعارها والكميات اللي جت</button>
       <button class="btn btn-gold btn-full" onclick="openClientPayments()">💰 دفعات العميل والتحصيل</button>
       <button class="btn btn-gold btn-full" onclick="openClientPortal()">🔗 صفحة العميل (لينك يتبعتله)</button>
     </div>
@@ -3781,6 +3808,9 @@ function describeRecord(r, key, parent){
     case 'warranties': return ['projects', `🛡️ ضمان: ${r.item||r.name||''}`];
     case 'clientChoices': return ['projects', `🎯 اختيار عميل: ${r.name||r.choice||''}`];
     case 'archiveEntries': return ['projects', `🗄️ أرشيف: ${r.name||r.title||''}`];
+    case 'matLog': return ['projects', `🧱 خامة جت الموقع: ${r.qty||''} — ${pn}${r.note ? ' — ' + r.note : ''}`];
+    case 'dayPlans': return ['projects', `☀️ شغل النهارده (${r.date||''})`];
+    case 'kitchenEstimates': case 'kitchens': return ['projects', `🍳 مطبخ: ${r.name||''}`];
     case 'siteChecklists': return ['projects', `🏗️ تشيك ليست: ${r.trade||r.specialty||''}`];
     case 'lineItems': return ['money', `🧾 بند في كشف حساب: ${r.item||''} — ${money(r.cost)}`];
     case 'payments': return ['money', `🧾 دفعة عميل في كشف حساب — ${money(r.amount)}`];
@@ -5461,6 +5491,7 @@ async function buildPaymentReceiptCanvas(){
     <div style="display:flex;gap:28px;margin-bottom:6px;flex-wrap:wrap;">
       ${data.project ? `<div><div style="font-size:12px;color:#8C8177;">المشروع</div><div style="font-size:14px;font-weight:700;">${escapeHtml(data.project)}</div></div>` : ''}
       <div><div style="font-size:12px;color:#8C8177;">التاريخ</div><div style="font-size:14px;font-weight:700;">${dateLabel}</div></div>
+      ${data.code ? `<div><div style="font-size:12px;color:#8C8177;">الكود</div><div style="font-size:15px;font-weight:900;letter-spacing:.5px;" dir="ltr">${escapeHtml(data.code)}</div></div>` : ''}
       ${data.by ? `<div><div style="font-size:12px;color:#8C8177;">بواسطة</div><div style="font-size:14px;font-weight:700;">${escapeHtml(data.by)}</div></div>` : ''}
     </div>
     ${data.image ? `<div style="margin-top:18px;">
@@ -12759,6 +12790,25 @@ initAppLock();
     <aside id="ks-right" class="ks-side"></aside>
   </div>
 </div>
+<div class="overlay" id="overlay-materials">
+  <div class="modal" style="max-width:640px;">
+    <button class="modal-close" onclick="closeModal('overlay-materials')">×</button>
+    <h2>🧱 الخامات</h2>
+    <div class="sub" id="mat-sub"></div>
+    <div id="mat-prices"></div>
+    <div class="dp-q">+ سجّل كمية جت الموقع</div>
+    <div class="mat-form">
+      <input type="date" id="matDate">
+      <select id="matKey"></select>
+      <input type="number" inputmode="decimal" id="matQty" placeholder="الكمية">
+      <input type="text" id="matNote" placeholder="ملاحظة (المورد، رقم البون…)">
+      <button type="button" class="btn btn-primary" onclick="addMatLog()">سجّل</button>
+    </div>
+    <div class="hint">الجدول ده بيطلع لوحده في آخر المستخلص (كشف حساب العميل) — PDF وExcel.</div>
+    <div class="dp-q">اللي اتسجل</div>
+    <div id="mat-log"></div>
+  </div>
+</div>
 <div class="overlay" id="overlay-notifs">
   <div class="modal" style="max-width:460px;">
     <button class="modal-close" onclick="closeModal('overlay-notifs')">×</button>
@@ -15045,6 +15095,246 @@ function alarmMaybeWarn(){
 }
 { const _o2 = openV2Settings; openV2Settings = function(){ _o2(); renderAlarmSetup(); }; }
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && document.getElementById('overlay-v2-settings') && document.getElementById('overlay-v2-settings').classList.contains('show')) renderAlarmSetup(); });
+
+</script>
+<script>
+
+/* =====================================================================================
+   V2 (DRAFT) — تأكيد المسح في كل حتة + سلة محذوفات لكل حاجة، خامات المشروع، نسبة الإشراف،
+   كود لكل فاتورة/دفعة، وكود ٦ أرقام لكل مشروع.
+   ===================================================================================== */
+
+/* ---------- ١. أي مسح = اكتب delete، وبعدها يروح سلة المحذوفات ---------- */
+const DEL_RE = /\b(delete|remove|kDel|kDelete|kOpenDel)\w*\s*\(/i;
+const DEL_SKIP = /cancelConfirmDelete|proceedConfirmDelete|permanentlyDeleteTrash|clear\w*\(/;
+let delPassThrough = 0;
+function isDeleteTrigger(el){
+  if(!el || el.nodeType!==1) return false;
+  if(el.closest('#overlay-confirm-delete')) return false;
+  const oc = el.getAttribute('onclick') || '';
+  if(oc && DEL_RE.test(oc) && !DEL_SKIP.test(oc)) return true;
+  const act = el.getAttribute('data-bd-action') || '';
+  if(/^delete/.test(act)) return true;
+  return false;
+}
+function snapRecords(){
+  const m = new Map();
+  try{ forEachRecord((r, key, parent)=>{ if(r && r.id && key!=='trash') m.set(r.id, { r, key, parentId: parent && parent.id ? parent.id : null }); }); }catch(e){}
+  return m;
+}
+function trashHasRecord(id){ return (state.trash||[]).some(t=> t.data && (t.data.id===id || (t.data.rec && t.data.rec.id===id))); }
+document.addEventListener('click', async e=>{
+  const el = e.target && e.target.closest ? e.target.closest('[onclick],[data-bd-action]') : null;
+  if(!el || !isDeleteTrigger(el)) return;
+  if(el.__delOK){ el.__delOK = false; return; } // متأكد — سيب الزرار يشتغل
+  e.preventDefault(); e.stopImmediatePropagation();
+  const label = (el.closest('.pd-row, .bd-card, .card, tr, .k-open, .k-ed, .step-row') || el).innerText.replace(/\s+/g,' ').replace(/[✕×🗑️]/g,'').trim().slice(0, 70);
+  const ok = await confirmDeleteOriginal(`هتمسح: ${label || 'العنصر ده'}\n\nهيروح سلة المحذوفات وتقدر ترجّعه منها خلال ${getTrashRetentionDays()} يوم.`);
+  if(!ok) return;
+  const before = snapRecords();
+  delPassThrough = Date.now() + 2500;
+  el.__delOK = true; el.click();
+  setTimeout(async ()=>{
+    const after = snapRecords(); let n = 0;
+    before.forEach((v, id)=>{
+      if(after.has(id) || trashHasRecord(id)) return;
+      if(v.parentId && !after.has(v.parentId) && before.has(v.parentId)) return; // اتمسح مع أبوه
+      let label2 = ''; try{ const d = describeRecord(v.r, v.key, null); label2 = d && d[1] ? d[1] : ''; }catch(err){}
+      state.trash = state.trash || [];
+      state.trash.unshift({ id: uid(), type: 'record', label: label2 || (v.r.name || v.r.text || v.r.item || v.key), data: { coll: v.key, parentId: v.parentId, rec: JSON.parse(JSON.stringify(v.r)) }, deletedAt: new Date().toISOString() });
+      n++;
+    });
+    if(n) await saveState();
+  }, 1600);
+}, true);
+// المسح اللي كان بيسأل لوحده: متسألش مرتين
+const confirmDeleteOriginal = confirmDelete;
+confirmDelete = function(msg){ return Date.now() < delPassThrough ? Promise.resolve(true) : confirmDeleteOriginal(msg); };
+{ const _vc = v2Confirm; v2Confirm = function(msg, a, b){ return Date.now() < delPassThrough ? Promise.resolve(true) : _vc(msg, a, b); }; }
+TRASH_TYPE_LABEL.record = '🗂️';
+{ const _rft = restoreFromTrash; restoreFromTrash = async function(trashId){
+  const t = (state.trash||[]).find(x=>x.id===trashId);
+  if(!t || t.type!=='record') return _rft(trashId);
+  const { coll, parentId, rec } = t.data;
+  let target = null;
+  if(parentId){ forEachRecord(r=>{ if(!target && r.id===parentId) target = r; }); if(!target){ showToast('مقدرتش أرجّعه — الحاجة اللي كان جواها اتمسحت'); return; } target[coll] = target[coll] || []; target[coll].push(rec); }
+  else { state[coll] = state[coll] || []; state[coll].push(rec); }
+  state.trash = state.trash.filter(x=>x.id!==trashId);
+  renderTrashModal(); renderEverything();
+  await saveState(); showToast('اترجع من سلة المحذوفات');
+}; }
+
+/* ---------- ٢. كود لكل فاتورة ودفعة ---------- */
+const TX_WHO = { 'إسلام':'I', 'بسنت':'B' };
+function txPrefix(kind, d){ const x = new Date(d || Date.now()); const yy = String(x.getFullYear()).slice(2), mm = String(x.getMonth()+1).padStart(2,'0'), dd = String(x.getDate()).padStart(2,'0'); return `${kind==='income' ? 'D' : 'F'}-${yy}${mm}${dd}-`; }
+let txJustCoded = [];
+function txAssignCodes(fresh){
+  const used = new Set();
+  [...(state.expenses||[]), ...(state.income||[])].forEach(r=>{ if(r.txCode) used.add(r.txCode); });
+  const assign = (list, kind)=> (list||[]).slice().sort((a,b)=> new Date(a.date) - new Date(b.date)).forEach(r=>{
+    if(r.txCode) return;
+    const who = TX_WHO[r.by || r.addedBy] || 'X', pre = txPrefix(kind, r.date) + who;
+    let n = 1; while(used.has(pre + n)) n++;
+    r.txCode = pre + n; used.add(r.txCode);
+    if(fresh && Date.now() - new Date(r.addedAt || r.date).getTime() < 10*60000) txJustCoded.push({ code: r.txCode, kind, amount: r.amount });
+  });
+  assign(state.expenses, 'expense'); assign(state.income, 'income');
+}
+let txCodesMigrated = false;
+{ const _ss = saveState; saveState = async function(){
+  try{ txAssignCodes(txCodesMigrated); txCodesMigrated = true; if(txJustCoded.length) setTimeout(txShowCode, 400); }catch(e){}
+  try{ projAssignCodes(); }catch(e){}
+  return _ss.apply(this, arguments);
+}; }
+function txShowCode(){
+  const last = txJustCoded.pop(); txJustCoded = [];
+  if(!last) return;
+  let el = document.getElementById('tx-code-bar');
+  if(!el){ el = document.createElement('div'); el.id = 'tx-code-bar'; document.body.appendChild(el); }
+  el.innerHTML = `<div><small>${last.kind==='income' ? 'كود الدفعة' : 'كود الفاتورة'} — اكتبه بالقلم على الورقة</small><b dir="ltr">${last.code}</b></div>
+    <button type="button" onclick="navigator.clipboard && navigator.clipboard.writeText('${last.code}').then(()=>showToast('اتنسخ'),()=>{})">نسخ</button><button type="button" onclick="this.parentElement.remove()">✕</button>`;
+  el.className = 'show';
+}
+{ const _opr = offerPaymentReceipt; offerPaymentReceipt = function(data, rem){
+  try{ txAssignCodes(true); const last = txJustCoded[txJustCoded.length-1]; if(!data.code && last && Number(last.amount)===Number(data.amount)) data.code = last.code; }catch(e){}
+  _opr(data, rem);
+  const s = document.getElementById('receipt-offer-summary');
+  if(s && data.code) s.innerHTML = `${escapeHtml(data.recipientName)} — ${fmtMoney(data.amount)}<div class="tx-code-chip" dir="ltr">🔖 ${escapeHtml(data.code)}</div>`;
+}; }
+{ const _brd = buildReceiptDataForTxn; buildReceiptDataForTxn = function(e, kind){ const d = _brd(e, kind); if(e.txCode) d.code = e.txCode; return d; }; }
+{ const _otd = openTxnDetail; openTxnDetail = function(id, kind){
+  _otd(id, kind);
+  const e = (kind==='income' ? state.income : state.expenses).find(x=>x.id===id);
+  if(e){ if(!e.txCode){ txAssignCodes(false); saveState(); }
+    document.getElementById('expense-detail-rows').insertAdjacentHTML('afterbegin', `<div class="detail-row"><span>🔖 الكود</span><b dir="ltr" style="font-size:16px;">${escapeHtml(e.txCode || '')}</b></div>`); }
+}; }
+
+/* ---------- ٣. كود ٦ أرقام لكل مشروع: سنة + شهر + رقمه في الشهر (مثلاً 261101) ---------- */
+function projAssignCodes(){
+  const used = new Set((state.projects||[]).map(p=>p.projectCode).filter(Boolean));
+  (state.projects||[]).slice().sort((a,b)=> new Date(a.createdAt || a.startDate || 0) - new Date(b.createdAt || b.startDate || 0)).forEach(p=>{
+    if(!p.projectCode){
+      const d = new Date(p.createdAt || p.startDate || Date.now());
+      const pre = String(d.getFullYear()).slice(2) + String(d.getMonth()+1).padStart(2,'0');
+      let n = 1; while(used.has(pre + String(n).padStart(2,'0'))) n++;
+      p.projectCode = pre + String(n).padStart(2,'0'); used.add(p.projectCode);
+    }
+    const cs = p.clientStatement;
+    if(cs && !cs.projectCode) cs.projectCode = p.projectCode;
+  });
+}
+{ const _ecs = ensureClientStatement; ensureClientStatement = function(p){ const cs = _ecs(p); if(!p.projectCode) projAssignCodes(); if(!cs.projectCode) cs.projectCode = p.projectCode || ''; return cs; }; }
+{ const _nz = normalizeState; normalizeState = function(){ _nz(); try{ projAssignCodes(); txAssignCodes(false); txCodesMigrated = true; }catch(e){} }; }
+
+/* ---------- ٤. فلوس المشروع بنسبة الإشراف ---------- */
+function projectMoney(p){
+  const sum = list=> (list||[]).filter(e=> projectMatchesName(p, e.project)).reduce((a,e)=> a + (Number(e.amount)||0), 0);
+  const s = { totalIncome: sum(state.income), totalExpense: sum(state.expenses) };
+  const cs = ensureClientStatement(p), t = computeClientStatementTotals(cs);
+  const pct = Number(cs.adminPercent) || 0;
+  const supervision = s.totalExpense * pct / 100;
+  return { received: s.totalIncome, spent: s.totalExpense, pct, supervision, left: s.totalIncome - s.totalExpense - supervision,
+    statementTotal: t.grandTotal, statementLeft: t.remaining };
+}
+{ const _opd = openProjectDashboard; openProjectDashboard = function(id){
+  _opd(id);
+  const p = (state.projects||[]).find(x=>x.id===id); if(!p) return;
+  const m = projectMoney(p);
+  const stats = document.getElementById('pd-stats');
+  stats.querySelectorAll('.stat span').forEach(sp=>{ if(sp.textContent==='الصافي لحد دلوقتي') sp.textContent = 'الصافي قبل نسبة الإشراف'; });
+  let box = document.getElementById('pd-money'); if(!box){ box = document.createElement('div'); box.id = 'pd-money'; stats.after(box); }
+  box.innerHTML = `<div class="pd-money">
+    <div class="pd-money-h"><span>💰 فلوس المشروع</span><span class="pd-code" dir="ltr">#${escapeHtml(p.projectCode || '')}</span></div>
+    <div class="pd-money-row"><span>اتقبض من العميل لحد دلوقتي</span><b class="ok">${fmtMoney(m.received)}</b></div>
+    <div class="pd-money-row"><span>اتصرف على المشروع</span><b class="bad">${fmtMoney(m.spent)}</b></div>
+    <div class="pd-money-row"><span>نسبة الإشراف ${m.pct}٪ (على اللي اتصرف)</span><b class="gold">${fmtMoney(m.supervision)}</b></div>
+    <div class="pd-money-row big"><span>الفاضل الحقيقي للمشروع (بعد الإشراف)</span><b class="${m.left>=0 ? 'ok' : 'bad'}">${fmtMoney(m.left)}</b></div>
+    ${m.statementTotal ? `<div class="pd-money-row sub"><span>المستخلص كله (بالإشراف)</span><b>${fmtMoney(m.statementTotal)}</b></div><div class="pd-money-row sub"><span>لسه على العميل في المستخلص</span><b>${fmtMoney(m.statementLeft)}</b></div>` : ''}
+    <div class="hint">النسبة بتتغير من 🧾 كشف حساب العميل.</div></div>`;
+}; }
+
+/* ---------- ٥. خامات المشروع: أسعارها من المورد + الكميات اللي جت ---------- */
+const MAT_DEFAULT = [['sand','رملة','م³'],['gravel','سن','م³'],['cement','أسمنت','شكارة'],['whitecement','أسمنت أبيض','شكارة'],['gypsum','جبس','شكارة'],['brick','طوب','١٠٠٠ طوبة']];
+// الأسعار في p.matItems والكميات في p.matLog (على المشروع نفسه، عشان لو اتمسحت ترجع مكانها من السلة)
+function projMaterials(p){
+  p.matItems = p.matItems || MAT_DEFAULT.map(([key,name,unit])=>({ key, name, unit, price: 0 }));
+  p.matLog = p.matLog || [];
+  return { get items(){ return p.matItems; }, get log(){ return p.matLog; }, set log(v){ p.matLog = v; } };
+}
+function matTotals(p){
+  const m = projMaterials(p);
+  return m.items.map(it=>{ const qty = m.log.filter(l=>l.key===it.key).reduce((s,l)=> s + (Number(l.qty)||0), 0); return { ...it, qty, total: qty * (Number(it.price)||0) }; });
+}
+function openProjectMaterials(){ renderProjectMaterials(); document.getElementById('overlay-materials').classList.add('show'); }
+function renderProjectMaterials(){
+  const p = (state.projects||[]).find(x=>x.id===activeProjectDashboardId); if(!p) return;
+  const m = projMaterials(p), tot = matTotals(p);
+  document.getElementById('mat-sub').textContent = p.name + ' — الأسعار بتتغير حسب مورد المنطقة، فبتتكتب لكل مشروع.';
+  document.getElementById('mat-prices').innerHTML = `<table class="wr-t mat-t"><tr><td><b>الخامة</b></td><td><b>الوحدة</b></td><td><b>السعر</b></td><td class="v"><b>جه لحد دلوقتي</b></td><td class="v"><b>التكلفة</b></td></tr>
+    ${tot.map(it=>`<tr><td><b>${escapeHtml(it.name)}</b></td><td><input value="${escapeHtml(it.unit)}" onchange="matSet('${it.key}','unit',this.value)" class="mat-in mat-unit"></td>
+      <td><input type="number" inputmode="decimal" value="${it.price || ''}" placeholder="0" onchange="matSet('${it.key}','price',this.value)" class="mat-in"></td>
+      <td class="v">${it.qty} ${escapeHtml(it.unit)}</td><td class="v">${it.total ? fmtMoney(it.total) : '—'}</td></tr>`).join('')}
+    <tr class="mat-sum"><td colspan="4"><b>إجمالي الخامات</b></td><td class="v"><b>${fmtMoney(tot.reduce((s,x)=>s+x.total,0))}</b></td></tr></table>
+    <button type="button" class="btn btn-ghost btn-sm" style="margin-top:6px;" onclick="matAddItem()">+ خامة تانية</button>`;
+  document.getElementById('matKey').innerHTML = m.items.map(it=>`<option value="${it.key}">${escapeHtml(it.name)} (${escapeHtml(it.unit)})</option>`).join('');
+  if(!document.getElementById('matDate').value) document.getElementById('matDate').value = bdTodayStr();
+  const log = m.log.slice().sort((a,b)=> (b.date||'').localeCompare(a.date||''));
+  document.getElementById('mat-log').innerHTML = log.length ? log.map(l=>{ const it = m.items.find(x=>x.key===l.key) || { name:l.key, unit:'' };
+    return `<div class="pd-row"><div class="pd-row-main"><div class="pd-row-title">${escapeHtml(it.name)} — ${l.qty} ${escapeHtml(it.unit)}</div><div class="pd-row-sub">${v2FmtDay(l.date)}${l.note ? ' · ' + escapeHtml(l.note) : ''}${l.by ? ' · ' + escapeHtml(l.by) : ''}</div></div><button type="button" class="qe-row-del" onclick="deleteMatLog('${l.id}')">✕</button></div>`; }).join('')
+    : '<div class="no-hist">لسه مفيش كميات متسجلة</div>';
+}
+async function matSet(key, field, val){
+  const p = (state.projects||[]).find(x=>x.id===activeProjectDashboardId); const it = projMaterials(p).items.find(x=>x.key===key); if(!it) return;
+  it[field] = field==='price' ? (parseFloat(val)||0) : String(val).trim(); renderProjectMaterials(); await saveState();
+}
+async function matAddItem(){
+  const name = ((await appPrompt('اسم الخامة (مثلاً: حديد، زلط)', '')) || '').trim(); if(!name) return;
+  const unit = ((await appPrompt('بتتحسب بإيه؟ (طن، م³، شكارة…)', '')) || '').trim();
+  const p = (state.projects||[]).find(x=>x.id===activeProjectDashboardId);
+  projMaterials(p).items.push({ key: 'm' + uid(), name, unit, price: 0 }); renderProjectMaterials(); await saveState();
+}
+async function addMatLog(){
+  const p = (state.projects||[]).find(x=>x.id===activeProjectDashboardId); if(!p) return;
+  const qty = parseFloat(document.getElementById('matQty').value);
+  if(!(qty > 0)){ showToast('اكتب الكمية'); return; }
+  projMaterials(p).log.push({ id: uid(), date: document.getElementById('matDate').value || bdTodayStr(), key: document.getElementById('matKey').value, qty, note: document.getElementById('matNote').value.trim(), by: getDeviceUser() || '' });
+  document.getElementById('matQty').value = ''; document.getElementById('matNote').value = '';
+  renderProjectMaterials(); await saveState(); showToast('اتسجلت');
+}
+async function deleteMatLog(id){
+  const p = (state.projects||[]).find(x=>x.id===activeProjectDashboardId); if(!p) return;
+  projMaterials(p).log = projMaterials(p).log.filter(l=>l.id!==id); renderProjectMaterials(); await saveState();
+}
+// جدول الخامات في آخر المستخلص (PDF + Excel)
+{ const _bpb = buildClientStatementPDFBody; buildClientStatementPDFBody = function(p, cs, t){
+  let html = _bpb(p, cs, t);
+  const tot = matTotals(p).filter(x=> x.price || x.qty);
+  if(!tot.length) return html;
+  const td = (v, bg)=> `<td style="background:${bg};padding:7px 4px;font-size:11px;text-align:center;border-bottom:1px solid #E6E6E6;">${v}</td>`;
+  const rows = tot.map((x,i)=>{ const bg = i%2 ? '#F2F2F2' : '#FFFFFF'; return `<tr>${td(i+1,bg)}${td(escapeHtml(x.unit),bg)}${td(escapeHtml(x.name),bg)}${td(x.price ? fmtMoney(x.price) : '—',bg)}${td(x.qty ? x.qty + ' ' + escapeHtml(x.unit) : '—',bg)}</tr>`; }).join('')
+    + `<tr><td colspan="4" style="background:#2E2A2C;color:#fff;font-weight:900;font-size:11.5px;padding:8px;text-align:center;">إجمالي الخامات اللي جت</td><td style="background:#2E2A2C;color:#D59663;font-weight:900;font-size:11.5px;padding:8px;text-align:center;">${fmtMoney(tot.reduce((s,x)=>s+x.total,0))}</td></tr>`;
+  const start = html.indexOf('أسعار الخامات المرجعية</div>');
+  if(start < 0) return html;
+  const tStart = html.indexOf('<table', start), tEnd = html.indexOf('</table>', tStart) + 8;
+  const table = `<table style="width:100%;border-collapse:collapse;"><tr>
+      <th style="background:#D59663;color:#fff;font-size:10px;font-weight:900;padding:6px 4px;width:8%;">م</th>
+      <th style="background:#D59663;color:#fff;font-size:10px;font-weight:900;padding:6px 4px;width:16%;">الوحدة</th>
+      <th style="background:#D59663;color:#fff;font-size:10px;font-weight:900;padding:6px 4px;width:32%;">الخامة</th>
+      <th style="background:#D59663;color:#fff;font-size:10px;font-weight:900;padding:6px 4px;width:20%;">سعر الوحدة</th>
+      <th style="background:#D59663;color:#fff;font-size:10px;font-weight:900;padding:6px 4px;width:24%;">جه لحد دلوقتي (تشوين)</th></tr>${rows}</table>`;
+  return html.slice(0, tStart) + table + html.slice(tEnd);
+}; }
+{ const _xls = downloadClientStatementExcel; downloadClientStatementExcel = function(){
+  const orig = XLSX.utils.aoa_to_sheet;
+  const p = (state.projects||[]).find(x=>x.id===activeProjectDashboardId);
+  XLSX.utils.aoa_to_sheet = function(rows, o){
+    try{ const tot = p ? matTotals(p).filter(x=> x.price || x.qty) : [];
+      if(tot.length && Array.isArray(rows)){ rows.push([]); rows.push(['أسعار الخامات والكميات']); rows.push(['الخامة','الوحدة','سعر الوحدة','الكمية لحد دلوقتي','التكلفة']);
+        tot.forEach(x=> rows.push([x.name, x.unit, x.price || 0, x.qty, x.total])); } }catch(e){}
+    XLSX.utils.aoa_to_sheet = orig; return orig.call(this, rows, o);
+  };
+  try{ return _xls(); } finally { XLSX.utils.aoa_to_sheet = orig; }
+}; }
 
 </script>
 </body>
