@@ -966,6 +966,21 @@ body.ks-on .bottom-nav,body.ks-on #settings-fab{display:none;}
 .mat-form input,.mat-form select{padding:9px;border:1.5px solid var(--line);border-radius:9px;font:14px Tajawal,sans-serif;background:var(--cream);min-width:0;}
 .mat-form #matNote{grid-column:1 / 3;}
 @media (max-width:480px){ .mat-form{grid-template-columns:1fr 1fr;} .mat-form #matNote{grid-column:1 / 3;} .mat-in{width:64px;} }
+
+.sv-tile{width:100%;display:flex;align-items:center;gap:12px;background:var(--charcoal);color:#fff;border:none;border-radius:16px;padding:14px 16px;margin-bottom:16px;cursor:pointer;font-family:inherit;text-align:right;}
+.sv-ic{font-size:26px;}
+.sv-txt{flex:1;display:grid;}
+.sv-txt small,.sv-side small{color:#E7D9DD;font-size:12px;}
+.sv-txt b{font-size:22px;color:var(--gold);font-variant-numeric:tabular-nums;}
+.sv-side{display:grid;text-align:left;}
+.sv-side b{font-size:14px;font-variant-numeric:tabular-nums;}
+.sv-kpis{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.sv-k{background:var(--blush);border-radius:12px;padding:10px 12px;display:grid;}
+.sv-k small{color:var(--muted);font-size:12px;}
+.sv-k b{font-size:16px;font-variant-numeric:tabular-nums;}
+.sv-k.main{grid-column:1 / 3;background:var(--charcoal);color:#fff;}
+.sv-k.main small{color:#E7D9DD;}
+.sv-k.main b{color:var(--gold);font-size:24px;}
 /* ===================== IBTKAR GE 2026 — الهوية البصرية (DRAFT) =====================
    ألوان الدليل، تصميم مسطح من غير ظلال، كروت Blush من غير إطار، خط دهبي تحت العناوين،
    جداول بهيدر روز وصفوف متبادلة، والإجمالي فحمي بأرقام دهبي. */
@@ -1096,6 +1111,7 @@ table.wr-kpis b{color:var(--charcoal);}
   </div>
   <button class="btn btn-gold btn-full voice-home-btn" onclick="openVoicePicker()">🎙️ اتكلم — حسابات أو أرشيف</button>
 
+  <div id="home-superv-wrap"></div>
   <div id="home-dayplan-wrap"></div>
   <div id="home-collection-wrap"></div>
   <div id="home-steps-wrap"></div>
@@ -3808,6 +3824,7 @@ function describeRecord(r, key, parent){
     case 'warranties': return ['projects', `🛡️ ضمان: ${r.item||r.name||''}`];
     case 'clientChoices': return ['projects', `🎯 اختيار عميل: ${r.name||r.choice||''}`];
     case 'archiveEntries': return ['projects', `🗄️ أرشيف: ${r.name||r.title||''}`];
+    case 'supervisionWithdrawals': return ['money', `💸 سحب نسبة إشراف ${money(r.amount)}`];
     case 'matLog': return ['projects', `🧱 خامة جت الموقع: ${r.qty||''} — ${pn}${r.note ? ' — ' + r.note : ''}`];
     case 'dayPlans': return ['projects', `☀️ شغل النهارده (${r.date||''})`];
     case 'kitchenEstimates': case 'kitchens': return ['projects', `🍳 مطبخ: ${r.name||''}`];
@@ -12809,6 +12826,14 @@ initAppLock();
     <div id="mat-log"></div>
   </div>
 </div>
+<div class="overlay" id="overlay-supervision">
+  <div class="modal" style="max-width:560px;">
+    <button class="modal-close" onclick="closeModal('overlay-supervision')">×</button>
+    <h2>💼 نسبة الإشراف</h2>
+    <div class="sub">فلوسنا إحنا — منفصلة عن فلوس العميل</div>
+    <div id="sv-body"></div>
+  </div>
+</div>
 <div class="overlay" id="overlay-notifs">
   <div class="modal" style="max-width:460px;">
     <button class="modal-close" onclick="closeModal('overlay-notifs')">×</button>
@@ -15344,6 +15369,80 @@ async function deleteMatLog(id){
   };
   try{ return _xls(); } finally { XLSX.utils.aoa_to_sheet = orig; }
 }; }
+
+</script>
+<script>
+
+/* =====================================================================================
+   💼 رصيد الإشراف (DRAFT) — نسبة الإشراف بتاعتنا منفصلة عن فلوس العميل:
+   بتتحسب من كل مصروف على المشروع × نسبة إشراف المشروع (من كشف الحساب)،
+   ولما نسحبها نسجّل "سحب" والرصيد يرجع صفر. (بعدين: البنوك ومعادلة التطابق.)
+   ===================================================================================== */
+{ const _n5 = normalizeState; normalizeState = function(){ _n5(); state.supervisionWithdrawals = state.supervisionWithdrawals || []; }; }
+function supervisionEarnings(){
+  const now = new Date(), mStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+  const rows = (state.projects||[]).map(p=>{
+    const pct = Number(ensureClientStatement(p).adminPercent) || 0;
+    let all = 0, month = 0;
+    (state.expenses||[]).forEach(e=>{
+      if(!projectMatchesName(p, e.project)) return;
+      const v = (Number(e.amount)||0) * pct / 100;
+      all += v; if(new Date(e.date).getTime() >= mStart) month += v;
+    });
+    return { p, pct, all, month };
+  }).filter(r=> r.all > 0);
+  const W = state.supervisionWithdrawals || [];
+  const withdrawn = W.reduce((s,w)=> s + (Number(w.amount)||0), 0);
+  const withdrawnMonth = W.filter(w=> new Date(w.date).getTime() >= mStart).reduce((s,w)=> s + (Number(w.amount)||0), 0);
+  const all = rows.reduce((s,r)=>s+r.all,0), month = rows.reduce((s,r)=>s+r.month,0);
+  return { rows, all, month, withdrawn, withdrawnMonth, balance: Math.round((all - withdrawn)*100)/100 };
+}
+function renderHomeSupervision(){
+  const el = document.getElementById('home-superv-wrap'); if(!el) return;
+  const s = supervisionEarnings();
+  el.innerHTML = `<button type="button" class="sv-tile" onclick="openSupervision()">
+    <span class="sv-ic">💼</span>
+    <span class="sv-txt"><small>رصيدنا من نسبة الإشراف (لسه ما اتسحبش)</small><b>${fmtMoney(s.balance)}</b></span>
+    <span class="sv-side"><small>الشهر ده</small><b>${fmtMoney(s.month)}</b></span>
+  </button>`;
+}
+{ const _rh4 = renderHome; renderHome = function(){ _rh4(); try{ renderHomeSupervision(); }catch(e){ console.error(e); } }; }
+function openSupervision(){ renderSupervision(); document.getElementById('overlay-supervision').classList.add('show'); }
+function renderSupervision(){
+  const s = supervisionEarnings();
+  const monthName = new Date().toLocaleDateString('ar-EG',{month:'long', numberingSystem:'latn'});
+  document.getElementById('sv-body').innerHTML = `
+    <div class="sv-kpis">
+      <div class="sv-k main"><small>لسه ما اتسحبش (الرصيد)</small><b>${fmtMoney(s.balance)}</b></div>
+      <div class="sv-k"><small>من أول ما بدأنا</small><b>${fmtMoney(s.all)}</b></div>
+      <div class="sv-k"><small>شهر ${monthName}</small><b>${fmtMoney(s.month)}</b></div>
+      <div class="sv-k"><small>اتسحب لحد دلوقتي</small><b>${fmtMoney(s.withdrawn)}</b></div>
+    </div>
+    <button type="button" class="btn btn-primary btn-full" style="margin-top:10px;" onclick="withdrawSupervision()" ${s.balance > 0 ? '' : 'disabled'}>💸 سحبت نسبة الإشراف (صفّر الرصيد)</button>
+    <div class="dp-q">من كل مشروع</div>
+    <table class="wr-t"><tr><td><b>المشروع</b></td><td class="v"><b>النسبة</b></td><td class="v"><b>الشهر ده</b></td><td class="v"><b>من الأول</b></td></tr>
+      ${s.rows.map(r=>`<tr><td>${escapeHtml(r.p.name)} <small dir="ltr">#${escapeHtml(r.p.projectCode||'')}</small></td><td class="v">${r.pct}٪</td><td class="v">${fmtMoney(r.month)}</td><td class="v">${fmtMoney(r.all)}</td></tr>`).join('') || '<tr><td colspan="4">لسه مفيش</td></tr>'}
+    </table>
+    <div class="hint" style="margin-top:4px;">بتتحسب من كل مصروف على المشروع × نسبة إشراف المشروع (من 🧾 كشف حساب العميل).</div>
+    <div class="dp-q">السحوبات</div>
+    ${(state.supervisionWithdrawals||[]).slice().sort((a,b)=> new Date(b.date)-new Date(a.date)).map(w=>`<div class="pd-row"><div class="pd-row-main"><div class="pd-row-title">💸 ${fmtMoney(w.amount)}</div><div class="pd-row-sub">${fmtDateTime(w.date)}${w.by ? ' · ' + escapeHtml(w.by) : ''}${w.note ? ' · ' + escapeHtml(w.note) : ''}</div></div><button type="button" class="qe-row-del" onclick="deleteSupervisionWithdrawal('${w.id}')">✕</button></div>`).join('') || '<div class="no-hist">لسه مفيش سحوبات</div>'}`;
+}
+async function withdrawSupervision(){
+  const s = supervisionEarnings(); if(!(s.balance > 0)) return;
+  const v = await appPrompt(`المبلغ اللي اتسحب (الرصيد كله: ${fmtMoney(s.balance)})`, String(s.balance));
+  if(v===null) return;
+  const amount = parseFloat(v); if(!(amount > 0)){ showToast('اكتب مبلغ صحيح'); return; }
+  const note = (await appPrompt('ملاحظة (اختياري) — مثلاً: اتسحبت كاش / اتحولت للبنك', '')) || '';
+  state.supervisionWithdrawals = state.supervisionWithdrawals || [];
+  state.supervisionWithdrawals.push({ id: uid(), date: new Date().toISOString(), amount: Math.round(amount*100)/100, by: getDeviceUser() || '', note: note.trim() });
+  await saveState(); renderSupervision(); renderHomeSupervision();
+  feedPush(`💸 سحب نسبة إشراف ${fmtMoney(amount)}`);
+  showToast(amount >= s.balance - 0.01 ? '✅ اتسجل السحب — الرصيد بقى صفر' : '✅ اتسجل السحب');
+}
+async function deleteSupervisionWithdrawal(id){
+  state.supervisionWithdrawals = (state.supervisionWithdrawals||[]).filter(w=>w.id!==id);
+  await saveState(); renderSupervision(); renderHomeSupervision();
+}
 
 </script>
 </body>
