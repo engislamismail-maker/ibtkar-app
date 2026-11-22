@@ -1052,13 +1052,13 @@ body.ks-on .bottom-nav,body.ks-on #settings-fab{display:none;}
 #pd-stats .stat b, #stats .stat b, #worker-stats .stat b{ display:block; font-size:15px !important; line-height:1.3; }
 #pd-stats .stat span, #stats .stat span, #worker-stats .stat span{ font-size:10.5px !important; opacity:.75; }
 .pd-groups{ display:flex; flex-direction:column; gap:10px; margin-top:14px; }
-.pd-group{ border-radius:14px; padding:9px 10px 10px; background:var(--card, #fff); border:1px solid rgba(0,0,0,.07); border-inline-start:4px solid var(--pdg); }
-.pd-group.g1{ --pdg:#e0b52a; } .pd-group.g2{ --pdg:#2f6fd6; } .pd-group.g3{ --pdg:#d9434b; } .pd-group.g4{ --pdg:#8a4fd8; }
-.pd-group-t{ font-weight:800; font-size:13.5px; margin-bottom:7px; display:flex; align-items:center; gap:6px; }
+.pd-group{ border-radius:14px; padding:9px 10px 10px; background:var(--white); border:1px solid var(--line); border-inline-start:3px solid var(--pdg); }
+.pd-group.g1{ --pdg:#D59663; } .pd-group.g2{ --pdg:#C2547A; } .pd-group.g3{ --pdg:#6E8B74; } .pd-group.g4{ --pdg:#2E2A2C; }
+.pd-group-t{ font-weight:800; font-size:13.5px; margin-bottom:7px; display:flex; align-items:center; gap:6px; color:var(--charcoal); }
 .pd-tiles{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:6px; }
 .pd-tiles:has(> :nth-child(3):last-child){ grid-template-columns:repeat(3,minmax(0,1fr)); }
 .pd-tiles:has(> :nth-child(3):last-child) .pd-tile{ flex-direction:column; justify-content:center !important; text-align:center; gap:3px; font-size:12px !important; }
-.pd-tile{ width:100%; min-height:40px; padding:7px 8px !important; font-size:12.5px !important; justify-content:flex-start !important; text-align:start; background:color-mix(in srgb, var(--pdg) 12%, transparent) !important; color:inherit !important; border:1px solid color-mix(in srgb, var(--pdg) 30%, transparent) !important; box-shadow:none !important; }
+.pd-tile{ width:100%; min-height:44px; padding:7px 8px !important; font-size:12.5px !important; font-weight:700; justify-content:flex-start !important; text-align:start; background:var(--blush) !important; color:var(--charcoal) !important; border:0 !important; box-shadow:none !important; }
 /* ===================== IBTKAR GE 2026 — الهوية البصرية (DRAFT) =====================
    ألوان الدليل، تصميم مسطح من غير ظلال، كروت Blush من غير إطار، خط دهبي تحت العناوين،
    جداول بهيدر روز وصفوف متبادلة، والإجمالي فحمي بأرقام دهبي. */
@@ -2561,8 +2561,8 @@ async function deleteReferenceSupplier(id){
     <div id="pd-pricing-compare"></div>
 
     <div class="pd-groups">
-      <div class="pd-group g1"><div class="pd-group-t">📊 العميل والتقارير</div><div class="pd-tiles"><button type="button" class="btn pd-tile" onclick="openWeeklyReport()">📊 تقرير الأسبوع</button><button type="button" class="btn pd-tile" onclick="openClientPortal()">🔗 صفحة العميل</button><button type="button" class="btn pd-tile" onclick="jumpToProjectView('accounts')">💰 الحسابات</button></div></div>
-      <div class="pd-group g2"><div class="pd-group-t">🧱 الموقع والموارد</div><div class="pd-tiles"><button type="button" class="btn pd-tile" onclick="openProjectMaterials()">🧱 الخامات وأسعارها</button><button type="button" class="btn pd-tile" onclick="openClientPayments()">💳 دفعات العميل</button><button type="button" class="btn pd-tile" onclick="jumpToProjectView('warehouse')">📦 المخازن</button><button type="button" class="btn pd-tile" onclick="jumpToProjectView('workers')">👷 العمال</button></div></div>
+      <div class="pd-group g1"><div class="pd-group-t">📊 العميل والحسابات</div><div class="pd-tiles"><button type="button" class="btn pd-tile" onclick="openWeeklyReport()">📊 تقرير الأسبوع</button><button type="button" class="btn pd-tile" onclick="openClientPortal()">🔗 صفحة العميل</button><button type="button" class="btn pd-tile" onclick="jumpToProjectView('accounts')">💰 الحسابات</button><button type="button" class="btn pd-tile" onclick="openClientPayments()">💳 دفعات العميل</button></div></div>
+      <div class="pd-group g2"><div class="pd-group-t">🧱 الموقع والموارد</div><div class="pd-tiles"><button type="button" class="btn pd-tile" onclick="openProjectMaterials()">🧱 الخامات وأسعارها</button><button type="button" class="btn pd-tile" onclick="jumpToProjectView('warehouse')">📦 المخازن</button><button type="button" class="btn pd-tile" onclick="jumpToProjectView('workers')">👷 العمال</button></div></div>
       <div class="pd-group g3"><div class="pd-group-t">✅ المتابعة والجودة</div><div class="pd-tiles"><button type="button" class="btn pd-tile" onclick="bdOpenProjectTasks()">✅ مهام المشروع</button><button type="button" class="btn pd-tile" onclick="openProjectChecklists()">🏗️ تشيك ليست الجودة</button><button type="button" class="btn pd-tile" onclick="openSnagListModal()">🏁 الاستلام النهائي</button></div></div>
       <div class="pd-group g4"><div class="pd-group-t">📁 المستندات</div><div class="pd-tiles"><button type="button" class="btn pd-tile" onclick="bdOpenProjectWarranties()">🛡️ الضمانات</button><button type="button" class="btn pd-tile" onclick="bdOpenProjectChoices()">🎯 اختيارات العميل</button><button type="button" class="btn pd-tile" onclick="bdOpenProjectArchive()">🗄️ الأرشيف</button></div></div>
     </div>
@@ -13993,6 +13993,8 @@ const BRAND_RULES = [
   ['.v2-tile > span', { circle:true, size: 46 }],
   ['.modal h2, .topbar h1, .home-section-title, .new-tools-title, .wr-h, .ph-title', { circle:true, size: 26 }],
   ['#settings-fab, #notif-bell', { size: 22 }],
+  ['.pd-tile', { circle:true, size: 28 }],
+  ['.pd-group-t', { circle:true, size: 24 }],
   ['.btn, .pd-row-title', { size: 17 }]
 ];
 const BRAND_SEL = BRAND_RULES.map(r=>r[0]).join(', ');
@@ -14013,6 +14015,7 @@ function brandApply(el){
   const rule = BRAND_RULES.find(r=> el.matches(r[0])); if(!rule) return;
   let o = rule[1];
   if(o.circle && el.closest('.bottom-nav, .wr-dark')) o = { ...o, bg: BRAND.gold };
+  const pg = o.circle && el.closest('.pd-group'); if(pg){ const c = getComputedStyle(pg).getPropertyValue('--pdg').trim(); if(c) o = { ...o, bg: c }; }
   const span = document.createElement('span');
   span.className = 'bi' + (o.circle ? ' bi-c' : '');
   span.innerHTML = brandIcon(name, o);
