@@ -998,6 +998,34 @@ body.ks-on .bottom-nav,body.ks-on #settings-fab{display:none;}
 .safe-det{margin-top:8px;} .safe-det summary{cursor:pointer;font-weight:700;font-size:13.5px;}
 .wr-t td.v.bad{color:var(--deep-rose);}
 @media (max-width:480px){ .safe-row{grid-template-columns:28px 1fr 96px auto;} .safe-row .btn{display:none;} }
+
+#home-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;}
+#home-stats .stat{min-width:0;padding:8px 10px;border-radius:10px;}
+#home-stats .stat b{font-size:15px;}
+#home-stats .stat span{font-size:11px;line-height:1.35;}
+.home-btn-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+.home-btn-row .btn{min-height:44px;padding:8px 6px;font-size:13px;justify-content:center;}
+.home-section-title.hc{cursor:pointer;user-select:none;}
+.hc-arr{margin-inline-start:auto;font-size:14px;color:var(--muted);transition:transform .15s;}
+.hc.open .hc-arr{transform:rotate(90deg);}
+.tc{background:#fff;border:1.5px solid var(--line);border-radius:16px;padding:12px 14px;margin-bottom:16px;}
+.tc-h{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin-bottom:6px;}
+.tc-h b{font-size:16px;} .tc-h small{color:var(--muted);font-size:12px;}
+.tc-hb{margin-inline-start:auto;}
+.tc-p{border-top:1px solid var(--line);padding:8px 0 4px;}
+.tc-pn{font-weight:900;font-size:14px;}
+.tc-tr{font-weight:700;font-size:12px;background:var(--blush);color:var(--deep-rose);border-radius:999px;padding:1px 8px;margin-inline-start:4px;}
+.tc-note{font-size:12.5px;color:var(--muted);margin:2px 0;}
+.tc-w{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:5px 0 5px 0;padding-inline-start:14px;font-size:13.5px;}
+.tc-w small{color:var(--muted);}
+.tc-w em{font-style:normal;color:#B9783F;font-size:12px;font-weight:700;}
+.tc-w.late b{color:#B9783F;}
+.tc-acts{display:flex;gap:4px;flex:none;}
+.tc-acts button{border:1px solid var(--line);background:#fff;border-radius:8px;padding:3px 8px;font:700 12px Tajawal,sans-serif;color:var(--charcoal);cursor:pointer;}
+.tc-empty{font-size:12.5px;color:var(--muted);padding-inline-start:14px;}
+.tc-tasks{border-top:1px solid var(--line);padding-top:8px;margin-top:4px;font-size:13px;display:grid;gap:2px;}
+.tc-tasks small{color:var(--muted);}
+.tc-add{width:100%;margin-top:8px;border:1.5px dashed var(--line);background:none;border-radius:10px;padding:8px;font:700 13px Tajawal,sans-serif;color:var(--muted);cursor:pointer;}
 /* ===================== IBTKAR GE 2026 — الهوية البصرية (DRAFT) =====================
    ألوان الدليل، تصميم مسطح من غير ظلال، كروت Blush من غير إطار، خط دهبي تحت العناوين،
    جداول بهيدر روز وصفوف متبادلة، والإجمالي فحمي بأرقام دهبي. */
@@ -1110,18 +1138,16 @@ table.wr-kpis b{color:var(--charcoal);}
 
   <div class="stats" id="home-stats"></div>
 
-  <div class="home-section-title">💼 مواقف المشاريع (من كشوف الحساب)</div>
+  <div class="home-section-title hc" data-hc="balances" data-hc-body="home-project-balances" onclick="hcToggle('balances')">💼 مواقف المشاريع (من كشوف الحساب)<span class="hc-arr">▸</span></div>
   <div id="home-project-balances"></div>
 
-  <div style="display:flex;justify-content:space-between;align-items:center;gap:6px;margin:16px 0;overflow-x:auto;">
-    <div style="display:flex;gap:6px;flex-shrink:0;">
-      <button class="btn btn-gold btn-sm" onclick="openDebtsModal()" style="white-space:nowrap;">💸 مديونيات</button>
-      <button class="btn btn-ghost btn-sm" onclick="openAllTasksModal()" style="white-space:nowrap;">📋 التاسكات</button>
-      <button class="btn btn-ghost btn-sm" onclick="openCompanySummaryModal()" style="white-space:nowrap;">💰 الملخص</button>
-    </div>
+  <div class="home-btn-row" style="margin-top:14px;">
+      <button class="btn btn-gold btn-sm btn-full" onclick="openDebtsModal()">💸 مديونيات</button>
+      <button class="btn btn-ghost btn-sm btn-full" onclick="openAllTasksModal()">📋 التاسكات</button>
+      <button class="btn btn-ghost btn-sm btn-full" onclick="openCompanySummaryModal()">💰 الملخص</button>
   </div>
 
-  <div style="display:flex;gap:8px;margin-bottom:16px;">
+  <div class="home-btn-row" style="margin-bottom:16px;">
     <button class="btn btn-primary btn-sm btn-full" onclick="openAddExpense()">⚡ تسجيل مصروف</button>
     <button class="btn btn-primary btn-sm btn-full" onclick="openAddIncome()">⚡ تسجيل قبض</button>
     <button class="btn btn-primary btn-sm btn-full" onclick="openAddDeduction()">➖ خصم على عامل</button>
@@ -1133,20 +1159,20 @@ table.wr-kpis b{color:var(--charcoal);}
   <div id="home-collection-wrap"></div>
   <div id="home-steps-wrap"></div>
 
-  <div class="home-section-title">🏗️ تشيك ليست الجودة — البنود المحتاجة انتباه</div>
+  <div class="home-section-title hc" data-hc="checklist" data-hc-body="home-checklist-summary" onclick="hcToggle('checklist')">🏗️ تشيك ليست الجودة — البنود المحتاجة انتباه<span class="hc-arr">▸</span></div>
   <div id="home-checklist-summary"></div>
 
-  <div class="home-section-title">📇 موردين شغالين معانا دلوقتي (Active)</div>
+  <div class="home-section-title hc" data-hc="suppliers" data-hc-body="home-active-suppliers" onclick="hcToggle('suppliers')">📇 موردين شغالين معانا دلوقتي (Active)<span class="hc-arr">▸</span></div>
   <div id="home-active-suppliers"></div>
 
-  <div class="home-section-title">👷 عمال لسه ما اتدفعلهمش</div>
-  <div id="home-unpaid-workers"></div>
+  <div hidden><div id="home-unpaid-workers"></div></div>
 
   <div class="field" style="margin-bottom:14px;">
     <input type="text" id="globalSearchInput" placeholder="🔍 دوّر في المشاريع، العمال، الموردين، المهام..." oninput="renderGlobalSearch()">
     <div id="global-search-results"></div>
   </div>
 
+  <div hidden>
   <div class="home-section-title">🟢 مين شغال دلوقتي</div>
   <div id="home-working-now"></div>
 
@@ -1164,6 +1190,8 @@ table.wr-kpis b{color:var(--charcoal);}
       <div class="today-box-section-title">📋 تاسكات مطلوبة النهاردة</div>
       <div id="today-tasks-list"></div>
     </div>
+  </div>
+
   </div>
 
   <div id="home-alerts-wrap"></div>
@@ -15542,6 +15570,66 @@ function renderHomeSafe(){
   el.innerHTML = `<span class="sv-ic">🏦</span><span class="sv-txt"><small>إجمالي الخزنة (بنوك + محفظة + كاش)</small><b>${fmtMoney(safeTotal())}</b></span>`;
 }
 { const _rh5 = renderHome; renderHome = function(){ _rh5(); try{ renderHomeSafe(); }catch(e){ console.error(e); } }; }
+
+</script>
+<script>
+
+/* =====================================================================================
+   🏠 الرئيسية أقصر (DRAFT): كارت واحد "شغل النهارده" (مشاريع + عمال وفين + موردين + تاسكات)
+   مع "اتأخر" و"ماجاش"، وأقسام تتفتح وتتقفل بـ ▸.
+   ===================================================================================== */
+function hcGet(k){ try{ return localStorage.getItem('ibtkar-home-open-' + k) === '1'; }catch(e){ return false; } }
+function hcToggle(k){ const open = !hcGet(k); try{ localStorage.setItem('ibtkar-home-open-' + k, open ? '1' : '0'); }catch(e){} hcApply(); }
+function hcApply(){
+  document.querySelectorAll('[data-hc]').forEach(t=>{
+    const k = t.dataset.hc, open = hcGet(k), body = document.getElementById(t.dataset.hcBody);
+    t.classList.toggle('open', open); if(body) body.hidden = !open;
+  });
+}
+function renderTodayCard(){
+  const el = document.getElementById('home-dayplan-wrap'); if(!el) return;
+  const today = bdTodayStr();
+  const plans = dpPlansFor(today);
+  const groups = new Map();
+  const g = (key, label)=>{ if(!groups.has(key)) groups.set(key, { label, trades: [], note: '', workers: [], suppliers: [] }); return groups.get(key); };
+  const projOf = name=> (state.projects||[]).find(p=> projectMatchesName(p, name));
+  plans.forEach(pl=>{ const p = (state.projects||[]).find(x=>x.id===pl.projectId); if(!p) return; const x = g(p.id, p.name); x.trades = pl.trades; x.note = pl.note; });
+  (state.workers||[]).forEach(w=> (w.logs||[]).forEach(l=>{ if(l.date!==today) return; const p = projOf(l.project); const x = g(p ? p.id : 'loc:' + l.project, p ? p.name : l.project);
+    x.workers.push({ w, l }); }));
+  (state.workOrders||[]).forEach(o=>{ if(o.date!==today) return; const p = projOf(o.project); g(p ? p.id : 'loc:' + o.project, p ? p.name : o.project).workers.push({ order: o }); });
+  (state.suppliers||[]).forEach(s=> (s.jobOrders||[]).forEach(j=>{ if(j.date!==today) return; const p = projOf(j.project); g(p ? p.id : 'loc:' + j.project, p ? p.name : j.project).suppliers.push({ s, j }); }));
+  const tasks = []; (state.projects||[]).forEach(p=> (p.snagList||[]).forEach(r=>{ if(r.dueDate===today && !r.done) tasks.push({ p, r }); }));
+  const dayName = new Date().toLocaleDateString('ar-EG',{ weekday:'long', day:'numeric', month:'long', numberingSystem:'latn' });
+  const workerRow = ({ w, l, order })=>{
+    if(order) return `<div class="tc-w"><span><b>${escapeHtml(order.workerName||'')}</b>${order.role ? ' — ' + escapeHtml(order.role) : ''} <small>(أمر عمل)</small></span></div>`;
+    return `<div class="tc-w ${l.late ? 'late' : ''}"><span><b>${escapeHtml(w.name)}</b>${w.role ? ' — ' + escapeHtml(w.role) : ''}${l.late ? ' <em>⏰ اتأخر</em>' : ''}</span>
+      <span class="tc-acts"><button type="button" onclick="tcLate('${w.id}','${l.id}')">${l.late ? 'جه بدري' : 'اتأخر'}</button><button type="button" onclick="tcAbsent('${w.id}','${l.id}')">ماجاش</button></span></div>`;
+  };
+  const list = [...groups.values()];
+  el.innerHTML = `<div class="tc">
+    <div class="tc-h"><b>☀️ شغل النهارده</b><small>${dayName}</small><span class="tc-hb"><button type="button" class="btn btn-ghost btn-sm" onclick="openDayPlan()">${plans.length ? '✏️ تعديل' : '+ سجّل'}</button></span></div>
+    ${list.length ? list.map(x=>`<div class="tc-p">
+      <div class="tc-pn">📍 ${escapeHtml(x.label)}${x.trades.length ? ` <span class="tc-tr">${escapeHtml(x.trades.join('، '))}</span>` : ''}</div>
+      ${x.note ? `<div class="tc-note">📝 ${escapeHtml(x.note)}</div>` : ''}
+      ${x.workers.map(workerRow).join('')}
+      ${x.suppliers.map(({s,j})=>`<div class="tc-w"><span>🔧 <b>${escapeHtml(s.name)}</b>${s.specialty ? ' — ' + escapeHtml(s.specialty) : ''}${j.type ? ' <small>' + escapeHtml(j.type) + '</small>' : ''}</span></div>`).join('')}
+      ${!x.workers.length && !x.suppliers.length ? '<div class="tc-empty">لسه محدش متسجل هنا</div>' : ''}
+    </div>`).join('') : `<button type="button" class="btn btn-gold btn-full" onclick="openDayPlan()">☀️ سجّل شغل النهارده — المشاريع ومين رايح فين</button>`}
+    ${tasks.length ? `<div class="tc-tasks"><b>📋 مطلوب النهارده</b>${tasks.map(({p,r})=>`<div>• ${escapeHtml(r.task || r.category || '')} <small>— ${escapeHtml(p.name)}</small></div>`).join('')}</div>` : ''}
+    ${list.length ? `<button type="button" class="tc-add" onclick="openDayPlan()">+ زوّد عامل أو مشروع</button>` : ''}
+  </div>`;
+}
+renderHomeDayPlan = renderTodayCard;
+async function tcLate(wid, lid){ const w = (state.workers||[]).find(x=>x.id===wid); const l = w && (w.logs||[]).find(x=>x.id===lid); if(!l) return; l.late = !l.late; renderTodayCard(); await saveState(); }
+async function tcAbsent(wid, lid){
+  const w = (state.workers||[]).find(x=>x.id===wid); const l = w && (w.logs||[]).find(x=>x.id===lid); if(!l) return;
+  if(!(await v2Confirm(`${w.name} ماجاش النهارده؟ هيتشال يوم الشغل بتاعه (${l.project}).`, 'أيوه ماجاش', 'لا'))) return;
+  state.trash = state.trash || [];
+  state.trash.unshift({ id: uid(), type:'record', label: `📅 يوم شغل ${w.name} — ${l.project} (${l.date})`, data:{ coll:'logs', parentId: w.id, rec: JSON.parse(JSON.stringify(l)) }, deletedAt: new Date().toISOString() });
+  w.logs = w.logs.filter(x=>x.id!==lid);
+  renderTodayCard(); try{ renderWorkers(); }catch(e){} await saveState(); showToast(`اتشال يوم ${w.name}`);
+}
+{ const _rh6 = renderHome; renderHome = function(){ _rh6(); try{ renderTodayCard(); hcApply(); }catch(e){ console.error(e); } }; }
 
 </script>
 </body>
