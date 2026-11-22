@@ -1301,6 +1301,10 @@ table.wr-kpis b{color:var(--charcoal);}
     <div class="modal-actions">
       <button class="btn btn-primary btn-full" onclick="downloadBackup()">⬇️ تنزيل نسخة احتياطية دلوقتي</button>
     </div>
+    <div class="dp-q">🛟 النسخ التلقائية — كل يوم بالليل (آخر ١٤ يوم على السيرفر)</div>
+    <div id="autobk-list"></div>
+    <button type="button" class="btn btn-ghost btn-sm" style="margin-top:6px;" onclick="bkNow()">🛟 اعمل نسخة النهارده دلوقتي</button>
+    <div class="hint">"استرجاع" بيدمج النسخة مع البيانات الحالية — اللي ناقص بيرجع ومفيش حاجة بتتمسح.</div>
     <div class="field" style="margin-top:18px;">
       <label>استرجاع من ملف نسخة احتياطية</label>
       <input type="file" id="restoreBackupInput" accept="application/json" onchange="handleRestoreBackup(event)">
@@ -15968,6 +15972,73 @@ function openOpening(){
   };
   ov.classList.add('show');
 }
+</script>
+<script>
+/* =====================================================================================
+   🛟 نسخة احتياطية تلقائية كل يوم (DRAFT)
+   - على السيرفر (Firebase): نسخة كل يوم تحت BACKUP_REF/<التاريخ>، ونحتفظ بآخر ١٤ يوم.
+     أي جهاز مفتوح بيعملها مرة في اليوم لو لسه ما اتعملتش، والموبايل بيعملها لوحده ١٢:٠٥ بالليل.
+   - على الموبايل: ملف في Download/Ibtkar/Backups كل ليلة (آخر ٣٠ يوم).
+   - الاسترجاع بيدمج (مفيش حاجة بتتمسح) — زي الاسترجاع من ملف.
+   ===================================================================================== */
+const BACKUP_REF = 'ibtkar_draft_backups';
+const BACKUP_KEEP_DAYS = 14;
+const DB_URL = 'https://ibtkar-system-default-rtdb.firebaseio.com';
+async function bkKeys(){
+  const r = await fetch(`${DB_URL}/${BACKUP_REF}.json?shallow=true`, { cache:'no-store' });
+  if(!r.ok) throw new Error('HTTP ' + r.status);
+  const j = await r.json(); return Object.keys(j || {}).sort().reverse();
+}
+async function bkMakeToday(force){
+  const day = bdTodayStr();
+  if(!force){ try{ if(localStorage.getItem('ibtkar-autobk-day') === day) return 'done'; }catch(e){} }
+  if(!state || !Array.isArray(state.projects) || !state._v) return 'nostate'; // لسه ما اتزامنش مع السيرفر
+  const keys = await bkKeys();
+  if(force || !keys.includes(day)){
+    await fbDB.ref(BACKUP_REF + '/' + day).set({ at: new Date().toISOString(), by: getDeviceUser() || '', state: JSON.parse(JSON.stringify(state)) });
+  }
+  try{ localStorage.setItem('ibtkar-autobk-day', day); }catch(e){}
+  const cut = bdAddDays(day, -BACKUP_KEEP_DAYS);
+  for(const k of keys){ if(/^\d{4}-\d{2}-\d{2}$/.test(k) && k < cut) try{ await fbDB.ref(BACKUP_REF + '/' + k).remove(); }catch(e){} }
+  return 'made';
+}
+function bkAuto(){ bkMakeToday(false).catch(()=>{}); }
+setTimeout(bkAuto, 30000); setInterval(bkAuto, 15*60*1000);
+document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) setTimeout(bkAuto, 5000); });
+
+async function renderAutoBackups(){
+  const el = document.getElementById('autobk-list'); if(!el) return;
+  el.innerHTML = '<div class="hint">بيحمّل…</div>';
+  let phone = '';
+  try{ if(window.IbtkarNative && IbtkarNative.backupStatus){ const s = JSON.parse(IbtkarNative.backupStatus() || '{}'); if(s.last) phone = `📱 آخر نسخة اتحفظت على الموبايل: ${escapeHtml(s.last)} — في فولدر Download/Ibtkar/Backups`; } }catch(e){}
+  try{
+    const keys = await bkKeys();
+    el.innerHTML = (phone ? `<div class="hint" style="margin-bottom:6px;">${phone}</div>` : '') + (keys.length ? keys.map(k=>`<div class="op-file"><span>🛟 ${v2FmtDay(k)} <small dir="ltr">${k}</small></span>
+      <button type="button" class="btn btn-ghost btn-sm" onclick="bkDownload('${k}')">⬇️ تنزيل</button>
+      <button type="button" class="btn btn-ghost btn-sm" onclick="bkRestore('${k}')">↩️ استرجاع</button></div>`).join('') : '<div class="no-hist">لسه مفيش نسخ — أول نسخة هتتعمل خلال دقيقة</div>');
+  }catch(e){ el.innerHTML = (phone ? `<div class="hint">${phone}</div>` : '') + '<div class="no-hist">مفيش نت دلوقتي — جرّب تاني</div>'; }
+}
+async function bkGet(k){ const snap = await fbDB.ref(BACKUP_REF + '/' + k).once('value'); const v = snap.val(); if(!v || !v.state) throw new Error('empty'); return v; }
+async function bkDownload(k){
+  try{ showToast('بيجهّز النسخة…'); const v = await bkGet(k);
+    const blob = new Blob([JSON.stringify(v.state, null, 2)], { type:'application/json' }); const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = `ibtkar-backup-${k}.json`; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url), 4000);
+  }catch(e){ showToast('مقدرتش أجيب النسخة دي'); }
+}
+async function bkRestore(k){
+  if(!(await confirmDelete(`هندمج نسخة ${v2FmtDay(k)} مع البيانات الحالية: أي حاجة ناقصة هترجع، واللي موجود في الاتنين هياخد نسخة الملف. مفيش حاجة هتتمسح. متأكد؟`))) return;
+  try{
+    const parsed = (await bkGet(k)).state;
+    const before = Object.keys(syncCollect(state)).length;
+    state = syncMerge(null, parsed, state, true).state;
+    state.backupPassword = state.backupPassword || parsed.backupPassword;
+    try{ markAllRecordsKnown(); }catch(e){}
+    await saveState(); closeModal('overlay-backup'); renderEverything();
+    showToast(`تم دمج نسخة ${v2FmtDay(k)} — رجع ${Math.max(0, Object.keys(syncCollect(state)).length - before)} عنصر ناقص`);
+  }catch(e){ showToast('مقدرتش أسترجع النسخة دي'); }
+}
+async function bkNow(){ try{ await bkMakeToday(true); showToast('✅ اتعملت نسخة النهارده'); renderAutoBackups(); }catch(e){ showToast('مفيش نت — جرّب تاني'); } }
+{ const _obm = openBackupModal; openBackupModal = function(){ _obm(); renderAutoBackups(); }; }
 </script>
 </body>
 </html>

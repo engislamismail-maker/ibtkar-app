@@ -8,7 +8,12 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.ContentValues;
+import android.database.Cursor;
+import android.net.Uri;
 import android.os.Build;
+import android.os.Environment;
+import android.provider.MediaStore;
 
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
@@ -16,6 +21,12 @@ import androidx.core.app.NotificationManagerCompat;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
+import java.text.SimpleDateFormat;
+import java.util.Locale;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
@@ -37,6 +48,10 @@ public class NotifyReceiver extends BroadcastReceiver {
     static final String ACTION_MORNING = "com.ibtkar.app.MORNING";
     static final String ACTION_FEED = "com.ibtkar.app.FEED_CHECK";
     static final String ACTION_SNOOZE = "com.ibtkar.app.MORNING_SNOOZE";
+    static final String ACTION_BACKUP = "com.ibtkar.app.NIGHTLY_BACKUP";
+    static final String DB = "https://ibtkar-system-default-rtdb.firebaseio.com/";
+    static final String DATA_PATH = "ibtkar_draft_v1";       // عند النقل للأساسي: ibtkar_sync_v2
+    static final String BACKUP_PATH = "ibtkar_draft_backups"; // عند النقل للأساسي: ibtkar_backups
     static final String PREFS = "ibtkar_notify";
     static final String CH_MORNING = "morning_alarm";
     static final String CH_FEED = "activity";
@@ -51,6 +66,12 @@ public class NotifyReceiver extends BroadcastReceiver {
             scheduleMorning(ctx); // اللي بعده بكرة
         } else if (ACTION_SNOOZE.equals(a)) {
             showMorningNow(ctx);
+        } else if (ACTION_BACKUP.equals(a)) {
+            scheduleBackup(ctx); // الليلة الجاية
+            final PendingResult pr = goAsync();
+            new Thread(() -> {
+                try { nightlyBackup(ctx); } catch (Exception ignored) { } finally { pr.finish(); }
+            }).start();
         } else if (ACTION_FEED.equals(a)) {
             final PendingResult pr = goAsync();
             new Thread(() -> {
@@ -66,6 +87,7 @@ public class NotifyReceiver extends BroadcastReceiver {
     static void schedule(Context ctx) {
         ensureChannels(ctx);
         scheduleMorning(ctx);
+        scheduleBackup(ctx);
         AlarmManager am = (AlarmManager) ctx.getSystemService(Context.ALARM_SERVICE);
         if (am == null) return;
         am.setInexactRepeating(AlarmManager.RTC_WAKEUP, System.currentTimeMillis() + 60_000L,
@@ -261,5 +283,130 @@ public class NotifyReceiver extends BroadcastReceiver {
                 ? "🔔 " + (who.isEmpty() ? "حاجة جديدة في السيستم" : "جديد من " + who)
                 : "🔔 " + lines.size() + " حاجات جديدة" + (who.isEmpty() ? "" : " من " + who);
         post(ctx, 902, CH_FEED, title, lines.size() > 6 ? lines.subList(lines.size() - 6, lines.size()) : lines);
+    }
+
+    // ------------------------------------------------------------------ نسخة احتياطية كل ليلة
+
+    /** ١٢:٠٥ بالليل كل يوم — من غير ما يطلع أي حاجة على الشاشة. */
+    static void scheduleBackup(Context ctx) {
+        AlarmManager am = (AlarmManager) ctx.getSystemService(Context.ALARM_SERVICE);
+        if (am == null) return;
+        Calendar c = Calendar.getInstance();
+        c.set(Calendar.HOUR_OF_DAY, 0);
+        c.set(Calendar.MINUTE, 5);
+        c.set(Calendar.SECOND, 0);
+        c.set(Calendar.MILLISECOND, 0);
+        if (c.getTimeInMillis() <= System.currentTimeMillis() + 5_000L) c.add(Calendar.DAY_OF_YEAR, 1);
+        PendingIntent pi = pending(ctx, ACTION_BACKUP, 4);
+        try {
+            if (Build.VERSION.SDK_INT < 31 || am.canScheduleExactAlarms()) {
+                am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, c.getTimeInMillis(), pi);
+                return;
+            }
+        } catch (SecurityException ignored) { }
+        am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, c.getTimeInMillis(), pi);
+    }
+
+    static String http(String method, String url, String body) throws Exception {
+        HttpURLConnection con = (HttpURLConnection) new URL(url).openConnection();
+        con.setConnectTimeout(20_000);
+        con.setReadTimeout(120_000);
+        con.setRequestMethod(method);
+        if (body != null) {
+            con.setDoOutput(true);
+            con.setRequestProperty("Content-Type", "application/json; charset=utf-8");
+            try (OutputStream os = con.getOutputStream()) { os.write(body.getBytes(StandardCharsets.UTF_8)); }
+        }
+        int code = con.getResponseCode();
+        if (code < 200 || code >= 300) throw new Exception("HTTP " + code);
+        StringBuilder sb = new StringBuilder();
+        try (BufferedReader r = new BufferedReader(new InputStreamReader(con.getInputStream(), StandardCharsets.UTF_8))) {
+            char[] buf = new char[16384];
+            int n;
+            while ((n = r.read(buf)) > 0) sb.append(buf, 0, n);
+        }
+        return sb.toString();
+    }
+
+    static void nightlyBackup(Context ctx) throws Exception {
+        String data = http("GET", DB + DATA_PATH + ".json", null);
+        if (data == null || data.length() < 50 || "null".equals(data.trim())) return; // مفيش بيانات — ما نكتبش نسخة فاضية
+        Calendar c = Calendar.getInstance();
+        c.add(Calendar.MINUTE, -10); // اللي بيتعمل ١٢:٠٥ يتسمى باسم اليوم اللي خلص
+        SimpleDateFormat f = new SimpleDateFormat("yyyy-MM-dd", Locale.US);
+        String day = f.format(c.getTime());
+        // ١) ملف على الموبايل
+        try { saveLocal(ctx, "ibtkar-backup-" + day + ".json", data); } catch (Exception ignored) { }
+        // ٢) نسخة على السيرفر لو لسه ما اتعملتش النهارده
+        try {
+            String exists = http("GET", DB + BACKUP_PATH + "/" + day + "/at.json", null);
+            if (exists == null || "null".equals(exists.trim())) {
+                String at = JSONObject.quote(new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.US).format(new java.util.Date()));
+                http("PUT", DB + BACKUP_PATH + "/" + day + ".json", "{\"at\":" + at + ",\"by\":\"nightly\",\"state\":" + data + "}");
+            }
+            Calendar old = Calendar.getInstance();
+            old.add(Calendar.DAY_OF_YEAR, -14);
+            String cut = f.format(old.getTime());
+            JSONObject keys = new JSONObject(http("GET", DB + BACKUP_PATH + ".json?shallow=true", null));
+            Iterator<String> it = keys.keys();
+            while (it.hasNext()) {
+                String k = it.next();
+                if (k.matches("\\d{4}-\\d{2}-\\d{2}") && k.compareTo(cut) < 0) http("DELETE", DB + BACKUP_PATH + "/" + k + ".json", null);
+            }
+        } catch (Exception ignored) { }
+        ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+                .putString("lastBackup", day + " " + new SimpleDateFormat("HH:mm", Locale.US).format(new java.util.Date())).apply();
+    }
+
+    /** Download/Ibtkar/Backups — ونحتفظ بآخر ٣٠ ملف. */
+    static void saveLocal(Context ctx, String name, String data) throws Exception {
+        byte[] bytes = data.getBytes(StandardCharsets.UTF_8);
+        if (Build.VERSION.SDK_INT >= 29) {
+            String rel = Environment.DIRECTORY_DOWNLOADS + "/Ibtkar/Backups/";
+            Uri col = MediaStore.Downloads.EXTERNAL_CONTENT_URI;
+            List<String[]> mine = new ArrayList<>(); // [id, name]
+            try (Cursor cur = ctx.getContentResolver().query(col,
+                    new String[]{MediaStore.MediaColumns._ID, MediaStore.MediaColumns.DISPLAY_NAME},
+                    MediaStore.MediaColumns.RELATIVE_PATH + "=?", new String[]{rel}, null)) {
+                while (cur != null && cur.moveToNext()) mine.add(new String[]{cur.getString(0), cur.getString(1)});
+            }
+            for (String[] m : mine) {
+                if (name.equals(m[1])) ctx.getContentResolver().delete(Uri.withAppendedPath(col, m[0]), null, null);
+            }
+            ContentValues v = new ContentValues();
+            v.put(MediaStore.MediaColumns.DISPLAY_NAME, name);
+            v.put(MediaStore.MediaColumns.MIME_TYPE, "application/json");
+            v.put(MediaStore.MediaColumns.RELATIVE_PATH, rel);
+            Uri uri = ctx.getContentResolver().insert(col, v);
+            if (uri == null) throw new Exception("insert failed");
+            try (OutputStream os = ctx.getContentResolver().openOutputStream(uri)) {
+                if (os == null) throw new Exception("open failed");
+                os.write(bytes);
+            }
+            List<String> names = new ArrayList<>();
+            for (String[] m : mine) if (m[1] != null && m[1].startsWith("ibtkar-backup-") && !name.equals(m[1])) names.add(m[1]);
+            names.add(name);
+            Collections.sort(names);
+            int extra = names.size() - 30;
+            for (String[] m : mine) {
+                if (extra <= 0) break;
+                if (m[1] != null && names.indexOf(m[1]) >= 0 && names.indexOf(m[1]) < extra && !name.equals(m[1])) {
+                    ctx.getContentResolver().delete(Uri.withAppendedPath(col, m[0]), null, null);
+                }
+            }
+        } else {
+            File dir = new File(ctx.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS), "Ibtkar/Backups");
+            //noinspection ResultOfMethodCallIgnored
+            dir.mkdirs();
+            try (FileOutputStream os = new FileOutputStream(new File(dir, name))) { os.write(bytes); }
+            File[] all = dir.listFiles();
+            if (all != null && all.length > 30) {
+                List<String> names = new ArrayList<>();
+                for (File x : all) names.add(x.getName());
+                Collections.sort(names);
+                for (int k = 0; k < names.size() - 30; k++) //noinspection ResultOfMethodCallIgnored
+                    new File(dir, names.get(k)).delete();
+            }
+        }
     }
 }

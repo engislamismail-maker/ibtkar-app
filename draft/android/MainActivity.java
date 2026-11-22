@@ -475,6 +475,15 @@ public class MainActivity extends Activity {
 
         /** حالة المنبّه: الإشعارات، بالظبط، الشاشة الكاملة، البطارية، والميعاد الجاي. */
         @JavascriptInterface
+        public String backupStatus() {
+            try {
+                JSONObject o = new JSONObject();
+                o.put("last", getSharedPreferences(NotifyReceiver.PREFS, MODE_PRIVATE).getString("lastBackup", ""));
+                return o.toString();
+            } catch (Exception e) { return "{}"; }
+        }
+
+        @JavascriptInterface
         public String alarmStatus() {
             try {
                 JSONObject o = new JSONObject();
