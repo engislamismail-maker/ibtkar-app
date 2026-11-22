@@ -1026,6 +1026,24 @@ body.ks-on .bottom-nav,body.ks-on #settings-fab{display:none;}
 .tc-tasks{border-top:1px solid var(--line);padding-top:8px;margin-top:4px;font-size:13px;display:grid;gap:2px;}
 .tc-tasks small{color:var(--muted);}
 .tc-add{width:100%;margin-top:8px;border:1.5px dashed var(--line);background:none;border-radius:10px;padding:8px;font:700 13px Tajawal,sans-serif;color:var(--muted);cursor:pointer;}
+/* ---- الحسابات: مربعات أصغر + فلتر ---- */
+#view-accounts #accounts-type-tabs, #view-accounts #accounts-person-tabs, #view-accounts #accounts-location-chips{ display:none !important; }
+#expense-stats{ display:grid !important; grid-template-columns:repeat(3,1fr) !important; gap:6px; }
+#expense-stats .stat-safe{ grid-column:span 2; }
+@media (min-width:900px){ #expense-stats{ grid-template-columns:repeat(6,1fr) !important; } }
+#expense-stats .stat{ padding:7px 8px !important; min-height:0 !important; text-align:center; }
+#expense-stats .stat b{ display:block; font-size:15px !important; line-height:1.3; }
+#expense-stats .stat span{ font-size:10.5px !important; opacity:.75; }
+#expense-stats .stat-safe{ cursor:pointer; border:1.5px solid var(--gold, #c9a227) !important; }
+.acc-filter-bar{ display:flex; flex-wrap:wrap; gap:6px; align-items:center; margin:6px 0 10px; }
+.acc-chip{ display:inline-flex; align-items:center; gap:4px; background:rgba(201,162,39,.15); border-radius:999px; padding:3px 10px; font-size:12.5px; }
+.acc-chip button{ border:0; background:none; cursor:pointer; font-size:12px; opacity:.7; padding:0 2px; color:inherit; }
+.acc-clear{ border:0; background:none; text-decoration:underline; cursor:pointer; font-size:12px; color:inherit; opacity:.75; }
+.acc-f-grid{ display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:10px; }
+.acc-f-grid label{ display:flex; flex-direction:column; gap:3px; font-size:12.5px; font-weight:600; }
+.acc-f-grid select, .acc-f-grid input{ width:100%; padding:7px; border-radius:8px; border:1px solid rgba(0,0,0,.15); font:inherit; background:inherit; color:inherit; }
+.acc-code{ font-size:11px; opacity:.7; }
+@media (max-width:420px){ .acc-f-grid{ grid-template-columns:1fr; } }
 /* ===================== IBTKAR GE 2026 — الهوية البصرية (DRAFT) =====================
    ألوان الدليل، تصميم مسطح من غير ظلال، كروت Blush من غير إطار، خط دهبي تحت العناوين،
    جداول بهيدر روز وصفوف متبادلة، والإجمالي فحمي بأرقام دهبي. */
@@ -1386,6 +1404,7 @@ table.wr-kpis b{color:var(--charcoal);}
   </div>
 
   <div class="location-chips" id="accounts-location-chips"></div>
+      <div class="acc-filter-bar" id="acc-filter-bar"></div>
 
   <div id="expense-content"><div class="loading-note">جاري تحميل البيانات...</div></div>
 </div>
@@ -12881,6 +12900,17 @@ initAppLock();
     <div id="sv-body"></div>
   </div>
 </div>
+<div class="overlay" id="overlay-acc-filter">
+  <div class="modal" style="max-width:480px;">
+    <button class="modal-close" onclick="closeModal('overlay-acc-filter')">×</button>
+    <h2>🔍 فلتر العمليات</h2>
+    <div id="acc-filter-body"></div>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-primary" onclick="applyAccFilter()">اعرض النتايج</button>
+      <button type="button" class="btn btn-ghost" onclick="accClear('all');closeModal('overlay-acc-filter')">مسح الفلتر</button>
+    </div>
+  </div>
+</div>
 <div class="overlay" id="overlay-safe">
   <div class="modal" style="max-width:560px;">
     <button class="modal-close" onclick="closeModal('overlay-safe')">×</button>
@@ -15631,6 +15661,119 @@ async function tcAbsent(wid, lid){
 }
 { const _rh6 = renderHome; renderHome = function(){ _rh6(); try{ renderTodayCard(); hcApply(); }catch(e){ console.error(e); } }; }
 
+</script>
+<script>
+/* =====================================================================================
+   💰 الحسابات (DRAFT): مربعات أصغر + "إجمالي الخزنة" بتفصيله، وفلتر واحد بدل الزراير الكتير.
+   ===================================================================================== */
+let accF = { type:'all', person:'all', project:'', worker:'', supplier:'', method:'', from:'', to:'' };
+function accFilterActive(){ return accF.type!=='all' || accF.person!=='all' || accF.project || accF.worker || accF.supplier || accF.method || accF.from || accF.to; }
+function accMatch(e){
+  if(accF.type!=='all' && e._kind!==accF.type) return false;
+  if(accF.person!=='all' && (e.by || e.addedBy)!==accF.person) return false;
+  if(accF.project){ const p = (state.projects||[]).find(x=>x.id===accF.project); if(p ? !projectMatchesName(p, e.project) : (e.project||'')!==accF.project.replace(/^loc:/,'')) return false; }
+  if(accF.worker && e.workerId!==accF.worker) return false;
+  if(accF.supplier && e.supplierId!==accF.supplier) return false;
+  if(accF.method && (e.method||'')!==accF.method) return false;
+  const d = isoLocalDate(e.date);
+  if(accF.from && d < accF.from) return false;
+  if(accF.to && d > accF.to) return false;
+  return true;
+}
+function accChips(){
+  const c = [];
+  const P = (state.projects||[]).find(x=>x.id===accF.project);
+  if(accF.type!=='all') c.push(['type', accF.type==='expense' ? 'مصروف' : 'قبض']);
+  if(accF.person!=='all') c.push(['person', '👤 ' + accF.person]);
+  if(accF.project) c.push(['project', '📍 ' + (P ? P.name : accF.project.replace(/^loc:/,''))]);
+  if(accF.worker) c.push(['worker', '👷 ' + (((state.workers||[]).find(w=>w.id===accF.worker))||{}).name]);
+  if(accF.supplier) c.push(['supplier', '🔧 ' + (((state.suppliers||[]).find(s=>s.id===accF.supplier))||{}).name]);
+  if(accF.method) c.push(['method', '💳 ' + accF.method]);
+  if(accF.from || accF.to) c.push(['date', '📅 ' + (accF.from ? v2FmtDay(accF.from) : '…') + ' – ' + (accF.to ? v2FmtDay(accF.to) : '…')]);
+  return c;
+}
+renderExpenses = function(){
+  const content = document.getElementById('expense-content'); if(!content) return;
+  const q = (document.getElementById('expenseSearchInput').value || '').trim().toLowerCase();
+  const all = [...(state.expenses||[]).map(e=>({ ...e, _kind:'expense' })), ...(state.income||[]).map(e=>({ ...e, _kind:'income' }))];
+  let list = all.filter(e=> accMatch(e) && (!q || (e.project||'').toLowerCase().includes(q) || (e.description||'').toLowerCase().includes(q) || (e.txCode||'').toLowerCase().includes(q)));
+  list.sort((a,b)=> new Date(b.date) - new Date(a.date));
+  renderAccStats(list, accFilterActive() || !!q);
+  try{ populateLocationDatalist(); }catch(e){}
+  try{ renderProjectBanner('accounts-project-banner'); }catch(e){}
+  const chips = accChips();
+  document.getElementById('acc-filter-bar').innerHTML = `<button type="button" class="btn ${chips.length ? 'btn-primary' : 'btn-ghost'} btn-sm" onclick="openAccFilter()">🔍 فلتر${chips.length ? ' (' + chips.length + ')' : ''}</button>
+    ${chips.map(([k,l])=>`<span class="acc-chip">${escapeHtml(l)}<button type="button" onclick="accClear('${k}')">✕</button></span>`).join('')}
+    ${chips.length ? `<button type="button" class="acc-clear" onclick="accClear('all')">مسح الكل</button>` : ''}`;
+  if(!list.length){ content.innerHTML = `<div class="empty"><h3>${all.length ? 'مفيش نتائج' : 'لسه مفيش عمليات مسجلة'}</h3><p>${all.length ? 'غيّر الفلتر أو البحث' : 'سجّل أول مصروف أو قبض'}</p></div>`; return; }
+  content.innerHTML = `<div class="expense-list">` + list.slice(0, 400).map(e=>{
+    const isIncome = e._kind==='income';
+    const thumb = e.image ? `<img class="expense-thumb" src="${e.image}" alt="مرفق">` : `<div class="expense-thumb-placeholder ${isIncome ? 'income' : ''}">${isIncome ? '💰' : '🧾'}</div>`;
+    return `<div class="expense-card" onclick="openTxnDetail('${e.id}','${e._kind}')">${thumb}<div class="expense-main">
+      <div class="expense-top"><span class="expense-project">${escapeHtml(e.project)}</span><span class="expense-amount ${isIncome ? 'income' : 'expense'}">${isIncome ? '+' : '-'}${fmtMoney(e.amount)}</span></div>
+      <div class="expense-desc"><span class="txn-kind-badge ${isIncome ? 'income' : 'expense'}">${isIncome ? (e.method || 'قبض') : 'مصروف'}</span> ${escapeHtml(e.description || '')}</div>
+      <div class="expense-date">${fmtDateTime(e.date)} ${e.by ? `· <span class="actor-badge">${escapeHtml(e.by)}</span>` : ''}${e.txCode ? ` · <span dir="ltr" class="acc-code">${escapeHtml(e.txCode)}</span>` : ''}</div>
+    </div></div>`;
+  }).join('') + `</div>${list.length > 400 ? '<div class="hint" style="text-align:center;">بيظهر آخر ٤٠٠ — استخدم الفلتر عشان تلاقي الأقدم</div>' : ''}`;
+};
+function renderAccStats(list, filtered){
+  const el = document.getElementById('expense-stats'); if(!el) return;
+  const inc = list.filter(e=>e._kind==='income').reduce((s,e)=>s+(Number(e.amount)||0),0), exp = list.filter(e=>e._kind==='expense').reduce((s,e)=>s+(Number(e.amount)||0),0), net = inc - exp;
+  el.innerHTML = `
+    <div class="stat"><b style="color:var(--green)">${fmtMoney(inc)}</b><span>المقبوض${filtered ? ' (حسب الفلتر)' : ''}</span></div>
+    <div class="stat"><b style="color:var(--rose)">${fmtMoney(exp)}</b><span>المصروف${filtered ? ' (حسب الفلتر)' : ''}</span></div>
+    <div class="stat"><b style="color:${net>=0 ? 'var(--green)' : 'var(--rose)'}">${fmtMoney(net)}</b><span>الصافي</span></div>
+    <div class="stat"><b>${list.length}</b><span>عدد العمليات</span></div>
+    <div class="stat stat-safe" onclick="openSafeBreakdown()"><b>${fmtMoney(safeTotal())}</b><span>🏦 إجمالي الخزنة ▸</span></div>`;
+}
+renderExpenseStats = function(){ try{ renderExpenses(); }catch(e){} };
+function openAccFilter(){
+  const sel = (id, opts, val)=> `<select id="${id}"><option value="">الكل</option>${opts.map(([v,l])=>`<option value="${escapeHtml(v)}" ${v===val ? 'selected' : ''}>${escapeHtml(l)}</option>`).join('')}</select>`;
+  const chip = (group, v, l)=> `<button type="button" class="dp-chip ${accF[group]===v ? 'on' : ''}" onclick="accPick('${group}','${v}')">${l}</button>`;
+  const projOpts = [...(state.projects||[]).map(p=>[p.id, p.name]), ...getVisibleLocations().filter(l=> !(state.projects||[]).some(p=>projectMatchesName(p,l))).map(l=>['loc:' + l, l])];
+  const methods = [...new Set([...(state.expenses||[]), ...(state.income||[])].map(e=>e.method).filter(Boolean))];
+  document.getElementById('acc-filter-body').innerHTML = `
+    <div class="dp-q">النوع</div><div class="dp-chips">${chip('type','all','الكل')}${chip('type','expense','مصروف')}${chip('type','income','قبض')}</div>
+    <div class="dp-q">اتسجل باسم مين</div><div class="dp-chips">${chip('person','all','الكل')}${chip('person','إسلام','إسلام')}${chip('person','بسنت','بسنت')}</div>
+    <div class="acc-f-grid">
+      <label>📍 المشروع${sel('afProject', projOpts, accF.project)}</label>
+      <label>👷 العامل${sel('afWorker', (state.workers||[]).map(w=>[w.id, w.name]), accF.worker)}</label>
+      <label>🔧 المورد${sel('afSupplier', (state.suppliers||[]).map(s=>[s.id, s.name]), accF.supplier)}</label>
+      <label>💳 طريقة الدفع${sel('afMethod', methods.map(m=>[m,m]), accF.method)}</label>
+      <label>📅 من<input type="date" id="afFrom" value="${accF.from}"></label>
+      <label>📅 لـ<input type="date" id="afTo" value="${accF.to}"></label>
+    </div>`;
+  document.getElementById('overlay-acc-filter').classList.add('show');
+}
+function accReadForm(){ ['afProject:project','afWorker:worker','afSupplier:supplier','afMethod:method','afFrom:from','afTo:to'].forEach(x=>{ const [id,k] = x.split(':'); const el = document.getElementById(id); if(el) accF[k] = el.value; }); }
+function accPick(group, v){ accReadForm(); accF[group] = v; openAccFilter(); }
+function applyAccFilter(){
+  accF.project = document.getElementById('afProject').value; accF.worker = document.getElementById('afWorker').value;
+  accF.supplier = document.getElementById('afSupplier').value; accF.method = document.getElementById('afMethod').value;
+  accF.from = document.getElementById('afFrom').value; accF.to = document.getElementById('afTo').value;
+  closeModal('overlay-acc-filter'); renderExpenses();
+}
+function accClear(k){
+  if(k==='all') accF = { type:'all', person:'all', project:'', worker:'', supplier:'', method:'', from:'', to:'' };
+  else if(k==='type' || k==='person') accF[k] = 'all';
+  else if(k==='date'){ accF.from = ''; accF.to = ''; }
+  else accF[k] = '';
+  if(k==='all'){ const i = document.getElementById('expenseSearchInput'); if(i) i.value = ''; }
+  renderExpenses();
+}
+function openSafeBreakdown(){
+  const accs = state.safeAccounts || [];
+  const ov = document.createElement('div'); ov.className = 'overlay show';
+  ov.innerHTML = `<div class="modal" style="max-width:420px;"><button class="modal-close">×</button><h2>🏦 تفصيل الخزنة</h2>
+    <table class="wr-t" style="margin-top:8px;">${accs.map(a=>`<tr><td>${a.icon || '🏦'} ${escapeHtml(a.name)}<br><small>آخر تحديث: ${a.updatedAt ? fmtDateTime(a.updatedAt) : 'لسه ما اتكتبش'}</small></td><td class="v"><b>${fmtMoney(a.balance||0)}</b></td></tr>`).join('')}</table>
+    <table class="wr-t wr-total"><tr><td><b>الإجمالي</b></td><td class="v"><b>${fmtMoney(safeTotal())}</b></td></tr></table>
+    <div class="modal-actions"><button type="button" class="btn btn-gold btn-full" data-edit>✏️ حدّث الأرصدة والمعادلة</button></div></div>`;
+  const close = ()=> ov.remove();
+  ov.querySelector('.modal-close').onclick = close; ov.addEventListener('click', e=>{ if(e.target===ov) close(); });
+  ov.querySelector('[data-edit]').onclick = ()=>{ close(); openSafe(); };
+  document.body.appendChild(ov);
+}
+{ const _rs = renderSafe; renderSafe = function(){ _rs(); try{ if(currentView==='accounts') renderExpenses(); }catch(e){} }; }
 </script>
 </body>
 </html>
