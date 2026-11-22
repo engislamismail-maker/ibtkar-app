@@ -1059,6 +1059,13 @@ body.ks-on .bottom-nav,body.ks-on #settings-fab{display:none;}
 .pd-tiles:has(> :nth-child(3):last-child){ grid-template-columns:repeat(3,minmax(0,1fr)); }
 .pd-tiles:has(> :nth-child(3):last-child) .pd-tile{ flex-direction:column; justify-content:center !important; text-align:center; gap:3px; font-size:12px !important; }
 .pd-tile{ width:100%; min-height:44px; padding:7px 8px !important; font-size:12.5px !important; font-weight:700; justify-content:flex-start !important; text-align:start; background:var(--blush) !important; color:var(--charcoal) !important; border:0 !important; box-shadow:none !important; }
+.op-link{ display:block; margin:14px auto 2px; background:none; border:0; color:var(--muted); font-size:11.5px; text-decoration:underline; cursor:pointer; opacity:.7; font-family:inherit; }
+.op-f{ display:flex; flex-direction:column; gap:3px; font-size:12.5px; font-weight:700; margin-top:8px; color:var(--charcoal); }
+.op-f input{ padding:8px; border-radius:8px; border:1px solid var(--line); font:inherit; font-weight:600; }
+.op-f small{ font-weight:400; color:var(--muted); font-size:11px; }
+.op-file{ display:flex; align-items:center; gap:6px; background:var(--blush); border-radius:10px; padding:6px 8px; margin-bottom:6px; font-size:12.5px; }
+.op-file span{ flex:1; min-width:0; overflow-wrap:anywhere; }
+#pd-txn-list .pd-row.op-old{ opacity:.55; }
 /* ===================== IBTKAR GE 2026 — الهوية البصرية (DRAFT) =====================
    ألوان الدليل، تصميم مسطح من غير ظلال، كروت Blush من غير إطار، خط دهبي تحت العناوين،
    جداول بهيدر روز وصفوف متبادلة، والإجمالي فحمي بأرقام دهبي. */
@@ -11015,6 +11022,8 @@ function downloadClientStatementExcel(){
     const paymentsLastRow = rows.length - 1;
     const paymentsTotalRow = rows.length;
     rows.push(['', 'إجمالي المدفوع', '', '', null]);
+    const carriedAmt = Number(cs.carried) || 0, carriedRow = carriedAmt ? rows.length : -1;
+    if(carriedAmt) rows.push(['', 'رصيد مرحّل من الكشف السابق', '', '', carriedAmt]);
     const remainingRow = rows.length;
     rows.push(['', 'المتبقي', '', '', null]);
 
@@ -11041,7 +11050,7 @@ function downloadClientStatementExcel(){
     } else {
       ws[costCol + (paymentsTotalRow+1)] = { t:'n', v: 0 };
     }
-    ws[costCol + (remainingRow+1)] = { t:'n', f: `${costCol}${grandTotalRow+1}-${costCol}${paymentsTotalRow+1}` };
+    ws[costCol + (remainingRow+1)] = { t:'n', f: `${costCol}${grandTotalRow+1}-${costCol}${paymentsTotalRow+1}` + (carriedRow >= 0 ? `+${costCol}${carriedRow+1}` : '') };
 
     ws['!cols'] = [{wch:16},{wch:34},{wch:14},{wch:13},{wch:14}];
 
@@ -15850,6 +15859,115 @@ computeProjectDetails = function(location){
   const workOrders = (state.workOrders||[]).filter(o=>m(o.project)).sort((a,b)=> byDate(a.date, b.date));
   return { workerEntries, transactions, movements, incomingMovements, toolsStillThere, workOrders };
 };
+</script>
+<script>
+/* =====================================================================================
+   🧭 الرصيد الافتتاحي (DRAFT) — لكل مشروع قديم: يوم فاصل + أرقام كشف الإكسل لحد اليوم ده.
+   اللي قبل اليوم ده متسجل في السيستم بيفضل موجود بس ما بيدخلش في الحساب (الإكسل هو المرجع)،
+   واللي بعده بيتراكم فوق الرصيد. ومكان لملف الكشف القديم ينزل منه وقت ما تحتاجه.
+   ===================================================================================== */
+function opOf(p){ const o = p && p.opening; return (o && o.date) ? o : null; }
+function opCounts(p, d){ const o = opOf(p); return !o || isoLocalDate(d) >= o.date; }
+function opSum(p, list){ return (list||[]).filter(e=> projectMatchesName(p, e.project) && opCounts(p, e.date)).reduce((a,e)=> a + (Number(e.amount)||0), 0); }
+{ const _pm = projectMoney; projectMoney = function(p){
+  const o = opOf(p); if(!o) return _pm(p);
+  const cs = ensureClientStatement(p), t = computeClientStatementTotals(cs), pct = Number(cs.adminPercent) || 0;
+  const payAfter = (cs.payments||[]).filter(x=> !x.date || x.date >= o.date).reduce((a,x)=> a + (Number(x.amount)||0), 0);
+  const received = (Number(o.received)||0) + Math.max(opSum(p, state.income), payAfter);
+  const spent = (Number(o.spent)||0) + opSum(p, state.expenses);
+  const supervision = spent * pct / 100;
+  return { received, spent, pct, supervision, left: received - spent - supervision, statementTotal: t.grandTotal, statementLeft: t.remaining, statementWork: t.workTotal, opening: o };
+}; }
+{ const _se = supervisionEarnings; supervisionEarnings = function(){
+  const r = _se();
+  const now = new Date(), mStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+  const rows = (state.projects||[]).map(p=>{
+    const pct = Number(ensureClientStatement(p).adminPercent) || 0, o = opOf(p);
+    let all = o ? (Number(o.spent)||0) * pct / 100 : 0, month = 0;
+    (state.expenses||[]).forEach(e=>{ if(!projectMatchesName(p, e.project) || !opCounts(p, e.date)) return; const v = (Number(e.amount)||0) * pct / 100; all += v; if(new Date(e.date).getTime() >= mStart) month += v; });
+    return { p, pct, all, month };
+  }).filter(x=> x.all > 0);
+  const opW = (state.projects||[]).reduce((a,p)=> a + (opOf(p) ? Number(p.opening.supWithdrawn)||0 : 0), 0);
+  const all = rows.reduce((a,x)=>a+x.all,0), month = rows.reduce((a,x)=>a+x.month,0), withdrawn = r.withdrawn + opW;
+  return { ...r, rows, all, month, withdrawn, balance: Math.round((all - withdrawn)*100)/100 };
+}; }
+{ const _cps = computeProjectStats; computeProjectStats = function(location){
+  const s = _cps(location); const p = (state.projects||[]).find(x=>x.id===activeProjectDashboardId);
+  if(p && opOf(p) && (p.location||'').trim().toLowerCase()===(location||'').trim().toLowerCase()){ const m = projectMoney(p); s.totalExpense = m.spent; s.totalIncome = m.received; }
+  return s;
+}; }
+/* كشف حساب العميل: الرصيد المرحّل من الكشف القديم (موجب = على العميل، سالب = لصالحه) */
+{ const _ct = computeClientStatementTotals; computeClientStatementTotals = function(cs){
+  const t = _ct(cs); const c = Number(cs && cs.carried) || 0; t.carried = c; t.remaining += c; return t;
+}; }
+{ const _rct = renderClientStatementTotals; renderClientStatementTotals = function(){
+  _rct(); const p = (state.projects||[]).find(x=>x.id===activeProjectDashboardId); if(!p) return;
+  const c = Number(ensureClientStatement(p).carried) || 0; if(!c) return;
+  const last = document.querySelector('#cs-totals .qe-grand');
+  if(last) last.insertAdjacentHTML('beforebegin', `<div class="qe-total-row"><span>${c > 0 ? 'رصيد مرحّل من الكشف السابق (على العميل)' : 'رصيد مرحّل من الكشف السابق (لصالح العميل)'}</span><span>${fmtMoney(Math.abs(c))}</span></div>`);
+}; }
+{ const _pdf = buildClientStatementPDFBody; buildClientStatementPDFBody = function(p, cs, t){
+  const html = _pdf(p, cs, t); const c = Number(cs && cs.carried) || 0; if(!c) return html;
+  const row = `<div style="display:flex;gap:14px;margin-top:6px;"><div style="flex:1;background:#FFC000;color:#fff;font-weight:900;font-size:13px;text-align:center;padding:9px 10px;">${c > 0 ? 'رصيد مرحّل من الكشف السابق (على العميل)' : 'رصيد مرحّل من الكشف السابق (لصالح العميل)'}</div><div style="width:26%;background:#F5E4D3;color:#2E2A2C;font-weight:900;font-size:13px;text-align:center;padding:9px 6px;">${fmtMoney(Math.abs(c))}</div></div>`;
+  return html.replace(/(<div style="display:flex;gap:14px;margin-top:6px;">\s*<div style="flex:1;background:#C00000)/, row + '$1');
+}; }
+/* شاشة الرصيد الافتتاحي — رابط صغير تحت خالص في صفحة المشروع */
+{ const _opd2 = openProjectDashboard; openProjectDashboard = function(id){
+  _opd2(id);
+  const p = (state.projects||[]).find(x=>x.id===id); if(!p) return;
+  const del = document.querySelector('#overlay-project-dashboard button[onclick="deleteProjectConfirm()"]') || [...document.querySelectorAll('button')].find(b=> b.getAttribute('onclick')==='deleteProjectConfirm()');
+  if(!del) return;
+  let link = document.getElementById('op-link');
+  if(!link){ link = document.createElement('button'); link.type = 'button'; link.id = 'op-link'; link.className = 'op-link'; link.onclick = ()=> openOpening(); del.closest('.modal-actions').after(link); }
+  const o = opOf(p);
+  link.textContent = o ? `رصيد افتتاحي من ${v2FmtDay(o.date)}${o.file ? ' · الكشف القديم 📎' : ''}` : 'رصيد افتتاحي / كشف قديم';
+  if(o){ const d = computeProjectDetails(p.location); const rows = document.querySelectorAll('#pd-txn-list .pd-row'); d.transactions.forEach((t,i)=>{ if(rows[i] && !opCounts(p, t.date)) rows[i].classList.add('op-old'); }); }
+}; }
+function openOpening(){
+  const p = (state.projects||[]).find(x=>x.id===activeProjectDashboardId); if(!p) return;
+  const o = p.opening || {}, cs = ensureClientStatement(p);
+  const before = o.date ? { inc: (state.income||[]).filter(e=> projectMatchesName(p,e.project) && isoLocalDate(e.date) < o.date).length, exp: (state.expenses||[]).filter(e=> projectMatchesName(p,e.project) && isoLocalDate(e.date) < o.date).length } : null;
+  let ov = document.getElementById('overlay-opening');
+  if(!ov){ ov = document.createElement('div'); ov.className = 'overlay'; ov.id = 'overlay-opening'; document.body.appendChild(ov); ov.addEventListener('click', e=>{ if(e.target===ov) ov.classList.remove('show'); }); }
+  const num = (id, label, v, hint)=> `<label class="op-f">${label}<input type="number" inputmode="decimal" id="${id}" value="${v!=null && v!=='' ? v : ''}" placeholder="0">${hint ? `<small>${hint}</small>` : ''}</label>`;
+  ov.innerHTML = `<div class="modal" style="max-width:460px;"><button type="button" class="modal-close">×</button><h2>🧭 الرصيد الافتتاحي</h2>
+    <div class="hint" style="margin-bottom:8px;">للمشاريع اللي بدأت على الإكسل: اكتب أرقام كشف الحساب لحد اليوم الفاصل. اللي قبل اليوم ده متسجل هنا بيفضل موجود بس مش بيدخل في الحساب، واللي بعده بيتحسب فوق الرصيد.</div>
+    <label class="op-f">📅 اليوم الفاصل<input type="date" id="opDate" value="${o.date || bdTodayStr()}"></label>
+    ${num('opRec', '💰 إجمالي اللي العميل دفعه لحد اليوم ده', o.received)}
+    ${num('opSpent', '🧾 إجمالي اللي اتصرف على المشروع (من غير نسبة الإشراف)', o.spent)}
+    ${num('opSup', '💼 نسبة إشراف اتسحبت قبل كده من المشروع ده', o.supWithdrawn, 'لو مش متأكد سيبها فاضية')}
+    ${num('opCarry', '📄 المتبقي على العميل في آخر الكشف القديم', cs.carried, 'لو العميل ليه فلوس (رصيد دائن) اكتبها بالسالب. بيظهر سطر "رصيد مرحّل" في كشف الحساب الجديد')}
+    <div class="dp-q">📎 كشف الحساب القديم (إكسل أو PDF)</div>
+    <div id="op-file">${o.file ? `<div class="op-file"><span>📄 ${escapeHtml(o.file.name)} <small>(${Math.round((o.file.size||0)/1024)} KB)</small></span><button type="button" class="btn btn-ghost btn-sm" data-dl>⬇️ تنزيل</button><button type="button" class="qe-row-del" data-rmf>✕</button></div>` : ''}
+      <label class="btn btn-ghost btn-sm" style="cursor:pointer;">${o.file ? '🔄 غيّر الملف' : '⬆️ ارفع الملف'}<input type="file" id="opFileIn" hidden accept=".xlsx,.xls,.csv,.pdf,image/*"></label></div>
+    ${before && (before.inc || before.exp) ? `<div class="hint" style="margin-top:8px;">قبل ${v2FmtDay(o.date)} فيه ${before.exp} مصروف و${before.inc} قبض متسجلين هنا — موجودين في الحسابات بس مش داخلين في أرقام المشروع.</div>` : ''}
+    <div class="modal-actions"><button type="button" class="btn btn-primary" data-save>حفظ</button>${p.opening ? '<button type="button" class="btn btn-ghost" data-clear>إلغاء الرصيد الافتتاحي</button>' : ''}</div></div>`;
+  const close = ()=> ov.classList.remove('show');
+  ov.querySelector('.modal-close').onclick = close;
+  let pendingFile = undefined;
+  const fin = ov.querySelector('#opFileIn');
+  fin.onchange = ()=>{ const f = fin.files[0]; if(!f) return;
+    if(f.size > 2*1024*1024){ showToast('الملف كبير (أكتر من ٢ ميجا) — صغّره أو صدّره PDF'); return; }
+    const r = new FileReader(); r.onload = ()=>{ pendingFile = { name: f.name, type: f.type, size: f.size, data: String(r.result), at: new Date().toISOString() };
+      ov.querySelector('#op-file').insertAdjacentHTML('afterbegin', `<div class="op-file"><span>📄 ${escapeHtml(f.name)} <small>(هيتحفظ لما تدوس حفظ)</small></span></div>`); }; r.readAsDataURL(f); };
+  const dl = ov.querySelector('[data-dl]'); if(dl) dl.onclick = ()=>{ const a = document.createElement('a'); a.href = o.file.data; a.download = o.file.name; document.body.appendChild(a); a.click(); a.remove(); };
+  const rmf = ov.querySelector('[data-rmf]'); if(rmf) rmf.onclick = ()=>{ pendingFile = null; rmf.closest('.op-file').remove(); };
+  ov.querySelector('[data-save]').onclick = async ()=>{
+    const v = id=> { const x = parseFloat(ov.querySelector('#' + id).value); return isNaN(x) ? 0 : x; };
+    const date = ov.querySelector('#opDate').value; if(!date){ showToast('اختار اليوم الفاصل'); return; }
+    const prev = p.opening || {};
+    p.opening = { date, received: v('opRec'), spent: v('opSpent'), supWithdrawn: v('opSup'), file: pendingFile === undefined ? (prev.file || null) : pendingFile, by: getDeviceUser() || '', at: new Date().toISOString() };
+    cs.carried = v('opCarry');
+    await saveState(); close(); openProjectDashboard(p.id);
+    try{ renderHome(); }catch(e){}
+    showToast('✅ اتحفظ الرصيد الافتتاحي');
+  };
+  const clr = ov.querySelector('[data-clear]'); if(clr) clr.onclick = async ()=>{
+    if(!(await v2Confirm('تلغي الرصيد الافتتاحي؟ المشروع هيرجع يتحسب من كل العمليات المتسجلة.', 'ألغيه', 'لا'))) return;
+    delete p.opening; cs.carried = 0; await saveState(); close(); openProjectDashboard(p.id);
+  };
+  ov.classList.add('show');
+}
 </script>
 </body>
 </html>
