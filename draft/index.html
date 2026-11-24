@@ -3489,8 +3489,38 @@ const syncLegacyRef = fbDB.ref(LEGACY_SYNC_PATH);
 let syncMeta = (()=>{ try{ return JSON.parse(localStorage.getItem(SYNC_META_KEY)) || null; }catch(e){ return null; } })();
 function syncSaveMeta(){ try{ localStorage.setItem(SYNC_META_KEY, JSON.stringify(syncMeta)); }catch(e){} }
 function syncAdoptBase(remote){
-  syncMeta = { base: syncIndex(remote), baseV: (remote && remote._v) || 0, dirty: false };
+  const base = syncIndex(remote);
+  // deletions made on this device that the server still has stay pending
+  const del = ((syncMeta && syncMeta.del) || []).filter(id=> base.h[id]!==undefined);
+  syncMeta = { base, baseV: (remote && remote._v) || 0, dirty: false, del };
   syncSaveMeta();
+}
+/* 🛡️ حماية: جهاز عليه نسخة قديمة عمره ما يمسح حاجة من السيرفر.
+   الحاجة تتمسح من السيرفر بس لو اتمسحت فعلاً على الجهاز ده (كانت ظاهرة عليه وحد مسحها).
+   أي حاجة ناقصة من الجهاز من غير ما تتمسح عليه = الجهاز قديم → بتفضل زي ما هي. */
+let syncKnownIds = new Set();
+function syncNoteKnown(){ try{ syncKnownIds = new Set(Object.keys(syncCollect(state))); }catch(e){} }
+function syncNoteDeletions(){
+  try{
+    const now = syncCollect(state), gone = [...syncKnownIds].filter(id=> !now[id]);
+    if(gone.length){
+      if(!syncMeta) syncMeta = { base: { h:{}, f:{} }, baseV: 0, dirty: true, del: [] };
+      const d = new Set(syncMeta.del || []); gone.forEach(id=> d.add(id)); syncMeta.del = [...d];
+    }
+    syncKnownIds = new Set(Object.keys(now));
+  }catch(e){}
+}
+let syncGuardKept = 0;
+function syncGuardBase(base, local){
+  const del = new Set((syncMeta && syncMeta.del) || []), have = syncCollect(local);
+  const h = Object.assign({}, (base && base.h) || {});
+  let kept = 0;
+  Object.keys(h).forEach(id=>{ if(!have[id] && !del.has(id)){ delete h[id]; kept++; } });
+  return { base: { h, f: (base && base.f) || {} }, kept };
+}
+function syncWarnStale(n){
+  if(!n) return;
+  try{ showToast(`⚠️ الجهاز ده كان عليه نسخة قديمة (${n} حاجة ناقصة) — اتجاب الجديد من السيرفر ومفيش حاجة اتمسحت`); }catch(e){}
 }
 function syncMarkDirty(){
   if(!syncMeta) syncMeta = { base: { h:{}, f:{} }, baseV: 0, dirty: true };
@@ -3511,13 +3541,13 @@ function syncPush(){
 async function syncPushNow(){
   if(!fbReady || !syncMeta || !syncMeta.dirty) return;
   const local = JSON.parse(JSON.stringify(state));
-  const base = syncMeta.base, baseV = syncMeta.baseV;
+  const g = syncGuardBase(syncMeta.base, local), base = g.base, baseV = syncMeta.baseV;
   let removed = [];
   const res = await syncRef.transaction(cur=>{
     removed = [];
     if(cur===null || cur===undefined) return local;            // nothing on the server yet
-    if(baseV && cur._v===baseV) return local;                 // server unchanged since we last synced
-    const m = syncMerge(base, local, cur, true);               // someone else wrote meanwhile → merge
+    if(baseV && cur._v===baseV && !g.kept) return local;      // server unchanged and this device has everything it had
+    const m = syncMerge(base, local, cur, true);               // merge (never drops what this device didn't delete)
     removed = m.removedByOther;
     m.state._v = Date.now();
     return JSON.parse(JSON.stringify(m.state));
@@ -3530,6 +3560,8 @@ async function syncPushNow(){
   const pendingAgain = syncStable(m2.state)!==syncStable(committed);
   state = m2.state; state._v = committed._v;
   syncAdoptBase(committed);
+  syncNoteKnown();
+  syncWarnStale(g.kept);
   if(pendingAgain){ syncMarkDirty(); }
   syncPersistLocal();
   renderEverything();
@@ -3554,7 +3586,9 @@ function syncHandleRemote(remote){
     if(onlyHere.length) syncAskLocalOnly(prev, onlyHere);
   } else if(syncMeta.dirty){
     // this device has unsynced changes: merge them into what's on the server, then push
-    const m = syncMerge(syncMeta.base, state, remote, true);
+    const g = syncGuardBase(syncMeta.base, state);
+    const m = syncMerge(g.base, state, remote, true);
+    syncWarnStale(g.kept);
     state = m.state; state._v = remote._v;
   } else {
     // nothing pending here: the server copy is the truth — but a sudden mass deletion is confirmed
@@ -3567,6 +3601,7 @@ function syncHandleRemote(remote){
   try{ markAllRecordsKnown(); }catch(e){}
   syncPersistLocal();
   renderEverything();
+  syncNoteKnown();
   if(syncMeta && syncMeta.dirty) syncPush();
 }
 async function syncSeed(){
@@ -4169,6 +4204,7 @@ async function loadState(){
   try{
     const raw = localStorage.getItem('ibtkar-inventory-v1');
     if(raw) state = JSON.parse(raw);
+    syncNoteKnown();
   }catch(e){ /* ignore, Firebase will fill it in next */ }
   try{ markAllRecordsKnown(); }catch(e){}
   renderEverything();
@@ -4239,6 +4275,7 @@ async function saveState(){
   }
   // send it in the background (merge-safe, see the sync engine) — the screen never waits for the
   // network, and if this device is offline the change goes up as soon as it's back online
+  syncNoteDeletions();
   syncMarkDirty();
   syncPush().catch(()=> showToast('⚠️ البيانات محفوظة عندك بس، لسه مش وصلت للسحابة'));
   // moving attachments to Storage is a slow, optional extra
