@@ -5626,7 +5626,7 @@ async function buildPaymentReceiptCanvas(){
       <img src="${data.image}" crossorigin="anonymous" style="display:block;width:100%;height:auto;border-radius:10px;border:1px solid #E6DED2;">
     </div>` : ''}
     <div style="margin-top:26px;padding-top:12px;border-top:1px solid #E6DED2;font-size:11px;color:#8C8177;">
-      تم الإصدار بواسطة IBTKAR Architecture Development — ${fmtDateTime(new Date().toISOString())}${data._sn != null ? ` — رقم مسلسل <b dir="ltr">#${data._sn}</b>` : ''}
+      تم الإصدار بواسطة IBTKAR Architecture Development — ${fmtDateTime(new Date().toISOString())}${data._sn != null ? ` — رقم مسلسل <b dir="ltr">${snLabel(data._sn, data._snDate || data.date)}</b>` : ''}
     </div>
     ${data._qr ? `<div style="margin-top:14px;display:flex;align-items:center;gap:14px;">
       <img src="${data._qr}" style="width:230px;height:230px;image-rendering:pixelated;background:#fff;flex:none;">
@@ -15766,7 +15766,7 @@ renderExpenses = function(){
     return `<div class="expense-card" onclick="openTxnDetail('${e.id}','${e._kind}')">${thumb}<div class="expense-main">
       <div class="expense-top"><span class="expense-project">${escapeHtml(e.project)}</span><span class="expense-amount ${isIncome ? 'income' : 'expense'}">${isIncome ? '+' : '-'}${fmtMoney(e.amount)}</span></div>
       <div class="expense-desc"><span class="txn-kind-badge ${isIncome ? 'income' : 'expense'}">${isIncome ? (e.method || 'قبض') : 'مصروف'}</span> ${escapeHtml(e.description || '')}</div>
-      <div class="expense-date">${fmtDateTime(e.date)} ${e.by ? `· <span class="actor-badge">${escapeHtml(e.by)}</span>` : ''}${e.txCode ? ` · <span dir="ltr" class="acc-code">${escapeHtml(e.txCode)}</span>` : ''}${e._sn != null ? ` · <span dir="ltr" class="acc-code">#${e._sn}</span>` : ''}</div>
+      <div class="expense-date">${fmtDateTime(e.date)} ${e.by ? `· <span class="actor-badge">${escapeHtml(e.by)}</span>` : ''}${e.txCode ? ` · <span dir="ltr" class="acc-code">${escapeHtml(e.txCode)}</span>` : ''}${e._sn != null ? ` · <span dir="ltr" class="acc-code">${snLabel(e._sn, e.date)}</span>` : ''}</div>
     </div></div>`;
   }).join('') + `</div>${list.length > 400 ? '<div class="hint" style="text-align:center;">بيظهر آخر ٤٠٠ — استخدم الفلتر عشان تلاقي الأقدم</div>' : ''}`;
 };
@@ -16533,6 +16533,13 @@ try{ v3OfflineCheck(); }catch(e){}
    الجهاز اللي سجّل العملية هو اللي بيديها رقمها. العمليات القديمة (قبل الرقم المسلسل) إسلام بياخدلها
    أرقام مرة واحدة. شاشة "تسلسل العمليات" بتكشف أي رقم ناقص أو مكرر. */
 const SEQ_REF = 'ibtkar_draft_seq';
+// الرقم المسلسل وجنبه تاريخ وساعة العملية: #777 · 23/09/2026 10:00
+function snLabel(sn, date){
+  if(sn == null) return '';
+  const d = new Date(date); if(isNaN(d)) return '#' + sn;
+  const p = n=> String(n).padStart(2, '0');
+  return `#${sn} · ${p(d.getDate())}/${p(d.getMonth()+1)}/${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
 let v3NeedSn = (()=>{ try{ return JSON.parse(localStorage.getItem('ibtkar-v3-needsn')) || []; }catch(e){ return []; } })();
 function v3SaveNeed(){ try{ localStorage.setItem('ibtkar-v3-needsn', JSON.stringify(v3NeedSn)); }catch(e){} }
 function v3SnEligible(x){ return x && x.rec && !V3_FREE.has(x.key) && !(x.parent && v3FreeParent(x)); }
@@ -16657,7 +16664,7 @@ function renderSerialWarn(){
 { const _rh3 = renderHome; renderHome = function(){ _rh3(); try{ renderSerialWarn(); }catch(e){} }; }
 setTimeout(v3AuditTick, 20000); setInterval(v3AuditTick, 10*60*1000);
 // الرقم بيظهر في تفاصيل العملية وفي الحسابات
-{ const _otd = openTxnDetail; openTxnDetail = function(id, kind){ _otd(id, kind); const e = [...(state.expenses||[]), ...(state.income||[])].find(x=>x.id===id); const rows = document.getElementById('expense-detail-rows'); if(e && rows && e._sn != null) rows.insertAdjacentHTML('afterbegin', `<div class="detail-row"><span>الرقم المسلسل</span><b dir="ltr">#${e._sn}</b></div>`); }; }
+{ const _otd = openTxnDetail; openTxnDetail = function(id, kind){ _otd(id, kind); const e = [...(state.expenses||[]), ...(state.income||[])].find(x=>x.id===id); const rows = document.getElementById('expense-detail-rows'); if(e && rows && e._sn != null) rows.insertAdjacentHTML('afterbegin', `<div class="detail-row"><span>الرقم المسلسل</span><b dir="ltr">${snLabel(e._sn, e.date)}</b></div>`); }; }
 { const _ob3 = openBackupModal; openBackupModal = function(){ _ob3(); const st = document.getElementById('v3-sync-status'); if(st && !document.getElementById('v3-audit-btn')) st.insertAdjacentHTML('afterend', '<button type="button" class="btn btn-ghost btn-sm" id="v3-audit-btn" style="margin:4px 0 8px;" onclick="openSerialAudit()">🔢 راجع تسلسل العمليات</button>'); }; }
 </script>
 <script>
@@ -16704,7 +16711,7 @@ function rcCurrentRecord(d){
 // الإيصال: نحط الـ QR قبل التصوير
 { const _b = buildPaymentReceiptCanvas; buildPaymentReceiptCanvas = async function(){
   const d = pendingReceiptData;
-  if(d && d._rec){ try{ await rcQRlib(); const rec = rcCurrentRecord(d); d._payload = RC_MARK + rcRecordJSON(rec, d._kind); d._qr = rcQRDataUrl(d._payload); if(rec._sn != null) d._sn = rec._sn; }catch(e){ console.error('qr', e); d._qr = null; } }
+  if(d && d._rec){ try{ await rcQRlib(); const rec = rcCurrentRecord(d); d._payload = RC_MARK + rcRecordJSON(rec, d._kind); d._qr = rcQRDataUrl(d._payload); if(rec._sn != null){ d._sn = rec._sn; d._snDate = rec.date; } }catch(e){ console.error('qr', e); d._qr = null; } }
   return _b();
 }; }
 // الـ PDF: نفس البيانات جوّه الملف
@@ -16770,7 +16777,7 @@ function openReceiptRestore(){
   const draw = bad=>{
     const lbl = { exists: '✅ موجودة', missing: '➕ ناقصة — هترجع', deleted: '🗑️ اتمسحت بموافقة إسلام' };
     out.innerHTML = `${found.map((f,i)=>`<label class="pd-row" style="gap:8px;"><input type="checkbox" data-i="${i}" ${f.status==='missing' ? 'checked' : ''} ${f.status==='exists' || (f.status==='deleted' && !v3IsAdmin()) ? 'disabled' : ''}>
-        <div class="pd-row-main"><div class="pd-row-title">${f.k==='i' ? '💰 قبض' : '🧾 مصروف'} ${fmtMoney(f.r.amount)} — ${escapeHtml(f.r.project || '')}${f.r._sn != null ? ` <small dir="ltr">#${f.r._sn}</small>` : ''}</div>
+        <div class="pd-row-main"><div class="pd-row-title">${f.k==='i' ? '💰 قبض' : '🧾 مصروف'} ${fmtMoney(f.r.amount)} — ${escapeHtml(f.r.project || '')}${f.r._sn != null ? ` <small dir="ltr">${snLabel(f.r._sn, f.r.date)}</small>` : ''}</div>
         <div class="pd-row-sub">${escapeHtml(f.r.description || '')} · ${fmtDateTime(f.r.date)} · ${escapeHtml(f.r.by || '')}</div></div><small>${lbl[f.status]}</small></label>`).join('')}
       ${bad.length ? `<div class="hint" style="margin-top:6px;">⚠️ ${bad.length} ملف مفيهوش بيانات عملية (إيصال قديم أو الصورة مش واضحة): ${bad.slice(0,5).map(escapeHtml).join('، ')}${bad.length>5?'…':''}</div>` : ''}
       ${found.length ? `<button type="button" class="btn btn-primary btn-full" style="margin-top:10px;" data-go>↩️ رجّع المتعلّم عليه</button>` : ''}`;
