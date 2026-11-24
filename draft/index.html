@@ -15745,7 +15745,7 @@ renderExpenses = function(){
   const content = document.getElementById('expense-content'); if(!content) return;
   const q = (document.getElementById('expenseSearchInput').value || '').trim().toLowerCase();
   const all = [...(state.expenses||[]).map(e=>({ ...e, _kind:'expense' })), ...(state.income||[]).map(e=>({ ...e, _kind:'income' }))];
-  let list = all.filter(e=> accMatch(e) && (!q || (e.project||'').toLowerCase().includes(q) || (e.description||'').toLowerCase().includes(q) || (e.txCode||'').toLowerCase().includes(q)));
+  let list = all.filter(e=> accMatch(e) && (!q || (e.project||'').toLowerCase().includes(q) || (e.description||'').toLowerCase().includes(q) || (e.txCode||'').toLowerCase().includes(q) || (e._sn != null && ('#' + e._sn)===q)));
   list.sort((a,b)=> new Date(b.date) - new Date(a.date));
   renderAccStats(list, accFilterActive() || !!q);
   try{ populateLocationDatalist(); }catch(e){}
@@ -15761,7 +15761,7 @@ renderExpenses = function(){
     return `<div class="expense-card" onclick="openTxnDetail('${e.id}','${e._kind}')">${thumb}<div class="expense-main">
       <div class="expense-top"><span class="expense-project">${escapeHtml(e.project)}</span><span class="expense-amount ${isIncome ? 'income' : 'expense'}">${isIncome ? '+' : '-'}${fmtMoney(e.amount)}</span></div>
       <div class="expense-desc"><span class="txn-kind-badge ${isIncome ? 'income' : 'expense'}">${isIncome ? (e.method || 'قبض') : 'مصروف'}</span> ${escapeHtml(e.description || '')}</div>
-      <div class="expense-date">${fmtDateTime(e.date)} ${e.by ? `· <span class="actor-badge">${escapeHtml(e.by)}</span>` : ''}${e.txCode ? ` · <span dir="ltr" class="acc-code">${escapeHtml(e.txCode)}</span>` : ''}</div>
+      <div class="expense-date">${fmtDateTime(e.date)} ${e.by ? `· <span class="actor-badge">${escapeHtml(e.by)}</span>` : ''}${e.txCode ? ` · <span dir="ltr" class="acc-code">${escapeHtml(e.txCode)}</span>` : ''}${e._sn != null ? ` · <span dir="ltr" class="acc-code">#${e._sn}</span>` : ''}</div>
     </div></div>`;
   }).join('') + `</div>${list.length > 400 ? '<div class="hint" style="text-align:center;">بيظهر آخر ٤٠٠ — استخدم الفلتر عشان تلاقي الأقدم</div>' : ''}`;
 };
@@ -16520,6 +16520,136 @@ window.addEventListener('online', ()=>{ v3OffSince = Date.now(); try{ fbDB.goOnl
 setInterval(()=>{ try{ v3OfflineCheck(); }catch(e){} }, 1500);
 document.addEventListener('DOMContentLoaded', ()=>{ try{ v3OfflineCheck(); }catch(e){} });
 try{ v3OfflineCheck(); }catch(e){}
+
+/* ---------- 🔢 رقم مسلسل لكل عملية ----------
+   كل حاجة بتتسجل في السيستم (مصروف، قبض، يوم شغل، حركة مخزن، دفعة…) بتاخد رقم #١، #٢، #٣…
+   الرقم بيتحجز من عدّاد واحد على السيرفر بـ transaction، فمستحيل جهازين ياخدوا نفس الرقم.
+   الجهاز اللي سجّل العملية هو اللي بيديها رقمها. العمليات القديمة (قبل الرقم المسلسل) إسلام بياخدلها
+   أرقام مرة واحدة. شاشة "تسلسل العمليات" بتكشف أي رقم ناقص أو مكرر. */
+const SEQ_REF = 'ibtkar_draft_seq';
+let v3NeedSn = (()=>{ try{ return JSON.parse(localStorage.getItem('ibtkar-v3-needsn')) || []; }catch(e){ return []; } })();
+function v3SaveNeed(){ try{ localStorage.setItem('ibtkar-v3-needsn', JSON.stringify(v3NeedSn)); }catch(e){} }
+function v3SnEligible(x){ return x && x.rec && !V3_FREE.has(x.key) && !(x.parent && v3FreeParent(x)); }
+function v3FreeParent(x){ let p = x.parent; const live = v3LiveMap; while(p && p.id){ const px = live[p.id]; if(!px) return false; if(V3_FREE.has(px.key)) return true; p = px.parent; } return false; }
+function v3RecTime(r){ return new Date(r.addedAt || r.createdAt || r.date || r.at || 0).getTime() || 0; }
+let v3SnBusy = false;
+// بيحجز k رقم ورا بعض، وبيسجّل على السيرفر الرقم ده اتحجز لأنهي عملية (عشان لو الرقم ما وصلش للعملية يترجعلها)
+async function v3Allocate(ids, claimBackfill){
+  let range = null;
+  const res = await fbDB.ref(SEQ_REF).transaction(cur=>{
+    const c = cur || { n: 0, start: Date.now() };
+    if(claimBackfill){ if(c.backfillBy) return; c.backfillBy = getDeviceUser() || '?'; c.backfillAt = new Date().toISOString(); }
+    if(!ids.length){ range = null; return c; }
+    const from = (Number(c.n)||0) + 1; c.n = from + ids.length - 1;
+    c.recent = [...(c.recent||[]), { from, to: c.n, at: Date.now(), by: getDeviceUser() || '', ids }].slice(-300);
+    range = { from, to: c.n };
+    return c;
+  }, undefined, false);
+  return (res && res.committed) ? (range || {}) : null;
+}
+function v3PutSn(ids, from){ const live = v3Live(state); let n = 0; ids.forEach((id, i)=>{ const x = live[id]; if(x && x.rec._sn == null){ x.rec._sn = from + i; n++; } }); return n; }
+async function v3AssignSerials(){
+  if(v3SnBusy || !fbReady) return; v3SnBusy = true;
+  try{
+    let live = v3Live(state), changed = 0;
+    // ١) اللي اتسجل على الجهاز ده
+    const mine = v3NeedSn.filter(id=> live[id] && live[id].rec._sn == null && v3SnEligible(live[id]))
+      .sort((a,b)=> v3RecTime(live[a].rec) - v3RecTime(live[b].rec));
+    if(mine.length){
+      const r = await v3Allocate(mine, false);
+      if(r && r.from){ changed += v3PutSn(mine, r.from); v3NeedSn = v3NeedSn.filter(id=> !mine.includes(id)); v3SaveNeed(); }
+    } else if(v3NeedSn.length){ v3NeedSn = v3NeedSn.filter(id=> live[id] && live[id].rec._sn == null); v3SaveNeed(); }
+    // ٢) أي رقم اتحجز لعملية وما وصلهاش (الجهاز اتقفل/اتحدّث قبل ما يحفظ): يترجعلها نفس الرقم
+    const snap = await fbDB.ref(SEQ_REF).once('value'); const c = snap.val() || {};
+    live = v3Live(state);
+    const used = new Set(Object.values(live).map(x=> x.rec._sn).filter(v=> v != null));
+    (c.recent||[]).forEach(r=> (r.ids||[]).forEach((id, i)=>{ const sn = r.from + i, x = live[id]; if(x && x.rec._sn == null && !used.has(sn)){ x.rec._sn = sn; used.add(sn); changed++; } }));
+    // ٣) إسلام: العمليات القديمة (مرة واحدة) + أي عملية فضلت من غير رقم أكتر من ساعة
+    if(v3IsAdmin()){
+      const old = Date.now() - 60*60*1000, need = new Set(v3NeedSn), reserved = new Set(); (c.recent||[]).forEach(r=> (r.ids||[]).forEach(id=> reserved.add(id)));
+      const orphans = Object.keys(live).filter(id=>{ const x = live[id], t = v3RecTime(x.rec); return x.rec._sn == null && v3SnEligible(x) && !need.has(id) && !reserved.has(id) && (!t || t < old); })
+        .sort((a,b)=> v3RecTime(live[a].rec) - v3RecTime(live[b].rec));
+      const isBackfill = !c.backfillBy;
+      if(orphans.length || isBackfill){
+        const r = await v3Allocate(orphans, isBackfill);
+        if(r && r.from) changed += v3PutSn(orphans, r.from);
+      }
+    }
+    if(changed) await saveState();
+  }catch(e){ console.error('serials', e); }
+  finally{ v3SnBusy = false; }
+}
+// الجديد في كل حفظ بيتسجّل إنه محتاج رقم
+{ const _st = v3Stamp; v3Stamp = function(){
+  const before = new Set(Object.keys(v3LiveMap));
+  _st();
+  const fresh = Object.keys(v3LiveMap).filter(id=> !before.has(id) && v3LiveMap[id].rec._sn == null && v3SnEligible(v3LiveMap[id]));
+  if(fresh.length){ v3NeedSn = [...new Set([...v3NeedSn, ...fresh])]; v3SaveNeed(); setTimeout(()=> v3AssignSerials(), 50); }
+}; }
+setInterval(()=>{ if(fbReady) v3AssignSerials(); }, 60000);
+setTimeout(()=>{ if(fbReady) v3AssignSerials(); }, 8000);
+// علامة المسح بتشيل الرقم بتاعها (عشان الرقم يتحسب "اتمسح بموافقة إسلام" مش "ناقص")
+{ const _tb = v3Tombstone; v3Tombstone = function(target, label){ _tb(target, label); const x = v3LiveMap[target]; const t = (state.tombstones||[]).find(z=> z.target===target && !z.undone); if(t && x && x.rec && x.rec._sn != null && t.sn == null) t.sn = x.rec._sn; }; }
+
+async function v3SerialAudit(){
+  const snap = await fbDB.ref(SEQ_REF).once('value'); const c = snap.val() || { n: 0 };
+  const n = Number(c.n) || 0, live = v3Live(state), where = new Map(), dup = [];
+  Object.keys(live).forEach(id=>{ const s = live[id].rec._sn; if(s == null) return; if(where.has(s)) dup.push(s); else where.set(s, { id, kind: 'live' }); });
+  const deep = (o, f)=>{ if(!o || typeof o!=='object') return; if(o._sn != null) f(o._sn); Object.values(o).forEach(v=> deep(v, f)); };
+  const trashed = new Set(), tombed = new Set();
+  (state.trash||[]).forEach(t=> deep(t.data, s=> trashed.add(s)));
+  (state.tombstones||[]).forEach(t=>{ if(t && t.sn != null && !t.undone) tombed.add(t.sn); });
+  const fresh = new Set(), forWhat = new Map(); (c.recent||[]).forEach(r=>{ for(let i=r.from;i<=r.to;i++){ if(Date.now() - r.at < 15*60*1000) fresh.add(i); forWhat.set(i, { id: (r.ids||[])[i - r.from], by: r.by, at: r.at }); } });
+  // رقم اتحجز لعملية إسلام مسحها قبل ما الرقم يوصلها = متحسوب "اتمسح"
+  const goneIds = new Set((state.tombstones||[]).filter(t=> t && !t.undone).map(t=> t.target));
+  (state.trash||[]).forEach(t=> deep(t.data, ()=>{}) );
+  (state.trash||[]).forEach(t=>{ const walk = o=>{ if(!o || typeof o!=='object') return; if(o.id) goneIds.add(o.id); Object.values(o).forEach(walk); }; walk(t.data); });
+  const missing = [], pendingFresh = [];
+  for(let i=1;i<=n;i++){
+    if(where.has(i) || trashed.has(i) || tombed.has(i)) continue;
+    const w = forWhat.get(i); if(w && w.id && goneIds.has(w.id) && !live[w.id]){ tombed.add(i); continue; }
+    (fresh.has(i) ? pendingFresh : missing).push(i);
+  }
+  const noSn = Object.keys(live).filter(id=> live[id].rec._sn == null && v3SnEligible(live[id])).length;
+  return { forWhat, n, live: where.size, deleted: [...new Set([...trashed, ...tombed])].filter(s=> !where.has(s)).length, missing, dup: [...new Set(dup)], pendingFresh, noSn, backfilled: !!c.backfillBy };
+}
+async function openSerialAudit(){
+  const ov = document.createElement('div'); ov.className = 'overlay show';
+  ov.innerHTML = `<div class="modal" style="max-width:460px;"><button type="button" class="modal-close">×</button><h2>🔢 تسلسل العمليات</h2><div id="v3-audit">بيراجع…</div></div>`;
+  ov.querySelector('.modal-close').onclick = ()=> ov.remove(); document.body.appendChild(ov);
+  try{
+    const a = await v3SerialAudit();
+    const list = arr=> arr.slice(0, 40).map(s=> '#' + s).join('، ') + (arr.length > 40 ? ` … (+${arr.length-40})` : '');
+    const ok = !a.missing.length && !a.dup.length;
+    ov.querySelector('#v3-audit').innerHTML = `
+      <div class="safe-result ${ok ? 'ok' : 'less'}">${ok ? '✅ التسلسل كامل — مفيش رقم ناقص ولا مكرر' : '⚠️ فيه مشكلة في التسلسل — بلّغ عنها'}</div>
+      <table class="wr-t" style="margin-top:8px;">
+        <tr><td>آخر رقم اتدّى</td><td class="v"><b>#${a.n}</b></td></tr>
+        <tr><td>عمليات موجودة</td><td class="v">${a.live}</td></tr>
+        <tr><td>اتمسحت بموافقة إسلام</td><td class="v">${a.deleted}</td></tr>
+        <tr><td>أرقام ناقصة</td><td class="v ${a.missing.length ? 'bad' : ''}">${a.missing.length ? list(a.missing) : '—'}</td></tr>
+        ${a.missing.slice(0, 15).map(sn=>{ const w = a.forWhat.get(sn); return `<tr><td colspan="2"><small>#${sn}: اتحجز ${w ? `من ${escapeHtml(w.by||'')} ${fmtDateTime(new Date(w.at).toISOString())}` : 'قبل سجل الحجز'} — والعملية بتاعته مش موجودة</small></td></tr>`; }).join('')}
+        <tr><td>أرقام مكررة</td><td class="v ${a.dup.length ? 'bad' : ''}">${a.dup.length ? list(a.dup) : '—'}</td></tr>
+        ${a.pendingFresh.length ? `<tr><td>لسه بتوصل من جهاز تاني (آخر ربع ساعة)</td><td class="v">${list(a.pendingFresh)}</td></tr>` : ''}
+        ${a.noSn ? `<tr><td>عمليات لسه مستنية رقم</td><td class="v">${a.noSn}${a.backfilled ? '' : ' <small>(القديم — بياخد أرقام أول ما إسلام يفتح)</small>'}</td></tr>` : ''}
+      </table>`;
+  }catch(e){ ov.querySelector('#v3-audit').textContent = 'مقدرتش أراجع دلوقتي — اتأكد من النت'; }
+}
+// تحذير في الرئيسية لإسلام لو فيه رقم ناقص أو مكرر (بيتراجع كل ١٠ دقايق)
+let v3AuditWarn = null;
+async function v3AuditTick(){ if(!fbReady || !v3IsAdmin()) return; try{ const a = await v3SerialAudit(); v3AuditWarn = (a.missing.length || a.dup.length) ? a : null; renderSerialWarn(); }catch(e){} }
+function renderSerialWarn(){
+  const home = document.getElementById('view-home'); if(!home) return;
+  let el = document.getElementById('v3-snwarn');
+  if(!v3AuditWarn){ if(el) el.remove(); return; }
+  if(!el){ el = document.createElement('button'); el.type = 'button'; el.id = 'v3-snwarn'; el.className = 'v3-delreq-btn'; el.style.marginBottom = '8px'; el.onclick = openSerialAudit; const a = document.getElementById('v3-delreq') || document.getElementById('home-dayplan-wrap'); if(a) a.before(el); else home.appendChild(el); }
+  el.textContent = `⚠️ تسلسل العمليات فيه ${v3AuditWarn.missing.length ? v3AuditWarn.missing.length + ' رقم ناقص' : ''}${v3AuditWarn.missing.length && v3AuditWarn.dup.length ? ' و' : ''}${v3AuditWarn.dup.length ? v3AuditWarn.dup.length + ' رقم مكرر' : ''} — دوس للتفاصيل`;
+}
+{ const _rh3 = renderHome; renderHome = function(){ _rh3(); try{ renderSerialWarn(); }catch(e){} }; }
+setTimeout(v3AuditTick, 20000); setInterval(v3AuditTick, 10*60*1000);
+// الرقم بيظهر في تفاصيل العملية وفي الحسابات
+{ const _otd = openTxnDetail; openTxnDetail = function(id, kind){ _otd(id, kind); const e = [...(state.expenses||[]), ...(state.income||[])].find(x=>x.id===id); const rows = document.getElementById('expense-detail-rows'); if(e && rows && e._sn != null) rows.insertAdjacentHTML('afterbegin', `<div class="detail-row"><span>الرقم المسلسل</span><b dir="ltr">#${e._sn}</b></div>`); }; }
+{ const _ob3 = openBackupModal; openBackupModal = function(){ _ob3(); const st = document.getElementById('v3-sync-status'); if(st && !document.getElementById('v3-audit-btn')) st.insertAdjacentHTML('afterend', '<button type="button" class="btn btn-ghost btn-sm" id="v3-audit-btn" style="margin:4px 0 8px;" onclick="openSerialAudit()">🔢 راجع تسلسل العمليات</button>'); }; }
 </script>
 </body>
 </html>
