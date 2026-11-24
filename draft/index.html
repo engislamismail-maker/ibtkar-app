@@ -16274,6 +16274,7 @@ function v3Stamp(){
       state.deleteRequests.push({ id: reqId, targets: gone, label: top.map(id=> v3Label(v3LiveMap[id])).join(' · ').slice(0, 200), count: top.length,
         by: getDeviceUser() || '', at: new Date().toISOString(), status: 'pending', _u: now });
       v3MarkDirty(reqId, now);
+      if(getDeviceUser()!==V3_ADMIN){ try{ feedPush(`🛑 طلب مسح: ${top.map(id=> v3Label(v3LiveMap[id])).join(' · ').slice(0, 120)} — مستني موافقة إسلام`); }catch(e){} }
       setTimeout(()=>{ try{ showToast(getDeviceUser()===V3_ADMIN ? '🛑 المسح ده محتاج تأكيد — اتسجل في "طلبات المسح" تحت في الرئيسية' : '🛑 المسح محتاج موافقة إسلام — اتبعتله طلب، والحاجة فاضلة لحد ما يوافق'); renderEverything(); }catch(e){} }, 50);
     }
   }
@@ -16382,6 +16383,28 @@ function v3AskPassword(msg){
   });
 }
 function v3IsAdmin(){ return getDeviceUser() === V3_ADMIN; }
+function v3AskApprove(r){
+  return new Promise(resolve=>{
+    const ov = document.createElement('div'); ov.className = 'overlay show'; ov.style.zIndex = 4000;
+    ov.innerHTML = `<div class="modal" style="max-width:400px;"><h2>🗑️ موافقة على المسح</h2>
+      <div class="sub" style="white-space:pre-line;margin-bottom:8px;">طلب مسح من ${escapeHtml(r.by || '')}:\n<b>${escapeHtml(r.label || '')}</b>\n\nهيتشال من كل الأجهزة ويروح سلة المحذوفات.</div>
+      <div class="field"><label>اكتب <b dir="ltr">Delete</b> (أول حرف كابيتال)</label><input type="text" dir="ltr" autocomplete="off" autocapitalize="off" spellcheck="false" data-v3word></div>
+      <div class="field"><label>كلمة سر الأدمن</label><input type="password" autocomplete="off" data-v3pw></div>
+      <div class="modal-actions"><button type="button" class="btn btn-primary" data-ok disabled>امسح</button><button type="button" class="btn btn-ghost" data-no>إلغاء</button></div></div>`;
+    const word = ov.querySelector('[data-v3word]'), ok = ov.querySelector('[data-ok]');
+    word.oninput = ()=>{ ok.disabled = word.value.trim() !== 'Delete'; };
+    const done = v=>{ ov.remove(); resolve(v); };
+    ov.querySelector('[data-no]').onclick = ()=> done(false);
+    ok.onclick = ()=>{
+      if(word.value.trim() !== 'Delete'){ showToast('اكتب Delete بالظبط — أول حرف كابيتال'); return; }
+      const v = ov.querySelector('[data-v3pw]').value;
+      if(!state.backupPassword){ showToast('لسه ما اتعملتش كلمة سر — اعملها من الإعدادات ← نسخة احتياطية'); return; }
+      if(v !== state.backupPassword){ showToast('كلمة السر غلط'); return; }
+      done(true);
+    };
+    document.body.appendChild(ov); setTimeout(()=> word.focus(), 50);
+  });
+}
 // مسح من غير زرار "مسح" (زي "ماجاش"): إسلام → كلمة السر، غيره → طلب
 { const _tca = tcAbsent; tcAbsent = async function(wid, lid){
   if(v3IsAdmin()){ if(!(await v3AskPassword('شيل يوم الشغل ده من كل الأجهزة.'))) return; v3AuthUntil = Date.now() + 15000; }
@@ -16425,8 +16448,7 @@ function openDeleteRequests(){
     ov.querySelectorAll('[data-keep]').forEach(b=> b.onclick = async ()=>{ const r = (state.deleteRequests||[]).find(x=>x.id===b.dataset.keep); if(!r) return; r.status = 'kept'; r.doneBy = getDeviceUser(); r.doneAt = new Date().toISOString(); await saveState(); draw(); renderDeleteRequestsCard(); });
     ov.querySelectorAll('[data-del]').forEach(b=> b.onclick = async ()=>{
       const r = (state.deleteRequests||[]).find(x=>x.id===b.dataset.del); if(!r) return;
-      if(!(await confirmDeleteOriginal(`هتمسح: ${r.label}\nمن كل الأجهزة.`))) return;
-      if(!(await v3AskPassword('تأكيد المسح من كل الأجهزة.'))) return;
+      if(!(await v3AskApprove(r))) return;
       const live = v3Live(state), ids = new Set(r.targets || []);
       const tops = (r.targets||[]).filter(id=>{ const x = live[id]; return x && !(x.parent && x.parent.id && ids.has(x.parent.id)); });
       state.trash = state.trash || [];
@@ -16439,7 +16461,16 @@ function openDeleteRequests(){
   };
   draw(); document.body.appendChild(ov);
 }
-{ const _rh = renderHome; renderHome = function(){ _rh(); try{ renderDeleteRequestsCard(); }catch(e){} }; }
+{ const _rh = renderHome; renderHome = function(){ _rh(); try{ renderDeleteRequestsCard(); v3MaybePopRequests(); }catch(e){} }; }
+let v3PoppedFor = '';
+function v3MaybePopRequests(){
+  if(!v3IsAdmin() || !fbReady || document.getElementById('overlay-v3-delreq')) return;
+  const ids = v3Pending().map(r=>r.id).sort().join(','); if(!ids || ids===v3PoppedFor) return;
+  if(document.querySelector('.overlay.show')) return;          // ما نقاطعش حاجة مفتوحة — هيطلع بعدين
+  v3PoppedFor = ids; openDeleteRequests();
+}
+document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) setTimeout(()=>{ try{ v3PoppedFor = ''; v3MaybePopRequests(); }catch(e){} }, 1500); });
+setInterval(()=>{ try{ v3MaybePopRequests(); }catch(e){} }, 20000);
 // الترجيع من السلة = نشيل علامة المسح
 { const _rft2 = restoreFromTrash; restoreFromTrash = async function(trashId){
   const t = (state.trash||[]).find(x=>x.id===trashId);
