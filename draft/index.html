@@ -16552,22 +16552,25 @@ function v3PutSn(ids, from){ const live = v3Live(state); let n = 0; ids.forEach(
 async function v3AssignSerials(){
   if(v3SnBusy || !fbReady) return; v3SnBusy = true;
   try{
-    let live = v3Live(state), changed = 0;
-    // ١) اللي اتسجل على الجهاز ده
-    const mine = v3NeedSn.filter(id=> live[id] && live[id].rec._sn == null && v3SnEligible(live[id]))
+    let changed = 0;
+    // ١) الأول: أي رقم اتحجز لعملية وما وصلهاش (الجهاز اتقفل قبل ما يحفظ) يترجعلها نفس الرقم
+    const snap = await fbDB.ref(SEQ_REF).once('value'); const c = snap.val() || {};
+    const reserved = new Map(); (c.recent||[]).forEach(r=> (r.ids||[]).forEach((id, i)=>{ if(!reserved.has(id)) reserved.set(id, r.from + i); }));
+    let live = v3Live(state);
+    const used = new Set(Object.values(live).map(x=> x.rec._sn).filter(v=> v != null));
+    reserved.forEach((sn, id)=>{ const x = live[id]; if(x && x.rec._sn == null && !used.has(sn)){ x.rec._sn = sn; used.add(sn); changed++; } });
+    // ٢) اللي اتسجل على الجهاز ده ولسه ما اتحجزلوش رقم خالص (عمر العملية ما يتحجزلها رقمين)
+    const mine = v3NeedSn.filter(id=> live[id] && live[id].rec._sn == null && v3SnEligible(live[id]) && !reserved.has(id))
       .sort((a,b)=> v3RecTime(live[a].rec) - v3RecTime(live[b].rec));
     if(mine.length){
       const r = await v3Allocate(mine, false);
-      if(r && r.from){ changed += v3PutSn(mine, r.from); v3NeedSn = v3NeedSn.filter(id=> !mine.includes(id)); v3SaveNeed(); }
-    } else if(v3NeedSn.length){ v3NeedSn = v3NeedSn.filter(id=> live[id] && live[id].rec._sn == null); v3SaveNeed(); }
-    // ٢) أي رقم اتحجز لعملية وما وصلهاش (الجهاز اتقفل/اتحدّث قبل ما يحفظ): يترجعلها نفس الرقم
-    const snap = await fbDB.ref(SEQ_REF).once('value'); const c = snap.val() || {};
+      if(r && r.from){ changed += v3PutSn(mine, r.from); mine.forEach(id=> reserved.set(id, -1)); }
+    }
     live = v3Live(state);
-    const used = new Set(Object.values(live).map(x=> x.rec._sn).filter(v=> v != null));
-    (c.recent||[]).forEach(r=> (r.ids||[]).forEach((id, i)=>{ const sn = r.from + i, x = live[id]; if(x && x.rec._sn == null && !used.has(sn)){ x.rec._sn = sn; used.add(sn); changed++; } }));
+    v3NeedSn = v3NeedSn.filter(id=> live[id] && live[id].rec._sn == null); v3SaveNeed();
     // ٣) إسلام: العمليات القديمة (مرة واحدة) + أي عملية فضلت من غير رقم أكتر من ساعة
     if(v3IsAdmin()){
-      const old = Date.now() - 60*60*1000, need = new Set(v3NeedSn), reserved = new Set(); (c.recent||[]).forEach(r=> (r.ids||[]).forEach(id=> reserved.add(id)));
+      const old = Date.now() - 60*60*1000, need = new Set(v3NeedSn);
       const orphans = Object.keys(live).filter(id=>{ const x = live[id], t = v3RecTime(x.rec); return x.rec._sn == null && v3SnEligible(x) && !need.has(id) && !reserved.has(id) && (!t || t < old); })
         .sort((a,b)=> v3RecTime(live[a].rec) - v3RecTime(live[b].rec));
       const isBackfill = !c.backfillBy;
