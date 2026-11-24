@@ -1069,6 +1069,11 @@ body.ks-on .bottom-nav,body.ks-on #settings-fab{display:none;}
 #v3-delreq{ margin:8px 0 10px; }
 .v3-delreq-btn{ width:100%; border:0; border-radius:12px; padding:10px; background:var(--deep-rose); color:#fff; font:800 13.5px Tajawal,sans-serif; cursor:pointer; }
 .v3-delreq-note{ background:var(--blush); border-radius:12px; padding:8px 10px; font-size:12.5px; color:var(--deep-rose); font-weight:700; }
+#v3-offline{ position:fixed; inset:0; z-index:2147482000; background:rgba(46,42,44,.96); display:flex; align-items:center; justify-content:center; padding:24px; }
+.v3-off-box{ background:var(--cream); border-radius:18px; padding:26px 20px; max-width:360px; text-align:center; color:var(--charcoal); font-family:Tajawal,sans-serif; }
+.v3-off-ic{ font-size:44px; margin-bottom:6px; }
+.v3-off-box b{ display:block; font-size:18px; margin-bottom:8px; }
+.v3-off-box p{ font-size:13.5px; line-height:1.8; color:var(--muted); margin:0 0 14px; }
 /* ===================== IBTKAR GE 2026 — الهوية البصرية (DRAFT) =====================
    ألوان الدليل، تصميم مسطح من غير ظلال، كروت Blush من غير إطار، خط دهبي تحت العناوين،
    جداول بهيدر روز وصفوف متبادلة، والإجمالي فحمي بأرقام دهبي. */
@@ -16488,6 +16493,33 @@ function v3SyncStatusText(){
 }
 
 { const _obm2 = openBackupModal; openBackupModal = function(){ _obm2(); const el = document.getElementById('autobk-list'); if(el && !document.getElementById('v3-sync-status')){ el.insertAdjacentHTML('beforebegin', '<div class="hint" id="v3-sync-status"></div>'); } const st = document.getElementById('v3-sync-status'); if(st) st.textContent = '🔄 ' + v3SyncStatusText(); }; }
+
+/* ---------- 📡 البرنامج بيشتغل بس وهو متصل بالسيرفر ----------
+   مفيش نت = شاشة بتقفل البرنامج لحد ما يتصل ويجيب أحدث نسخة. لو النت فصل وانت شغال، نفس الشاشة
+   (اللي اتسجل قبلها محفوظ وهيطلع أول ما النت يرجع). */
+let v3Conn = false, v3OfflineDisabled = false, v3OffSince = Date.now();
+function v3OfflineCheck(){
+  let el = document.getElementById('v3-offline');
+  const ok = v3OfflineDisabled || (v3Conn && fbReady);
+  if(ok){ if(el) el.remove(); return; }
+  if(!el){
+    el = document.createElement('div'); el.id = 'v3-offline';
+    el.innerHTML = `<div class="v3-off-box"><div class="v3-off-ic">📡</div><b id="v3-off-t"></b><p id="v3-off-p"></p>
+      <button type="button" class="btn btn-gold" onclick="try{ fbDB.goOnline(); }catch(e){} v3OffSince = Date.now(); v3OfflineCheck();">🔄 حاول تاني</button></div>`;
+    document.body.appendChild(el);
+  }
+  const waiting = Date.now() - v3OffSince < 7000 && navigator.onLine !== false;
+  document.getElementById('v3-off-t').textContent = waiting ? 'بيتصل بالسيرفر…' : 'مفيش اتصال بالإنترنت';
+  document.getElementById('v3-off-p').textContent = waiting
+    ? 'ثواني وهيجيب أحدث نسخة من البيانات'
+    : 'البرنامج بيشتغل بس وانت متصل بالنت — عشان البيانات تفضل متطابقة على كل الأجهزة. شغّل النت (واي فاي أو داتا) وهيفتح لوحده.' + (v3HasDirty() ? ' (اللي اتسجل قبل ما النت يفصل محفوظ على الجهاز وهيطلع أول ما يرجع.)' : '');
+}
+try{ fbDB.ref('.info/connected').on('value', s=>{ const c = !!(s && s.val()); if(c !== v3Conn){ v3Conn = c; if(!c) v3OffSince = Date.now(); } v3OfflineCheck(); }); }catch(e){}
+window.addEventListener('offline', ()=>{ v3Conn = false; v3OffSince = 0; v3OfflineCheck(); });
+window.addEventListener('online', ()=>{ v3OffSince = Date.now(); try{ fbDB.goOnline(); }catch(e){} v3OfflineCheck(); });
+setInterval(()=>{ try{ v3OfflineCheck(); }catch(e){} }, 1500);
+document.addEventListener('DOMContentLoaded', ()=>{ try{ v3OfflineCheck(); }catch(e){} });
+try{ v3OfflineCheck(); }catch(e){}
 </script>
 </body>
 </html>
