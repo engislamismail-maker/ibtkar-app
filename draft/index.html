@@ -16339,7 +16339,7 @@ syncHandleRemote = function(remote){
     if(mine.length) v3SaveDirty();
     v3LastSync = Date.now(); v3LastErr = '';
   }catch(e){ v3LastErr = String(e && e.message || e); console.error('sync merge', e); try{ showToast('⚠️ مشكلة في المزامنة: ' + v3LastErr); }catch(_){} }
-  if(first){ fbReady = true; }
+  if(first){ fbReady = true; if(navigator.onLine !== false) v3Conn = true; } // أول نسخة من السيرفر = متصل
   try{ markAllRecordsKnown(); }catch(e){}
   syncPersistLocal(); renderEverything(); v3NotePrev();
   if(v3HasDirty()) syncPush().catch(()=>{});
@@ -16503,10 +16503,13 @@ function v3SyncStatusText(){
 /* ---------- 📡 البرنامج بيشتغل بس وهو متصل بالسيرفر ----------
    مفيش نت = شاشة بتقفل البرنامج لحد ما يتصل ويجيب أحدث نسخة. لو النت فصل وانت شغال، نفس الشاشة
    (اللي اتسجل قبلها محفوظ وهيطلع أول ما النت يرجع). */
-let v3Conn = false, v3OfflineDisabled = false, v3OffSince = Date.now();
+let v3Conn = false, v3OfflineDisabled = false, v3OffSince = Date.now(), v3StartedAt = 0;
 function v3OfflineCheck(){
   let el = document.getElementById('v3-offline');
-  const ok = v3OfflineDisabled || (v3Conn && fbReady);
+  // قبل الرقم السري البرنامج لسه ما بدأش يتصل — نقفل بس لو الموبايل نفسه قال مفيش نت
+  const started = typeof syncListening!=='undefined' && syncListening;
+  if(started && !v3StartedAt) v3StartedAt = Date.now();
+  const ok = v3OfflineDisabled || (started ? (v3Conn && fbReady) || (Date.now() - v3StartedAt < 2500) : navigator.onLine !== false);
   if(ok){ if(el) el.remove(); return; }
   if(!el){
     el = document.createElement('div'); el.id = 'v3-offline';
@@ -16514,7 +16517,7 @@ function v3OfflineCheck(){
       <button type="button" class="btn btn-gold" onclick="try{ fbDB.goOnline(); }catch(e){} v3OffSince = Date.now(); v3OfflineCheck();">🔄 حاول تاني</button></div>`;
     document.body.appendChild(el);
   }
-  const waiting = Date.now() - v3OffSince < 7000 && navigator.onLine !== false;
+  const waiting = Date.now() - Math.max(v3OffSince, v3StartedAt) < 8000 && navigator.onLine !== false;
   document.getElementById('v3-off-t').textContent = waiting ? 'بيتصل بالسيرفر…' : 'مفيش اتصال بالإنترنت';
   document.getElementById('v3-off-p').textContent = waiting
     ? 'ثواني وهيجيب أحدث نسخة من البيانات'
