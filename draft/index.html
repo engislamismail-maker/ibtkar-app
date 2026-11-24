@@ -5325,7 +5325,7 @@ async function addExpense(){
   } else {
     receiptData = { recipientName: description || project || 'مصروف عام', recipientRole: 'مصروف عام', amount, project, contextLine: null, date: new Date().toISOString(), by: selectedActor.expense };
   }
-  if(receiptData){ receiptData.image = record.image || null; offerPaymentReceipt(receiptData, reminderInfo); }
+  if(receiptData){ receiptData.image = record.image || null; receiptData._rec = record; receiptData._kind = 'expense'; offerPaymentReceipt(receiptData, reminderInfo); }
 }
 
 /* ===================== Income (قبض) ===================== */
@@ -5626,8 +5626,12 @@ async function buildPaymentReceiptCanvas(){
       <img src="${data.image}" crossorigin="anonymous" style="display:block;width:100%;height:auto;border-radius:10px;border:1px solid #E6DED2;">
     </div>` : ''}
     <div style="margin-top:26px;padding-top:12px;border-top:1px solid #E6DED2;font-size:11px;color:#8C8177;">
-      تم الإصدار بواسطة IBTKAR Architecture Development — ${fmtDateTime(new Date().toISOString())}
+      تم الإصدار بواسطة IBTKAR Architecture Development — ${fmtDateTime(new Date().toISOString())}${data._sn != null ? ` — رقم مسلسل <b dir="ltr">#${data._sn}</b>` : ''}
     </div>
+    ${data._qr ? `<div style="margin-top:14px;display:flex;align-items:center;gap:14px;">
+      <img src="${data._qr}" style="width:230px;height:230px;image-rendering:pixelated;background:#fff;flex:none;">
+      <div style="font-size:11px;color:#8C8177;line-height:1.7;">الكود ده فيه بيانات العملية كاملة.<br>لو العملية اتمسحت أو ضاعت، ارفع الإيصال ده في البرنامج (النسخة الاحتياطية ← رجّع عمليات من إيصالات) وهترجع مكانها.</div>
+    </div>` : ''}
   `;
   // wait for the attached photo to load so it's in the picture
   await Promise.all([...document.querySelectorAll('#receipt-print-body img')].map(img=> img.complete ? null : new Promise(r=>{ img.onload = img.onerror = r; setTimeout(r, 6000); })));
@@ -5670,6 +5674,7 @@ async function downloadPaymentReceipt(format){
       const pageWidth = 595.28; // A4 width — the page is as tall as the receipt, so a long one (with the photo) is never cut
       const imgHeight = (canvas.height * pageWidth) / canvas.width;
       const pdf = new jsPDF({ unit:'pt', format:[pageWidth, Math.max(imgHeight, 200)] });
+      try{ rcPdfStamp(pdf); }catch(e){}
       pdf.addImage(imgData, 'JPEG', 0, 0, pageWidth, imgHeight);
       blob = pdf.output('blob'); // same proven pattern as every other PDF export in this app
       filename = receiptFilenameBase() + '.pdf';
@@ -16654,6 +16659,144 @@ setTimeout(v3AuditTick, 20000); setInterval(v3AuditTick, 10*60*1000);
 // الرقم بيظهر في تفاصيل العملية وفي الحسابات
 { const _otd = openTxnDetail; openTxnDetail = function(id, kind){ _otd(id, kind); const e = [...(state.expenses||[]), ...(state.income||[])].find(x=>x.id===id); const rows = document.getElementById('expense-detail-rows'); if(e && rows && e._sn != null) rows.insertAdjacentHTML('afterbegin', `<div class="detail-row"><span>الرقم المسلسل</span><b dir="ltr">#${e._sn}</b></div>`); }; }
 { const _ob3 = openBackupModal; openBackupModal = function(){ _ob3(); const st = document.getElementById('v3-sync-status'); if(st && !document.getElementById('v3-audit-btn')) st.insertAdjacentHTML('afterend', '<button type="button" class="btn btn-ghost btn-sm" id="v3-audit-btn" style="margin:4px 0 8px;" onclick="openSerialAudit()">🔢 راجع تسلسل العمليات</button>'); }; }
+</script>
+<script>
+/* =====================================================================================
+   🧾↩️ الإيصال فيه بيانات العملية كاملة — وتقدر ترجّعها منه
+   - كل إيصال (صورة أو PDF) عليه QR فيه العملية كلها: الرقم المسلسل، الكود، المبلغ، المشروع، البند،
+     التاريخ والوقت بالدقيقة، مين سجّلها، طريقة الدفع، الربط بالعامل/المورد، ولينك صورة الفاتورة.
+   - الـ PDF كمان شايل نفس البيانات جوّه الملف (بيوصل زي ما هو على الواتساب).
+   - من النسخة الاحتياطية: "📥 رجّع عمليات من إيصالات" — ترفع صور/PDF الإيصالات، وكل عملية مش موجودة
+     بترجع مكانها بنفس الـ id والتاريخ والرقم المسلسل.
+   ===================================================================================== */
+const RC_MARK = 'IBK1:';
+function rcLoad(src, global, cdn){
+  if(window[global]) return Promise.resolve();
+  return new Promise((res, rej)=>{ const s = document.createElement('script'); s.src = src; s.onload = res;
+    s.onerror = ()=>{ const t = document.createElement('script'); t.src = cdn; t.onload = res; t.onerror = rej; document.head.appendChild(t); }; document.head.appendChild(s); });
+}
+const rcQRlib = ()=> rcLoad('vendor/qrcode.js', 'qrcode', 'https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js');
+const rcJsQR = ()=> rcLoad('vendor/jsQR.js', 'jsQR', 'https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js');
+function rcRecordJSON(rec, kind){
+  const r = {};
+  Object.keys(rec).forEach(k=>{
+    const v = rec[k];
+    if(k==='_u' || (k.startsWith('_') && k!=='_sn')) return;
+    if(v===null || v===undefined || (v && typeof v==='object')) return;
+    if(typeof v==='string' && (v.startsWith('data:') || v.length > 600)) return;
+    r[k] = v;
+  });
+  return JSON.stringify({ v: 1, k: kind==='income' ? 'i' : 'e', r });
+}
+function rcUtf8B64(s){ return btoa(unescape(encodeURIComponent(s))); }
+function rcB64Utf8(b){ return decodeURIComponent(escape(atob(b))); }
+function rcQRDataUrl(text){
+  const qr = qrcode(0, 'M');
+  if(qrcode.stringToBytesFuncs && qrcode.stringToBytesFuncs['UTF-8']) qrcode.stringToBytes = qrcode.stringToBytesFuncs['UTF-8'];
+  qr.addData(text, 'Byte'); qr.make();
+  return qr.createDataURL(8, 4);
+}
+function rcCurrentRecord(d){
+  if(!d || !d._rec) return null;
+  const list = d._kind==='income' ? (state.income||[]) : (state.expenses||[]);
+  return list.find(x=> x.id===d._rec.id) || d._rec;
+}
+// الإيصال: نحط الـ QR قبل التصوير
+{ const _b = buildPaymentReceiptCanvas; buildPaymentReceiptCanvas = async function(){
+  const d = pendingReceiptData;
+  if(d && d._rec){ try{ await rcQRlib(); const rec = rcCurrentRecord(d); d._payload = RC_MARK + rcRecordJSON(rec, d._kind); d._qr = rcQRDataUrl(d._payload); if(rec._sn != null) d._sn = rec._sn; }catch(e){ console.error('qr', e); d._qr = null; } }
+  return _b();
+}; }
+// الـ PDF: نفس البيانات جوّه الملف
+{ const _pdfP = window.jspdf ? null : null; }
+function rcPdfStamp(pdf){ try{ const d = pendingReceiptData; if(d && d._payload) pdf.setProperties({ subject: 'IBK1B64:' + rcUtf8B64(d._payload.slice(RC_MARK.length)), keywords: 'IBTKAR receipt', title: 'إيصال' }); }catch(e){} }
+// ربط الإيصال بالعملية: عند التسجيل وعند إعادة الإصدار
+{ const _bt = buildReceiptDataForTxn; buildReceiptDataForTxn = function(e, kind){ const d = _bt(e, kind); if(d){ d._rec = e; d._kind = kind; } return d; }; }
+
+/* ---------- الرجوع من الإيصالات ---------- */
+async function rcReadFile(file){
+  const name = file.name || '';
+  if(/pdf$/i.test(file.type) || /\.pdf$/i.test(name)){
+    const buf = new Uint8Array(await file.arrayBuffer()); let s = ''; for(let i=0;i<buf.length;i+=8192) s += String.fromCharCode.apply(null, buf.subarray(i, i+8192));
+    const m = s.match(/IBK1B64:([A-Za-z0-9+\/=]+)/); if(m){ try{ return JSON.parse(rcB64Utf8(m[1])); }catch(e){} }
+    return null;
+  }
+  await rcJsQR();
+  const url = URL.createObjectURL(file);
+  try{
+    const img = await new Promise((res, rej)=>{ const i = new Image(); i.onload = ()=> res(i); i.onerror = rej; i.src = url; });
+    const tries = [[0, 0, 1, 1, 1], [0, 0.45, 1, 0.55, 1], [0, 0.6, 1, 0.4, 2], [0, 0, 1, 1, 0.6], [0.2, 0.55, 0.6, 0.45, 2]];
+    for(const [x, y, w, h, scale] of tries){
+      const sw = Math.round(img.naturalWidth * w), sh = Math.round(img.naturalHeight * h);
+      let cw = Math.round(sw * scale), ch = Math.round(sh * scale); const max = 2400; if(cw > max){ ch = Math.round(ch * max / cw); cw = max; }
+      const c = document.createElement('canvas'); c.width = cw; c.height = ch; const g = c.getContext('2d');
+      g.imageSmoothingEnabled = scale < 1; g.drawImage(img, Math.round(img.naturalWidth * x), Math.round(img.naturalHeight * y), sw, sh, 0, 0, cw, ch);
+      const data = g.getImageData(0, 0, cw, ch);
+      const r = jsQR(data.data, cw, ch, { inversionAttempts: 'dontInvert' });
+      if(r){
+        let text = ''; try{ text = new TextDecoder('utf-8').decode(new Uint8Array(r.binaryData)); }catch(e){ text = r.data; }
+        if(text.startsWith(RC_MARK)){ try{ return JSON.parse(text.slice(RC_MARK.length)); }catch(e){} }
+      }
+    }
+  }finally{ URL.revokeObjectURL(url); }
+  return null;
+}
+function rcStatus(p){
+  const list = p.k==='i' ? (state.income||[]) : (state.expenses||[]);
+  if(list.some(x=> x.id===p.r.id)) return 'exists';
+  if((state.tombstones||[]).some(t=> t.target===p.r.id && !t.undone)) return 'deleted';
+  return 'missing';
+}
+function openReceiptRestore(){
+  const ov = document.createElement('div'); ov.className = 'overlay show'; ov.id = 'overlay-rc';
+  ov.innerHTML = `<div class="modal" style="max-width:520px;"><button type="button" class="modal-close">×</button><h2>📥 رجّع عمليات من الإيصالات</h2>
+    <div class="sub">اختار صور أو PDF الإيصالات (من جروب الواتساب مثلاً) — كل عملية مش موجودة هترجع مكانها بنفس التاريخ والوقت والرقم المسلسل. الإيصالات اللي اتعملت قبل التحديث ده مفيهاش البيانات.</div>
+    <label class="btn btn-gold btn-full" style="cursor:pointer;margin-top:8px;">⬆️ اختار الإيصالات<input type="file" multiple accept="image/*,application/pdf,.pdf" hidden data-in></label>
+    <div data-out style="margin-top:10px;"></div></div>`;
+  ov.querySelector('.modal-close').onclick = ()=> ov.remove();
+  const out = ov.querySelector('[data-out]');
+  let found = [];
+  ov.querySelector('[data-in]').onchange = async ev=>{
+    const files = [...ev.target.files]; if(!files.length) return;
+    found = []; const bad = [];
+    for(let i=0;i<files.length;i++){
+      out.innerHTML = `<div class="hint">بيقرا ${i+1} من ${files.length}…</div>`;
+      let p = null; try{ p = await rcReadFile(files[i]); }catch(e){}
+      if(p && p.r && p.r.id) found.push({ ...p, file: files[i].name, status: rcStatus(p) }); else bad.push(files[i].name);
+    }
+    const seen = new Set(); found = found.filter(f=>{ if(seen.has(f.r.id)) return false; seen.add(f.r.id); return true; });
+    draw(bad);
+  };
+  const draw = bad=>{
+    const lbl = { exists: '✅ موجودة', missing: '➕ ناقصة — هترجع', deleted: '🗑️ اتمسحت بموافقة إسلام' };
+    out.innerHTML = `${found.map((f,i)=>`<label class="pd-row" style="gap:8px;"><input type="checkbox" data-i="${i}" ${f.status==='missing' ? 'checked' : ''} ${f.status==='exists' || (f.status==='deleted' && !v3IsAdmin()) ? 'disabled' : ''}>
+        <div class="pd-row-main"><div class="pd-row-title">${f.k==='i' ? '💰 قبض' : '🧾 مصروف'} ${fmtMoney(f.r.amount)} — ${escapeHtml(f.r.project || '')}${f.r._sn != null ? ` <small dir="ltr">#${f.r._sn}</small>` : ''}</div>
+        <div class="pd-row-sub">${escapeHtml(f.r.description || '')} · ${fmtDateTime(f.r.date)} · ${escapeHtml(f.r.by || '')}</div></div><small>${lbl[f.status]}</small></label>`).join('')}
+      ${bad.length ? `<div class="hint" style="margin-top:6px;">⚠️ ${bad.length} ملف مفيهوش بيانات عملية (إيصال قديم أو الصورة مش واضحة): ${bad.slice(0,5).map(escapeHtml).join('، ')}${bad.length>5?'…':''}</div>` : ''}
+      ${found.length ? `<button type="button" class="btn btn-primary btn-full" style="margin-top:10px;" data-go>↩️ رجّع المتعلّم عليه</button>` : ''}`;
+    const go = out.querySelector('[data-go]'); if(go) go.onclick = async ()=>{
+      const pick = [...out.querySelectorAll('input[data-i]:checked')].map(c=> found[+c.dataset.i]); if(!pick.length){ showToast('علّم على اللي عايز ترجّعه'); return; }
+      if(pick.some(f=> f.status==='deleted')){ if(!(await v3AskPassword('ترجيع عمليات كانت اتمسحت بموافقتك.'))) return; }
+      const live = v3Live(state), usedSn = new Set(Object.values(live).map(x=> x.rec._sn).filter(v=> v != null));
+      let n = 0;
+      pick.forEach(f=>{
+        if(rcStatus(f)==='exists') return;
+        const rec = { ...f.r };
+        if(rec._sn != null && usedSn.has(rec._sn)) delete rec._sn; else if(rec._sn != null) usedSn.add(rec._sn);
+        (state.tombstones||[]).forEach(t=>{ if(t.target===rec.id && !t.undone){ t.undone = true; t._u = Date.now(); } });
+        const key = f.k==='i' ? 'income' : 'expenses'; state[key] = state[key] || []; state[key].push(rec);
+        if(rec.workerId && rec.workerLogId){ const w = (state.workers||[]).find(x=>x.id===rec.workerId); const l = w && (w.logs||[]).find(x=>x.id===rec.workerLogId); if(l) l.paid = true; }
+        n++;
+      });
+      v3AuthUntil = Date.now() + 4000;
+      await saveState(); renderEverything();
+      found.forEach(f=> f.status = rcStatus(f)); draw([]);
+      showToast(`↩️ رجعت ${n} عملية مكانها`);
+    };
+  };
+  document.body.appendChild(ov);
+}
+{ const _ob4 = openBackupModal; openBackupModal = function(){ _ob4(); if(!document.getElementById('rc-btn')){ const a = document.getElementById('v3-audit-btn') || document.getElementById('autobk-list'); if(a) a.insertAdjacentHTML('afterend', '<button type="button" class="btn btn-ghost btn-sm" id="rc-btn" style="margin:4px 0 8px;" onclick="closeModal(\'overlay-backup\'); openReceiptRestore()">📥 رجّع عمليات من إيصالات</button>'); } }; }
 </script>
 </body>
 </html>
