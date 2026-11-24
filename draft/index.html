@@ -16153,7 +16153,8 @@ function v3MergeObj(l, r, rid, prefix, ctx, lu, ru, isRoot){
     else if(syncStable(lv)===syncStable(rv)) v = lv;
     else {
       const localChanged = changed && (!kn || kn[p] !== v3Hv(lv));
-      if(localChanged) v = (Number(lu)||0) >= (Number(ru)||0) ? lv : rv;          // الاتنين غيّروا: الأحدث يكسب
+      if(localChanged && kn && kn[p] === v3Hv(rv)) v = lv;                           // الجهاز ده بس اللي غيّر الحقل ده
+      else if(localChanged) v = (Number(lu)||0) >= (Number(ru)||0) ? lv : rv;     // الاتنين غيّروا نفس الحقل: الأحدث يكسب
       else if(rv===undefined || rv===null) v = (kn && kn[p]!==undefined) ? undefined : lv; // السيرفر شال الحقل
       else v = rv;                                                                 // الجهاز ما غيّرهاش: الأحدث من السيرفر
     }
