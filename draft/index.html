@@ -1066,6 +1066,9 @@ body.ks-on .bottom-nav,body.ks-on #settings-fab{display:none;}
 .op-file{ display:flex; align-items:center; gap:6px; background:var(--blush); border-radius:10px; padding:6px 8px; margin-bottom:6px; font-size:12.5px; }
 .op-file span{ flex:1; min-width:0; overflow-wrap:anywhere; }
 #pd-txn-list .pd-row.op-old{ opacity:.55; }
+#v3-delreq{ margin:8px 0 10px; }
+.v3-delreq-btn{ width:100%; border:0; border-radius:12px; padding:10px; background:var(--deep-rose); color:#fff; font:800 13.5px Tajawal,sans-serif; cursor:pointer; }
+.v3-delreq-note{ background:var(--blush); border-radius:12px; padding:8px 10px; font-size:12.5px; color:var(--deep-rose); font-weight:700; }
 /* ===================== IBTKAR GE 2026 — الهوية البصرية (DRAFT) =====================
    ألوان الدليل، تصميم مسطح من غير ظلال، كروت Blush من غير إطار، خط دهبي تحت العناوين،
    جداول بهيدر روز وصفوف متبادلة، والإجمالي فحمي بأرقام دهبي. */
@@ -4213,6 +4216,7 @@ async function loadState(){
   // again every time ANY device (including this one) writes. Everything that can WRITE (like
   // the migration below) must wait for this first snapshot — otherwise a stale local copy can
   // race ahead and stomp over data another device already saved.
+  try{ await v3LoadNewest(); }catch(e){}
   if(syncListening) return; // already connected (e.g. the app was re-locked and unlocked)
   syncListening = true;
   const firstSnapshot = new Promise((resolve)=>{
@@ -15279,7 +15283,7 @@ document.addEventListener('click', async e=>{
   if(el.__delOK){ el.__delOK = false; return; } // متأكد — سيب الزرار يشتغل
   e.preventDefault(); e.stopImmediatePropagation();
   const label = (el.closest('.pd-row, .bd-card, .card, tr, .k-open, .k-ed, .step-row') || el).innerText.replace(/\s+/g,' ').replace(/[✕×🗑️]/g,'').trim().slice(0, 70);
-  const ok = await confirmDeleteOriginal(`هتمسح: ${label || 'العنصر ده'}\n\nهيروح سلة المحذوفات وتقدر ترجّعه منها خلال ${getTrashRetentionDays()} يوم.`);
+  const ok = await confirmDeleteOriginal(getDeviceUser()==='إسلام' ? `هتمسح: ${label || 'العنصر ده'}\n\nهيتشال من كل الأجهزة ويروح سلة المحذوفات (تقدر ترجّعه خلال ${getTrashRetentionDays()} يوم). هيطلب منك كلمة السر.` : `هتمسح: ${label || 'العنصر ده'}\n\nالمسح محتاج موافقة إسلام — هيتبعتله طلب، والحاجة هتفضل موجودة لحد ما يوافق.`);
   if(!ok) return;
   const before = snapRecords();
   delPassThrough = Date.now() + 2500;
@@ -16076,6 +16080,383 @@ async function bkRestore(k){
 }
 async function bkNow(){ try{ await bkMakeToday(true); showToast('✅ اتعملت نسخة النهارده'); renderAutoBackups(); }catch(e){ showToast('مفيش نت — جرّب تاني'); } }
 { const _obm = openBackupModal; openBackupModal = function(){ _obm(); renderAutoBackups(); }; }
+</script>
+<script>
+/* =====================================================================================
+   🛡️ مزامنة V2.2 — "مفيش حاجة تتمسح غير من إسلام"
+   ١) المزامنة عمرها ما بتمسح: اللي عند الجهاز بيفضل، واللي على السيرفر بيتضاف عليه (اتحاد).
+   ٢) التعديل: كل جهاز بيعرف هو غيّر إيه بالظبط (مقارنة بالنسخة اللي كانت عنده)، وأي حاجة ما غيّرهاش
+      بتاخد الأحدث من السيرفر — فجهاز عليه نسخة قديمة عمره ما يرجّع حاجة لورا.
+   ٣) المسح: حاجة بتتشال من كل الأجهزة بس لو إسلام وافق (كلمة السر + كتابة delete) — وده بيتسجل
+      "علامة مسح" (tombstone) بتوصل لكل الأجهزة. أي مسح تاني بيرجع مكانه ويتبعت لإسلام كـ"طلب مسح".
+   ٤) الحفظ على الجهاز: localStorage + نسخة في IndexedDB (مساحة أكبر) — وبنحمّل الأحدث فيهم.
+   ===================================================================================== */
+const V3_ADMIN = 'إسلام';
+const V3_OPAQUE = new Set(['trash']);              // بنود بتتحفظ زي ما هي (سلة المحذوفات)
+const V3_META_KEY = 'ibtkar-v3-dirty';
+const V3_KEEP = new Set(['tombstones', 'deleteRequests']);
+// حاجات بتتشال وتتحط كجزء من التعديل نفسه (مش بيانات شغل): خطة اليوم بتتبدّل، شخبطة الكراسة،
+// حيطان/وحدات/فتحات مصمم المطبخ، ومراحل المشروع — دي بتتشال عادي من غير طلب.
+const V3_FREE = new Set(['dayPlans', 'notes', 'walls', 'units', 'openings', 'steps']);
+function v3IsRec(x){ return syncIsPlain(x) && !!x.id; }
+function v3IsRecArr(a){ return Array.isArray(a) && a.some(v3IsRec); }
+function v3Hv(v){ return syncIsPlain(v) ? '{}' : (syncHash(v)); }
+
+/* ---------- فهرس: لكل سجل، بصمة كل حقل فيه (الحقول المتداخلة بمسار) ---------- */
+function v3Fields(obj, prefix, out, recIdx, isRoot){
+  Object.keys(obj).forEach(k=>{
+    if(k==='_v' || k==='_u') return;
+    const v = obj[k], p = prefix + k;
+    if(v3IsRecArr(v)){
+      if(isRoot && V3_OPAQUE.has(k)){ v.forEach(x=>{ if(v3IsRec(x)) recIdx[x.id] = { '#': syncHash(x) }; }); return; }
+      v.forEach(x=>{ if(v3IsRec(x)) v3IndexRec(x, recIdx); });
+      return;
+    }
+    if(syncIsPlain(v)){ out[p] = '{}'; v3Fields(v, p + '\u0001', out, recIdx, false); return; }
+    out[p] = v3Hv(v);
+  });
+}
+function v3IndexRec(rec, recIdx){ const f = {}; v3Fields(rec, '', f, recIdx, false); recIdx[rec.id] = f; }
+function v3Index(st){ const recs = {}, root = {}; v3Fields(st || {}, '', root, recs, true); recs.__root__ = root; return recs; }
+// السجلات "الحية" (من غير سلة المحذوفات): id -> {rec, key, parent}
+function v3Live(st){
+  const out = {};
+  const walk = (node, key, parent, top)=>{
+    if(Array.isArray(node)){ node.forEach(x=> walk(x, key, parent, false)); return; }
+    if(!syncIsPlain(node)) return;
+    if(node.id && key!==null) out[node.id] = { rec: node, key, parent };
+    Object.keys(node).forEach(k=>{
+      if(top && (V3_OPAQUE.has(k) || V3_KEEP.has(k) || k==='_v')) return;
+      const v = node[k]; if(v && typeof v==='object') walk(v, k, node.id ? node : parent, false);
+    });
+  };
+  walk(st || {}, null, null, true);
+  return out;
+}
+
+/* ---------- الدمج ---------- */
+function v3MergeObj(l, r, rid, prefix, ctx, lu, ru, isRoot){
+  const o = {}, kn = ctx.kn(rid), changed = ctx.dirty.has(rid);
+  const keys = new Set([...Object.keys(l), ...Object.keys(r)]);
+  keys.forEach(k=>{
+    if(k==='_v' || (k==='_u' && prefix==='')) return;
+    const lv = l[k], rv = r[k], p = prefix + k;
+    let v;
+    if(v3IsRecArr(lv) || v3IsRecArr(rv)) v = v3MergeArr(Array.isArray(lv) ? lv : [], Array.isArray(rv) ? rv : [], ctx, isRoot && V3_OPAQUE.has(k));
+    else if(isRoot && k==='counters' && syncIsPlain(lv) && syncIsPlain(rv)){ v = Object.assign({}, rv); Object.keys(lv).forEach(c=>{ v[c] = Math.max(Number(lv[c])||0, Number(rv[c])||0); }); }
+    else if(syncIsPlain(lv) && syncIsPlain(rv)) v = v3MergeObj(lv, rv, rid, p + '\u0001', ctx, lu, ru, false);
+    else if(syncStable(lv)===syncStable(rv)) v = lv;
+    else {
+      const localChanged = changed && (!kn || kn[p] !== v3Hv(lv));
+      if(localChanged) v = (Number(lu)||0) >= (Number(ru)||0) ? lv : rv;          // الاتنين غيّروا: الأحدث يكسب
+      else if(rv===undefined || rv===null) v = (kn && kn[p]!==undefined) ? undefined : lv; // السيرفر شال الحقل
+      else v = rv;                                                                 // الجهاز ما غيّرهاش: الأحدث من السيرفر
+    }
+    if(v!==undefined && v!==null) o[k] = v;
+  });
+  if(prefix==='' && !isRoot){ const u = Math.max(Number(l._u)||0, Number(r._u)||0); if(u) o._u = u; }
+  return o;
+}
+function v3MergeArr(la, ra, ctx, opaque){
+  const lmap = new Map(); la.forEach(x=>{ if(v3IsRec(x)) lmap.set(x.id, x); });
+  const rIds = new Set(ra.filter(v3IsRec).map(x=>x.id));
+  const out = [];
+  ra.forEach(r=>{
+    if(!v3IsRec(r)){ if(r!==undefined && r!==null) out.push(r); return; }
+    const l = lmap.get(r.id);
+    if(!l){ out.push(r); return; }
+    if(syncStable(l)===syncStable(r)){ out.push(l); return; }
+    if(opaque){ out.push((Number(l._u)||0) > (Number(r._u)||0) ? l : r); return; }
+    out.push(v3MergeObj(l, r, r.id, '', ctx, l._u, r._u, false));
+  });
+  la.forEach((l, i)=>{
+    if(!v3IsRec(l) || rIds.has(l.id)) return;        // موجود عند الجهاز بس → يفضل (عمره ما يتمسح بالمزامنة)
+    let pos = 0;
+    for(let j=i-1;j>=0;j--){ const p = la[j]; if(v3IsRec(p)){ const at = out.findIndex(x=> x && x.id===p.id); if(at>=0){ pos = at+1; break; } } }
+    out.splice(pos, 0, l);
+  });
+  return out;
+}
+function v3Tombs(st){ return new Set(((st && st.tombstones) || []).filter(t=> t && t.target && !t.undone).map(t=>t.target)); }
+function v3RemoveIds(st, ids){
+  if(!ids.size) return 0; let n = 0;
+  const walk = (node, top)=>{
+    if(Array.isArray(node)){ for(let i=node.length-1;i>=0;i--){ const x = node[i]; if(v3IsRec(x) && ids.has(x.id)){ node.splice(i,1); n++; } else walk(x, false); } return; }
+    if(syncIsPlain(node)) Object.keys(node).forEach(k=>{ if(top && (V3_OPAQUE.has(k) || V3_KEEP.has(k))) return; const v = node[k]; if(v && typeof v==='object') walk(v, false); });
+  };
+  walk(st, true); return n;
+}
+// سجل اتنقل من مكان لمكان (مثلاً يوم شغل اتنقل لعامل تاني): نخليه في مكان واحد بس
+function v3Dedupe(st, L, ctx){
+  const occ = new Map(), locOf = (parent, key)=> (parent && parent.id ? parent.id : '') + '|' + key;
+  const walk = (node, key, parent, top)=>{
+    if(Array.isArray(node)){ node.forEach((x, i)=>{ if(v3IsRec(x)){ const a = occ.get(x.id) || []; a.push({ arr: node, x, loc: locOf(parent, key) }); occ.set(x.id, a); } walk(x, key, parent, false); }); return; }
+    if(!syncIsPlain(node)) return;
+    Object.keys(node).forEach(k=>{ if(top && (V3_OPAQUE.has(k) || V3_KEEP.has(k) || k==='_v')) return; const v = node[k]; if(v && typeof v==='object') walk(v, k, node.id ? node : parent, false); });
+  };
+  walk(st, null, null, true);
+  let lLoc = null;
+  occ.forEach((list, id)=>{
+    if(list.length < 2) return;
+    if(!lLoc){ lLoc = {}; const lv = v3Live(L); Object.keys(lv).forEach(i=>{ lLoc[i] = locOf(lv[i].parent, lv[i].key); }); }
+    const want = ctx.dirty.has(id) ? lLoc[id] : null;
+    let keep = want ? list.find(o=> o.loc===want) : null; if(!keep) keep = list[list.length-1];
+    list.forEach(o=>{ if(o!==keep){ const i = o.arr.indexOf(o.x); if(i>=0) o.arr.splice(i,1); } });
+  });
+}
+function v3Merge(L, R, ctx){
+  const out = v3MergeObj(L || {}, R || {}, '__root__', '', ctx, 1, 0, true);
+  v3RemoveIds(out, v3Tombs(out));
+  try{ v3Dedupe(out, L || {}, ctx); }catch(e){}
+  return out;
+}
+
+/* ---------- اللي الجهاز ده يعرفه، واللي غيّره ---------- */
+// v3Known = اللي السيرفر عنده على حد علم الجهاز (بيتحدّث بعد كل مزامنة)
+// v3Prev* = آخر نسخة محلية (عشان نعرف اتغيّر إيه من آخر حفظ)
+// v3Dirty = id → { t: وقت التعديل, b: بصمة السجل قبل ما الجهاز يعدّله }
+let v3Known = {}, v3PrevIdx = {}, v3LiveMap = {}, v3TrashIds = new Set();
+let v3Dirty = (()=>{ try{ const d = JSON.parse(localStorage.getItem(V3_META_KEY)) || {}; Object.keys(d).forEach(k=>{ if(typeof d[k]==='number') d[k] = { t: d[k], b: null }; }); return d; }catch(e){ return {}; } })();
+let v3AuthUntil = 0, v3ForcePush = false, v3LastSync = 0, v3LastErr = '';
+function v3SaveDirty(){ try{ localStorage.setItem(V3_META_KEY, JSON.stringify(v3Dirty)); }catch(e){} }
+function v3HasDirty(){ return Object.keys(v3Dirty).length > 0; }
+function v3Ctx(){ const dirty = new Set(Object.keys(v3Dirty)); return { dirty, kn: id=> (v3Dirty[id] && v3Dirty[id].b) ? v3Dirty[id].b : v3Known[id] }; }
+function v3MarkDirty(id, now){ if(v3Dirty[id]) v3Dirty[id].t = now; else v3Dirty[id] = { t: now, b: v3Known[id] || null }; }
+function v3NotePrev(){ try{ v3PrevIdx = v3Index(state); v3LiveMap = v3Live(state); v3TrashIds = new Set((state.trash||[]).map(t=>t && t.id).filter(Boolean)); }catch(e){ console.error('v3 index', e); } }
+// عند الفتح: اللي متخزن على الجهاز هو اللي نعرفه
+syncNoteKnown = function(){ v3NotePrev(); v3Known = v3PrevIdx; };
+syncNoteDeletions = function(){};
+function v3Label(x){ try{ const d = describeRecord(x.rec, x.key, x.parent); if(d && d[1]) return d[1]; }catch(e){} const r = x.rec || {}; return r.name || r.description || r.text || r.task || r.item || x.key; }
+function v3Tombstone(target, label){
+  state.tombstones = state.tombstones || [];
+  if(state.tombstones.some(t=> t.target===target && !t.undone)) return;
+  const id = uid(); state.tombstones.push({ id, target, label: String(label||'').slice(0, 120), by: getDeviceUser() || '', at: new Date().toISOString(), _u: Date.now() });
+  v3MarkDirty(id, Date.now());
+}
+// كل حفظ: نعلّم اللي اتغيّر، ونتعامل مع أي حاجة اختفت
+function v3Stamp(){
+  const now = Date.now();
+  const live = v3Live(state);
+  // ١) حاجات اختفت
+  const gone = Object.keys(v3LiveMap).filter(id=> !live[id]);
+  let top = [];
+  if(gone.length){
+    const goneSet = new Set(gone);
+    top = gone.filter(id=>{ const p = v3LiveMap[id].parent; return !(p && p.id && goneSet.has(p.id)); });
+    const free = top.filter(id=> V3_FREE.has(v3LiveMap[id].key));
+    free.forEach(id=> v3Tombstone(id, v3Label(v3LiveMap[id])));
+    if(free.length){ const fs = new Set(free); const under = id=>{ let p = v3LiveMap[id] && v3LiveMap[id].parent; while(p && p.id){ if(fs.has(p.id)) return true; p = v3LiveMap[p.id] && v3LiveMap[p.id].parent; } return false; };
+      top = top.filter(id=> !fs.has(id)); for(let i=gone.length-1;i>=0;i--){ if(fs.has(gone[i]) || under(gone[i])) gone.splice(i,1); } }
+  }
+  if(gone.length){
+    const goneSet = new Set(gone);
+    if(now < v3AuthUntil){
+      gone.forEach(id=> v3Tombstone(id, v3Label(v3LiveMap[id])));       // إسلام وافق
+      const inTrash = id=> (state.trash||[]).some(t=> t.data && (t.data.id===id || (t.data.rec && t.data.rec.id===id)));
+      top.forEach(id=>{ if(inTrash(id)) return; const x = v3LiveMap[id]; state.trash = state.trash || [];
+        state.trash.unshift({ id: uid(), type:'record', label: v3Label(x), data:{ coll: x.key, parentId: x.parent && x.parent.id ? x.parent.id : null, rec: JSON.parse(JSON.stringify(x.rec)) }, deletedAt: new Date().toISOString() }); });
+    } else {
+      // رجّعها مكانها + طلب مسح لإسلام
+      const freshTrash = new Set();
+      (state.trash||[]).forEach(t=>{ if(t && t.id && !v3TrashIds.has(t.id)) freshTrash.add(t.id); });
+      top.forEach(id=>{
+        const x = v3LiveMap[id];
+        if(x.parent){ const P = live[x.parent.id] ? live[x.parent.id].rec : x.parent; P[x.key] = P[x.key] || []; if(!P[x.key].some(r=>r && r.id===id)) P[x.key].push(x.rec); }
+        else { state[x.key] = Array.isArray(state[x.key]) ? state[x.key] : []; if(!state[x.key].some(r=>r && r.id===id)) state[x.key].push(x.rec); }
+      });
+      if(freshTrash.size) state.trash = (state.trash||[]).filter(t=>{
+        if(!freshTrash.has(t.id)) return true;
+        const d = t.data || {}; const ids = [d.id, d.rec && d.rec.id].filter(Boolean);
+        return !ids.some(i=> goneSet.has(i));
+      });
+      const reqId = uid();
+      state.deleteRequests = state.deleteRequests || [];
+      state.deleteRequests.push({ id: reqId, targets: gone, label: top.map(id=> v3Label(v3LiveMap[id])).join(' · ').slice(0, 200), count: top.length,
+        by: getDeviceUser() || '', at: new Date().toISOString(), status: 'pending', _u: now });
+      v3MarkDirty(reqId, now);
+      setTimeout(()=>{ try{ showToast(getDeviceUser()===V3_ADMIN ? '🛑 المسح ده محتاج تأكيد — اتسجل في "طلبات المسح" تحت في الرئيسية' : '🛑 المسح محتاج موافقة إسلام — اتبعتله طلب، والحاجة فاضلة لحد ما يوافق'); renderEverything(); }catch(e){} }, 50);
+    }
+  }
+  // ٢) اللي اتغيّر أو اتضاف
+  const idx = v3Index(state), live2 = v3Live(state);
+  Object.keys(idx).forEach(id=>{
+    if(syncStable(idx[id]) === syncStable(v3PrevIdx[id])) return;
+    v3MarkDirty(id, now);
+    if(live2[id]) live2[id].rec._u = now;
+  });
+  (state.trash||[]).forEach(t=>{ if(t && t.id && !v3TrashIds.has(t.id)) v3MarkDirty(t.id, now); });
+  // ٣) سلة المحذوفات: اللي اتشال منها (انتهت مدته أو "امسح نهائي") بيتعلّم عشان ما يرجعش
+  const trashNow = new Set((state.trash||[]).map(t=>t && t.id).filter(Boolean));
+  v3TrashIds.forEach(id=>{ if(!trashNow.has(id)) v3Tombstone(id, 'سلة المحذوفات'); });
+  v3SaveDirty();
+  v3NotePrev();
+}
+
+/* ---------- الإرسال والاستقبال ---------- */
+syncPushNow = async function(){
+  if(!fbReady || (!v3HasDirty() && !v3ForcePush)) return;
+  const sentAt = Date.now(), local = JSON.parse(JSON.stringify(state)), ctx = v3Ctx();
+  let res;
+  try{
+    res = await syncRef.transaction(cur=>{
+      if(cur===null || cur===undefined) return local;
+      const m = v3Merge(local, cur, ctx); m._v = Date.now();
+      return JSON.parse(JSON.stringify(m));
+    }, undefined, false);
+  }catch(e){ v3LastErr = String(e && e.message || e); throw e; }
+  if(!res || !res.committed) return;
+  v3ForcePush = false;
+  const committed = res.snapshot.val();
+  Object.keys(v3Dirty).forEach(id=>{ if(v3Dirty[id].t <= sentAt) delete v3Dirty[id]; });
+  v3Known = v3Index(committed);
+  state = v3Merge(state, committed, v3Ctx()); state._v = committed._v;
+  v3SaveDirty(); v3NotePrev(); v3LastSync = Date.now(); v3LastErr = '';
+  syncPersistLocal(); renderEverything();
+  if(v3HasDirty()) syncPush().catch(()=>{});
+};
+syncHandleRemote = function(remote){
+  const first = !fbReady;
+  if(remote===null || remote===undefined){ if(first) syncSeed(); return; }
+  try{
+    const before = v3Live(state);
+    state = v3Merge(state, remote, v3Ctx()); state._v = remote._v;
+    v3Known = v3Index(remote);
+    // حاجات موجودة هنا بس ومش على السيرفر (اتعملت والجهاز فاصل): تتبعت
+    const rLive = v3Live(remote), mine = Object.keys(v3Live(state)).filter(id=> !rLive[id]);
+    mine.forEach(id=>{ if(!v3Dirty[id]) v3Dirty[id] = { t: Date.now(), b: null }; });
+    if(mine.length) v3SaveDirty();
+    v3LastSync = Date.now(); v3LastErr = '';
+  }catch(e){ v3LastErr = String(e && e.message || e); console.error('sync merge', e); try{ showToast('⚠️ مشكلة في المزامنة: ' + v3LastErr); }catch(_){} }
+  if(first){ fbReady = true; }
+  try{ markAllRecordsKnown(); }catch(e){}
+  syncPersistLocal(); renderEverything(); v3NotePrev();
+  if(v3HasDirty()) syncPush().catch(()=>{});
+};
+{ const _seed = syncSeed; syncSeed = async function(){ v3ForcePush = true; return _seed(); }; }
+
+/* ---------- الحفظ على الجهاز: localStorage + IndexedDB ---------- */
+function v3Idb(){ return new Promise((res, rej)=>{ try{ const r = indexedDB.open('ibtkar', 1); r.onupgradeneeded = ()=> r.result.createObjectStore('kv'); r.onsuccess = ()=> res(r.result); r.onerror = ()=> rej(r.error); }catch(e){ rej(e); } }); }
+async function v3IdbPut(v){ try{ const db = await v3Idb(); await new Promise((res, rej)=>{ const tx = db.transaction('kv','readwrite'); tx.objectStore('kv').put(v, 'state'); tx.oncomplete = res; tx.onerror = ()=> rej(tx.error); }); }catch(e){} }
+async function v3IdbGet(){ try{ const db = await v3Idb(); return await new Promise((res)=>{ const tx = db.transaction('kv','readonly'); const q = tx.objectStore('kv').get('state'); q.onsuccess = ()=> res(q.result || null); q.onerror = ()=> res(null); }); }catch(e){ return null; } }
+let v3LocalSaveFailed = false;
+syncPersistLocal = function(){
+  const s = JSON.stringify(state);
+  try{ localStorage.setItem('ibtkar-inventory-v1', s); v3LocalSaveFailed = false; }catch(e){ v3LocalSaveFailed = true; }
+  v3IdbPut(s);
+};
+// عند الفتح: لو نسخة IndexedDB أحدث من localStorage (لأنه اتملى)، نشتغل بيها
+async function v3LoadNewest(){
+  const raw = await v3IdbGet(); if(!raw) return;
+  try{ const s = JSON.parse(raw); if((Number(s._v)||0) > (Number(state && state._v)||0)){ state = s; syncNoteKnown(); renderEverything(); } }catch(e){}
+}
+
+saveState = async function(){
+  try{ stampNewRecords(); }catch(e){}
+  try{ v3Stamp(); }catch(e){ console.error('v3 stamp', e); }
+  state._v = Date.now();
+  syncPersistLocal();
+  if(v3LocalSaveFailed) showToast('⚠️ مساحة التخزين على الجهاز مليانة — البيانات بتتحفظ في مكان تاني على الجهاز وعلى السيرفر');
+  syncPush().catch(()=> showToast('⚠️ البيانات محفوظة عندك بس، لسه مش وصلت للسحابة'));
+  if(!syncMigratingAttachments && !storageUploadsBroken && JSON.stringify(state).includes(';base64,')){
+    syncMigratingAttachments = true;
+    migrateDataUrisIn(state, 'root').then(()=>{ syncMigratingAttachments = false; if(!storageUploadsBroken) saveState(); }, ()=>{ syncMigratingAttachments = false; });
+  }
+};
+
+/* ---------- المسح: إسلام بس (كلمة السر + delete) ---------- */
+function v3AskPassword(msg){
+  return new Promise(resolve=>{
+    const ov = document.createElement('div'); ov.className = 'overlay show'; ov.style.zIndex = 4000;
+    ov.innerHTML = `<div class="modal" style="max-width:380px;"><h2>🔐 تأكيد المسح</h2><div class="sub" style="white-space:pre-line;margin-bottom:8px;">${escapeHtml(msg)}</div>
+      <div class="field"><label>كلمة سر الأدمن (نفس كلمة سر النسخة الاحتياطية)</label><input type="password" autocomplete="off" data-v3pw></div>
+      <div class="modal-actions"><button type="button" class="btn btn-primary" data-ok>تأكيد</button><button type="button" class="btn btn-ghost" data-no>إلغاء</button></div></div>`;
+    const done = v=>{ ov.remove(); resolve(v); };
+    ov.querySelector('[data-no]').onclick = ()=> done(false);
+    ov.querySelector('[data-ok]').onclick = ()=>{
+      const v = ov.querySelector('[data-v3pw]').value;
+      if(!state.backupPassword){ showToast('لسه ما اتعملتش كلمة سر — اعملها من الإعدادات ← نسخة احتياطية'); return; }
+      if(v !== state.backupPassword){ showToast('كلمة السر غلط'); return; }
+      done(true);
+    };
+    document.body.appendChild(ov); setTimeout(()=>{ const i = ov.querySelector('[data-v3pw]'); if(i) i.focus(); }, 50);
+  });
+}
+function v3IsAdmin(){ return getDeviceUser() === V3_ADMIN; }
+// مسح من غير زرار "مسح" (زي "ماجاش"): إسلام → كلمة السر، غيره → طلب
+{ const _tca = tcAbsent; tcAbsent = async function(wid, lid){
+  if(v3IsAdmin()){ if(!(await v3AskPassword('شيل يوم الشغل ده من كل الأجهزة.'))) return; v3AuthUntil = Date.now() + 15000; }
+  return _tca(wid, lid);
+}; }
+// زرار المسح (قبل ما يتنفّذ): إسلام → كلمة السر وبعدها يتمسح فعلاً. غير كده → يتبعت طلب.
+document.addEventListener('click', async e=>{
+  const el = e.target && e.target.closest ? e.target.closest('[onclick],[data-bd-action]') : null;
+  if(!el || !isDeleteTrigger(el)) return;
+  if(!el.__v3OK && !(Date.now() < delPassThrough)) return; // لسه ما اتكتبش delete
+  if(!v3IsAdmin()) return;                                 // غير الأدمن: هيتحوّل لطلب وقت الحفظ
+  if(el.__v3OK){ el.__v3OK = false; v3AuthUntil = Date.now() + 4000; return; }
+  e.preventDefault(); e.stopImmediatePropagation();
+  if(!(await v3AskPassword('المسح هيتشال من كل الأجهزة (ويروح سلة المحذوفات).'))) return;
+  delPassThrough = Date.now() + 2500;
+  el.__delOK = true; el.__v3OK = true; el.click();
+}, true);
+
+/* ---------- طلبات المسح (لإسلام) ---------- */
+function v3Pending(){ return (state.deleteRequests||[]).filter(r=> r && r.status==='pending'); }
+function renderDeleteRequestsCard(){
+  const home = document.getElementById('view-home'); if(!home) return;
+  let el = document.getElementById('v3-delreq'); const list = v3Pending();
+  if(!list.length){ if(el) el.remove(); return; }
+  if(!el){ el = document.createElement('div'); el.id = 'v3-delreq'; const anchor = document.getElementById('home-dayplan-wrap') || home.querySelector('.stats'); if(anchor) anchor.before(el); else home.appendChild(el); }
+  el.innerHTML = v3IsAdmin()
+    ? `<button type="button" class="v3-delreq-btn" onclick="openDeleteRequests()">🛑 فيه ${list.length} طلب مسح مستنيين موافقتك</button>`
+    : `<div class="v3-delreq-note">🛑 ${list.length} طلب مسح مستنيين موافقة إسلام</div>`;
+}
+function openDeleteRequests(){
+  const ov = document.createElement('div'); ov.className = 'overlay show'; ov.id = 'overlay-v3-delreq';
+  const draw = ()=>{
+    const list = v3Pending();
+    ov.innerHTML = `<div class="modal" style="max-width:520px;"><button type="button" class="modal-close">×</button><h2>🛑 طلبات المسح</h2>
+      <div class="sub">مفيش حاجة بتتمسح من البرنامج غير بموافقتك. الحاجات دي لسه موجودة لحد ما تقرر.</div>
+      ${list.map(r=>`<div class="pd-row"><div class="pd-row-main"><div class="pd-row-title">${escapeHtml(r.label || '')}${r.count > 1 ? ` <small>(${r.count})</small>` : ''}</div>
+        <div class="pd-row-sub">${escapeHtml(r.by || '')} · ${fmtDateTime(r.at)}</div></div>
+        <button type="button" class="btn btn-ghost btn-sm" data-keep="${r.id}">↩️ سيبه</button>
+        <button type="button" class="btn btn-primary btn-sm" data-del="${r.id}">🗑️ امسح</button></div>`).join('') || '<div class="no-hist">مفيش طلبات</div>'}</div>`;
+    ov.querySelector('.modal-close').onclick = ()=>{ ov.remove(); renderDeleteRequestsCard(); };
+    ov.querySelectorAll('[data-keep]').forEach(b=> b.onclick = async ()=>{ const r = (state.deleteRequests||[]).find(x=>x.id===b.dataset.keep); if(!r) return; r.status = 'kept'; r.doneBy = getDeviceUser(); r.doneAt = new Date().toISOString(); await saveState(); draw(); renderDeleteRequestsCard(); });
+    ov.querySelectorAll('[data-del]').forEach(b=> b.onclick = async ()=>{
+      const r = (state.deleteRequests||[]).find(x=>x.id===b.dataset.del); if(!r) return;
+      if(!(await confirmDeleteOriginal(`هتمسح: ${r.label}\nمن كل الأجهزة.`))) return;
+      if(!(await v3AskPassword('تأكيد المسح من كل الأجهزة.'))) return;
+      const live = v3Live(state), ids = new Set(r.targets || []);
+      const tops = (r.targets||[]).filter(id=>{ const x = live[id]; return x && !(x.parent && x.parent.id && ids.has(x.parent.id)); });
+      state.trash = state.trash || [];
+      tops.forEach(id=>{ const x = live[id]; state.trash.unshift({ id: uid(), type:'record', label: v3Label(x), data:{ coll: x.key, parentId: x.parent && x.parent.id ? x.parent.id : null, rec: JSON.parse(JSON.stringify(x.rec)) }, deletedAt: new Date().toISOString() }); });
+      v3AuthUntil = Date.now() + 4000;
+      v3RemoveIds(state, ids);
+      r.status = 'deleted'; r.doneBy = getDeviceUser(); r.doneAt = new Date().toISOString();
+      await saveState(); renderEverything(); draw(); renderDeleteRequestsCard(); showToast('اتمسح من كل الأجهزة (موجود في سلة المحذوفات)');
+    });
+  };
+  draw(); document.body.appendChild(ov);
+}
+{ const _rh = renderHome; renderHome = function(){ _rh(); try{ renderDeleteRequestsCard(); }catch(e){} }; }
+// الترجيع من السلة = نشيل علامة المسح
+{ const _rft2 = restoreFromTrash; restoreFromTrash = async function(trashId){
+  const t = (state.trash||[]).find(x=>x.id===trashId);
+  const ids = new Set(); const coll = (o)=>{ if(!o || typeof o!=='object') return; if(o.id) ids.add(o.id); Object.values(o).forEach(v=>{ if(v && typeof v==='object') coll(v); }); };
+  if(t){ coll(t.type==='record' ? t.data && t.data.rec : t.data); }
+  (state.tombstones||[]).forEach(x=>{ if(ids.has(x.target) && !x.undone){ x.undone = true; x._u = Date.now(); } });
+  v3AuthUntil = Date.now() + 4000; // شيل الحاجة من السلة مش "مسح"
+  return _rft2(trashId);
+}; }
+
+/* ---------- حالة المزامنة (في الإعدادات) ---------- */
+function v3SyncStatusText(){
+  const ago = v3LastSync ? Math.round((Date.now() - v3LastSync)/60000) : null;
+  return `${v3LastSync ? (ago < 1 ? '✅ متزامن دلوقتي' : `✅ آخر مزامنة من ${ago} دقيقة`) : '⏳ لسه ما اتزامنش'}${v3HasDirty() ? ` · ${Object.keys(v3Dirty).length} تعديل مستني يطلع` : ''}${v3LastErr ? ' · ⚠️ ' + v3LastErr : ''}`;
+}
+
+{ const _obm2 = openBackupModal; openBackupModal = function(){ _obm2(); const el = document.getElementById('autobk-list'); if(el && !document.getElementById('v3-sync-status')){ el.insertAdjacentHTML('beforebegin', '<div class="hint" id="v3-sync-status"></div>'); } const st = document.getElementById('v3-sync-status'); if(st) st.textContent = '🔄 ' + v3SyncStatusText(); }; }
 </script>
 </body>
 </html>
