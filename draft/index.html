@@ -1074,6 +1074,10 @@ body.ks-on .bottom-nav,body.ks-on #settings-fab{display:none;}
 .v3-off-ic{ font-size:44px; margin-bottom:6px; }
 .v3-off-box b{ display:block; font-size:18px; margin-bottom:8px; }
 .v3-off-box p{ font-size:13.5px; line-height:1.8; color:var(--muted); margin:0 0 14px; }
+/* كروت الحسابات: السطر الأخير يلف على سطرين بدل ما يوسّع الصفحة */
+.expense-card .expense-main{ min-width:0; }
+.expense-card .expense-date{ white-space:normal !important; display:flex; flex-wrap:wrap; align-items:center; gap:2px 4px; line-height:1.9; }
+.acc-sn{ font-size:11.5px; color:var(--charcoal); font-weight:700; }
 /* ===================== IBTKAR GE 2026 — الهوية البصرية (DRAFT) =====================
    ألوان الدليل، تصميم مسطح من غير ظلال، كروت Blush من غير إطار، خط دهبي تحت العناوين،
    جداول بهيدر روز وصفوف متبادلة، والإجمالي فحمي بأرقام دهبي. */
@@ -15766,7 +15770,7 @@ renderExpenses = function(){
     return `<div class="expense-card" onclick="openTxnDetail('${e.id}','${e._kind}')">${thumb}<div class="expense-main">
       <div class="expense-top"><span class="expense-project">${escapeHtml(e.project)}</span><span class="expense-amount ${isIncome ? 'income' : 'expense'}">${isIncome ? '+' : '-'}${fmtMoney(e.amount)}</span></div>
       <div class="expense-desc"><span class="txn-kind-badge ${isIncome ? 'income' : 'expense'}">${isIncome ? (e.method || 'قبض') : 'مصروف'}</span> ${escapeHtml(e.description || '')}</div>
-      <div class="expense-date">${fmtDateTime(e.date)} ${e.by ? `· <span class="actor-badge">${escapeHtml(e.by)}</span>` : ''}${e.txCode ? ` · <span dir="ltr" class="acc-code">${escapeHtml(e.txCode)}</span>` : ''}${e._sn != null ? ` · <span dir="ltr" class="acc-code">${snLabel(e._sn, e.date)}</span>` : ''}</div>
+      <div class="expense-date">${e._sn != null ? `<b dir="ltr" class="acc-sn">${snLabel(e._sn, e.date)}</b>` : fmtDateTime(e.date)}${e.by ? ` · <span class="actor-badge">${escapeHtml(e.by)}</span>` : ''}${e.txCode ? ` · <span dir="ltr" class="acc-code">${escapeHtml(e.txCode)}</span>` : ''}</div>
     </div></div>`;
   }).join('') + `</div>${list.length > 400 ? '<div class="hint" style="text-align:center;">بيظهر آخر ٤٠٠ — استخدم الفلتر عشان تلاقي الأقدم</div>' : ''}`;
 };
