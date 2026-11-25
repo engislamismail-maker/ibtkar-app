@@ -16568,8 +16568,11 @@ async function v3Allocate(ids, claimBackfill){
   return (res && res.committed) ? (range || {}) : null;
 }
 function v3PutSn(ids, from){ const live = v3Live(state); let n = 0; ids.forEach((id, i)=>{ const x = live[id]; if(x && x.rec._sn == null){ x.rec._sn = from + i; n++; } }); return n; }
+let v3SnAgain = false;
 async function v3AssignSerials(){
-  if(v3SnBusy || !fbReady) return; v3SnBusy = true;
+  if(!fbReady) return;
+  if(v3SnBusy){ v3SnAgain = true; return; }   // شغال — يعيد أول ما يخلص
+  v3SnBusy = true;
   try{
     let changed = 0;
     // ١) الأول: أي رقم اتحجز لعملية وما وصلهاش (الجهاز اتقفل قبل ما يحفظ) يترجعلها نفس الرقم
@@ -16600,7 +16603,7 @@ async function v3AssignSerials(){
     }
     if(changed) await saveState();
   }catch(e){ console.error('serials', e); }
-  finally{ v3SnBusy = false; }
+  finally{ v3SnBusy = false; if(v3SnAgain){ v3SnAgain = false; setTimeout(()=> v3AssignSerials(), 100); } }
 }
 // الجديد في كل حفظ بيتسجّل إنه محتاج رقم
 { const _st = v3Stamp; v3Stamp = function(){
@@ -16811,6 +16814,174 @@ function openReceiptRestore(){
   document.body.appendChild(ov);
 }
 { const _ob4 = openBackupModal; openBackupModal = function(){ _ob4(); if(!document.getElementById('rc-btn')){ const a = document.getElementById('v3-audit-btn') || document.getElementById('autobk-list'); if(a) a.insertAdjacentHTML('afterend', '<button type="button" class="btn btn-ghost btn-sm" id="rc-btn" style="margin:4px 0 8px;" onclick="closeModal(\'overlay-backup\'); openReceiptRestore()">📥 رجّع عمليات من إيصالات</button>'); } }; }
+</script>
+<script>
+/* =====================================================================================
+   👥 الحسابات: كل واحد ليه رقم من ٦ أرقام — بيكتبه في شاشة القفل والبرنامج بيعرف هو مين.
+   الأرقام بتتحفظ متشفّرة (SHA-256 + ملح لكل شخص)، مش الرقم نفسه.
+   🔔 وأي حركة من حد تاني (فتح البرنامج، تسجيل، تعديل، مسح) بتوصل إشعار فيه الاسم والعملية ورقمها.
+   ===================================================================================== */
+function sha256Hex(str){
+  const K = [0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2];
+  const bytes = Array.from(unescape(encodeURIComponent(str)), c=> c.charCodeAt(0));
+  const l = bytes.length * 8; bytes.push(0x80); while((bytes.length % 64) !== 56) bytes.push(0);
+  for(let i=7;i>=0;i--) bytes.push(i >= 4 ? 0 : (l >>> (i*8)) & 0xff);
+  let h = [0x6a09e667,0xbb67ae85,0x3c6ef372,0xa54ff53a,0x510e527f,0x9b05688c,0x1f83d9ab,0x5be0cd19];
+  const r = (x,n)=> (x>>>n) | (x<<(32-n));
+  for(let o=0;o<bytes.length;o+=64){
+    const w = new Array(64);
+    for(let i=0;i<16;i++) w[i] = (bytes[o+i*4]<<24) | (bytes[o+i*4+1]<<16) | (bytes[o+i*4+2]<<8) | bytes[o+i*4+3];
+    for(let i=16;i<64;i++){ const s0 = r(w[i-15],7) ^ r(w[i-15],18) ^ (w[i-15]>>>3), s1 = r(w[i-2],17) ^ r(w[i-2],19) ^ (w[i-2]>>>10); w[i] = (w[i-16] + s0 + w[i-7] + s1) | 0; }
+    let [a,b,c,d,e,f,g,hh] = h;
+    for(let i=0;i<64;i++){
+      const S1 = r(e,6) ^ r(e,11) ^ r(e,25), ch = (e & f) ^ (~e & g), t1 = (hh + S1 + ch + K[i] + w[i]) | 0;
+      const S0 = r(a,2) ^ r(a,13) ^ r(a,22), mj = (a & b) ^ (a & c) ^ (b & c), t2 = (S0 + mj) | 0;
+      hh = g; g = f; f = e; e = (d + t1) | 0; d = c; c = b; b = a; a = (t1 + t2) | 0;
+    }
+    h = [(h[0]+a)|0,(h[1]+b)|0,(h[2]+c)|0,(h[3]+d)|0,(h[4]+e)|0,(h[5]+f)|0,(h[6]+g)|0,(h[7]+hh)|0];
+  }
+  return h.map(x=> (x>>>0).toString(16).padStart(8,'0')).join('');
+}
+const USERS_CACHE = 'ibtkar-users-cache';
+function usersActive(list){ return (list || state.users || []).filter(u=> u && u.name && u.pinHash && u.active !== false); }
+function usersCached(){ try{ return JSON.parse(localStorage.getItem(USERS_CACHE)) || []; }catch(e){ return []; } }
+function usersCache(){ try{ localStorage.setItem(USERS_CACHE, JSON.stringify(usersActive().map(u=>({ name: u.name, role: u.role, salt: u.salt, pinHash: u.pinHash })))); }catch(e){} }
+function pinHashFor(pin, salt){ return sha256Hex(salt + ':' + pin); }
+function currentUserRec(){ const me = getDeviceUser(); return usersActive().find(u=> u.name===me) || null; }
+// الأدمن: لو فيه حسابات → صاحب الحساب "أدمن"، لو لسه مفيش → إسلام
+v3IsAdmin = function(){ const us = usersActive(); if(!us.length) return getDeviceUser() === V3_ADMIN; const u = currentUserRec(); return !!(u && u.role==='admin'); };
+
+/* ---------- شاشة القفل ---------- */
+let usersFails = 0, usersLockUntil = 0;
+{ const _init = initAppLock; initAppLock = function(){
+  if(!usersCached().length) return _init();
+  pinMode = 'user'; pinBuffer = ''; renderLockDots();
+  document.getElementById('lock-title').textContent = 'اكتب رقمك (٦ أرقام)';
+  const f = document.getElementById('lock-forgot-btn'); if(f){ f.style.display = 'block'; f.textContent = 'نسيت رقمك؟'; }
+}; }
+{ const _sub = lockPinSubmit; lockPinSubmit = function(){
+  if(pinMode !== 'user') return _sub();
+  if(Date.now() < usersLockUntil){ showLockError(`استنى ${Math.ceil((usersLockUntil - Date.now())/1000)} ثانية`); return; }
+  if(pinBuffer.length !== 6){ showLockError('الرقم ٦ أرقام'); return; }
+  const u = usersCached().find(x=> pinHashFor(pinBuffer, x.salt) === x.pinHash);
+  pinBuffer = ''; renderLockDots();
+  if(!u){ usersFails++; if(usersFails >= 5){ usersLockUntil = Date.now() + 30000; usersFails = 0; } showLockError('الرقم غلط'); return; }
+  usersFails = 0;
+  try{ localStorage.setItem(DEVICE_USER_KEY, u.name); }catch(e){}
+  window.__loginAs = u.name;
+  unlockApp();
+}; }
+// شاشة القفل اتجهّزت قبل الكود ده — نجهّزها تاني لو لسه ظاهرة
+try{ const ls = document.getElementById('app-lock-screen'); if(ls && getComputedStyle(ls).display !== 'none') initAppLock(); }catch(e){}
+{ const _lp = lockPinPress; lockPinPress = function(d){ _lp(d); if(pinMode==='user' && pinBuffer.length===6) setTimeout(lockPinSubmit, 120); }; }
+{ const _fg = lockForgotPin; lockForgotPin = function(){ if(pinMode==='user'){ showLockError('اطلب من إسلام يغيّرلك الرقم من الإعدادات ← المستخدمين'); return; } return _fg(); }; }
+// "مين بيستخدم الجهاز ده" بقى بيتحدد بالرقم — مفيش تغيير يدوي
+{ const _ods = openDeviceUserSettings; openDeviceUserSettings = function(){ if(usersActive().length){ showToast(`انت داخل باسم ${getDeviceUser() || '—'} — الاسم بيتحدد بالرقم اللي بتفتح بيه`); return; } return _ods(); }; }
+// أول ما يفتح ويتصل: "فلان فتح البرنامج"
+(function loginFeed(){ const t = setInterval(()=>{ if(window.__loginAs && fbReady){ clearInterval(t); try{ feedPush('🔓 فتح البرنامج'); }catch(e){} } }, 1000); })();
+// الحسابات بتتحفظ على الجهاز عشان شاشة القفل تعرفها قبل ما البيانات تحمّل
+{ const _re = renderEverything; renderEverything = function(){ _re(); try{ usersCache(); }catch(e){} }; }
+
+/* ---------- الإعدادات ← 👥 المستخدمين ---------- */
+async function openUsersAdmin(){
+  const us = usersActive();
+  if(us.length && !v3IsAdmin()){ showToast('المستخدمين لإسلام بس'); return; }
+  if(!(await v3AskPassword('إدارة المستخدمين (الأرقام السرية).'))) return;
+  const ov = document.createElement('div'); ov.className = 'overlay show'; ov.id = 'overlay-users';
+  const draw = ()=>{
+    const list = (state.users || []).filter(u=> u && u.name);
+    ov.innerHTML = `<div class="modal" style="max-width:460px;"><button type="button" class="modal-close">×</button><h2>👥 المستخدمين</h2>
+      <div class="sub">كل واحد ليه رقم من ٦ أرقام بيفتح بيه — البرنامج بيعرف مين دخل من رقمه. الأرقام بتتحفظ متشفّرة.</div>
+      ${list.map(u=>`<div class="pd-row"><div class="pd-row-main"><div class="pd-row-title">${u.role==='admin' ? '👑' : '👤'} ${escapeHtml(u.name)} ${u.active===false ? '<small>(موقوف)</small>' : ''}</div>
+        <div class="pd-row-sub">${u.role==='admin' ? 'أدمن — بيمسح ويوافق' : 'مستخدم'}${u.pinAt ? ' · الرقم اتعمل ' + fmtDateTime(u.pinAt) : ''}</div></div>
+        <button type="button" class="btn btn-ghost btn-sm" data-pin="${u.id}">🔢 رقم جديد</button>
+        <button type="button" class="btn btn-ghost btn-sm" data-act="${u.id}">${u.active===false ? '▶️ شغّل' : '⏸️ وقّف'}</button></div>`).join('') || '<div class="no-hist">لسه مفيش — ابدأ بنفسك (أدمن)</div>'}
+      <div class="dp-q">+ مستخدم جديد</div>
+      <div class="field"><label>الاسم</label><input type="text" data-n placeholder="مثلاً: بسنت" value="${list.length ? '' : escapeHtml(getDeviceUser() || 'إسلام')}"></div>
+      <div class="field"><label>الصلاحية</label><select data-r><option value="user">مستخدم</option><option value="admin" ${list.length ? '' : 'selected'}>أدمن (بيمسح ويوافق)</option></select></div>
+      <div class="field"><label>الرقم (٦ أرقام)</label><input type="password" inputmode="numeric" maxlength="6" data-p1 autocomplete="off"></div>
+      <div class="field"><label>الرقم تاني للتأكيد</label><input type="password" inputmode="numeric" maxlength="6" data-p2 autocomplete="off"></div>
+      <div class="modal-actions"><button type="button" class="btn btn-primary btn-full" data-add>➕ ضيف</button></div></div>`;
+    ov.querySelector('.modal-close').onclick = ()=> ov.remove();
+    const taken = (pin, except)=> (state.users || []).some(u=> u && u.id!==except && u.active!==false && u.pinHash && pinHashFor(pin, u.salt)===u.pinHash);
+    const okPin = (a, b, except)=>{ if(!/^\d{6}$/.test(a)){ showToast('الرقم لازم ٦ أرقام'); return false; } if(a!==b){ showToast('الرقمين مش زي بعض'); return false; } if(taken(a, except)){ showToast('الرقم ده مستخدم لحد تاني — اختار رقم تاني'); return false; } return true; };
+    ov.querySelector('[data-add]').onclick = async ()=>{
+      const name = ov.querySelector('[data-n]').value.trim(), role = ov.querySelector('[data-r]').value, a = ov.querySelector('[data-p1]').value, b = ov.querySelector('[data-p2]').value;
+      if(!name){ showToast('اكتب الاسم'); return; }
+      if((state.users||[]).some(u=> u && u.name===name)){ showToast('الاسم ده موجود — غيّر رقمه من "رقم جديد"'); return; }
+      if(!okPin(a, b, null)) return;
+      const salt = uid();
+      state.users = state.users || [];
+      state.users.push({ id: uid(), name, role, salt, pinHash: pinHashFor(a, salt), active: true, pinAt: new Date().toISOString(), createdBy: getDeviceUser() || '' });
+      await saveState(); usersCache(); showToast(`اتضاف ${name}`); draw();
+    };
+    ov.querySelectorAll('[data-pin]').forEach(btn=> btn.onclick = async ()=>{
+      const u = state.users.find(x=> x.id===btn.dataset.pin); if(!u) return;
+      const a = (await appPrompt(`الرقم الجديد لـ ${u.name} (٦ أرقام)`, '')) || ''; if(!a) return;
+      const b = (await appPrompt('الرقم تاني للتأكيد', '')) || '';
+      if(!okPin(a.trim(), b.trim(), u.id)) return;
+      u.salt = uid(); u.pinHash = pinHashFor(a.trim(), u.salt); u.pinAt = new Date().toISOString();
+      await saveState(); usersCache(); showToast(`اتغيّر رقم ${u.name}`); draw();
+    });
+    ov.querySelectorAll('[data-act]').forEach(btn=> btn.onclick = async ()=>{
+      const u = state.users.find(x=> x.id===btn.dataset.act); if(!u) return;
+      if(u.active !== false && u.role==='admin' && usersActive().filter(x=> x.role==='admin').length <= 1){ showToast('لازم يفضل أدمن واحد على الأقل'); return; }
+      u.active = u.active===false; await saveState(); usersCache(); draw();
+    });
+  };
+  draw(); document.body.appendChild(ov);
+}
+{ const _oss = openSecuritySettings; openSecuritySettings = function(){
+  _oss();
+  const box = document.querySelector('#overlay-security-settings .modal');
+  if(box && !document.getElementById('users-btn')) box.querySelector('h2').insertAdjacentHTML('afterend', '<div class="modal-actions"><button type="button" class="btn btn-primary btn-full" id="users-btn" onclick="closeModal(\'overlay-security-settings\'); openUsersAdmin()">👥 المستخدمين (رقم لكل واحد)</button></div>');
+}; }
+
+/* ---------- 🔔 الإشعار فيه رقم العملية + التعديل والمسح ---------- */
+{ const _fp = feedPush; feedPush = function(text, rid){ _fp(text); if(rid && feedQueue.length){ feedQueue[feedQueue.length-1].rid = rid; } clearTimeout(feedTimer); feedTimer = setTimeout(feedFlush, 3000); }; }
+let feedWaitSince = 0;
+{ const _ff = feedFlush; feedFlush = function(){
+  try{
+    const live = v3Live(state);
+    // لسه الرقم المسلسل ما وصلش؟ نستنى لحد ١٥ ثانية عشان الإشعار يطلع برقمه
+    const waiting = feedQueue.some(e=> e.rid && live[e.rid] && live[e.rid].rec._sn == null);
+    if(waiting){ if(!feedWaitSince) feedWaitSince = Date.now(); if(Date.now() - feedWaitSince < 15000){ clearTimeout(feedTimer); feedTimer = setTimeout(feedFlush, 1500); return; } }
+    feedWaitSince = 0;
+    feedQueue.forEach(e=>{ if(e.rid){ const x = live[e.rid]; if(x && x.rec._sn != null) e.text += ` · #${x.rec._sn}`; delete e.rid; } });
+  }catch(e){}
+  return _ff();
+}; }
+// تسجيل جديد: نفس الإشعار القديم بس معاه رقم العملية
+stampNewRecords = function(){
+  const me = getDeviceUser();
+  forEachRecord((r, key, parent)=>{
+    if(!r.id || knownRecordIds.has(r.id)) return;
+    knownRecordIds.add(r.id);
+    if(me && !r.addedBy){
+      r.addedBy = me; r.addedAt = new Date().toISOString();
+      if(key && !FEED_SKIP.has(key) && !V3_FREE.has(key)){ try{ const d = describeRecord(r, key, parent); if(d && d[0]!=='all') feedPush(d[1], r.id); }catch(e){} }
+    }
+  });
+};
+// تعديل مصروف/قبض/يوم شغل، ومسح بموافقة إسلام
+const FEED_EDIT_KEYS = new Set(['expenses', 'income', 'logs', 'safeAccounts', 'supervisionWithdrawals']);
+{ const _st2 = v3Stamp; v3Stamp = function(){
+  const prev = v3PrevIdx, prevLive = v3LiveMap, tombsBefore = new Set((state.tombstones||[]).map(t=> t.id));
+  _st2();
+  try{
+    if(!getDeviceUser()) return;
+    const edits = [];
+    Object.keys(v3LiveMap).forEach(id=>{
+      const x = v3LiveMap[id]; if(!x || !FEED_EDIT_KEYS.has(x.key) || !prev[id]) return;
+      const a = prev[id], b = v3PrevIdx[id] || {};
+      const changed = Object.keys({ ...a, ...b }).filter(k=> !/^(_sn|addedBy|addedAt|by|txCode)$/.test(k) && a[k] !== b[k]);
+      if(changed.length) edits.push(id);
+    });
+    edits.slice(0, 4).forEach(id=>{ const x = v3LiveMap[id]; feedPush('✏️ عدّل: ' + v3Label(x), id); });
+    (state.tombstones||[]).filter(t=> !tombsBefore.has(t.id) && t.label && t.label!=='سلة المحذوفات' && !V3_FREE.has((prevLive[t.target]||{}).key)).slice(0, 4)
+      .forEach(t=> feedPush('🗑️ مسح: ' + t.label + (t.sn != null ? ` · #${t.sn}` : '')));
+  }catch(e){}
+}; }
 </script>
 </body>
 </html>

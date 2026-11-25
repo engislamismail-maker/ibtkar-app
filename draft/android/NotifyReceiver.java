@@ -54,7 +54,7 @@ public class NotifyReceiver extends BroadcastReceiver {
     static final String BACKUP_PATH = "ibtkar_draft_backups"; // عند النقل للأساسي: ibtkar_backups
     static final String PREFS = "ibtkar_notify";
     static final String CH_MORNING = "morning_alarm";
-    static final String CH_FEED = "activity";
+    static final String CH_FEED = "activity_alert"; // بيرن ويطلع فوق الشاشة (القناة القديمة "activity" كانت هادية)
     static final String FEED_URL =
             "https://ibtkar-system-default-rtdb.firebaseio.com/ibtkar_draft_feed.json?orderBy=%22%24key%22&limitToLast=20";
 
@@ -73,6 +73,7 @@ public class NotifyReceiver extends BroadcastReceiver {
                 try { nightlyBackup(ctx); } catch (Exception ignored) { } finally { pr.finish(); }
             }).start();
         } else if (ACTION_FEED.equals(a)) {
+            scheduleFeed(ctx, 120_000L); // اللي بعده بعد دقيقتين
             final PendingResult pr = goAsync();
             new Thread(() -> {
                 try { checkFeed(ctx); } catch (Exception ignored) { } finally { pr.finish(); }
@@ -90,8 +91,8 @@ public class NotifyReceiver extends BroadcastReceiver {
         scheduleBackup(ctx);
         AlarmManager am = (AlarmManager) ctx.getSystemService(Context.ALARM_SERVICE);
         if (am == null) return;
-        am.setInexactRepeating(AlarmManager.RTC_WAKEUP, System.currentTimeMillis() + 60_000L,
-                AlarmManager.INTERVAL_FIFTEEN_MINUTES, pending(ctx, ACTION_FEED, 2));
+        am.cancel(pending(ctx, ACTION_FEED, 2)); // التكرار القديم كل ربع ساعة
+        scheduleFeed(ctx, 30_000L);
     }
 
     static void scheduleMorning(Context ctx) {
@@ -105,6 +106,18 @@ public class NotifyReceiver extends BroadcastReceiver {
         if (c.getTimeInMillis() <= System.currentTimeMillis() + 5_000L) c.add(Calendar.DAY_OF_YEAR, 1);
         setAlarm(ctx, c.getTimeInMillis(), pending(ctx, ACTION_MORNING, 1));
         ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putLong("nextMorning", c.getTimeInMillis()).apply();
+    }
+
+    /** بيبص على اللي اتعمل كل دقيقتين تقريباً (لما الموبايل نايم Android بيأخّرها شوية). */
+    static void scheduleFeed(Context ctx, long delay) {
+        AlarmManager am = (AlarmManager) ctx.getSystemService(Context.ALARM_SERVICE);
+        if (am == null) return;
+        PendingIntent pi = pending(ctx, ACTION_FEED, 5);
+        long when = System.currentTimeMillis() + delay;
+        try {
+            if (Build.VERSION.SDK_INT < 31 || am.canScheduleExactAlarms()) { am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, when, pi); return; }
+        } catch (SecurityException ignored) { }
+        am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, when, pi);
     }
 
     /** فكّرني بعد كام دقيقة (من شاشة المنبّه). */
@@ -162,8 +175,12 @@ public class NotifyReceiver extends BroadcastReceiver {
         morning.setVibrationPattern(new long[]{0, 600, 300, 600, 300, 600});
         morning.setBypassDnd(true);
         nm.createNotificationChannel(morning);
-        nm.createNotificationChannel(new NotificationChannel(CH_FEED, "اللي اتعمل في السيستم",
-                NotificationManager.IMPORTANCE_DEFAULT));
+        nm.deleteNotificationChannel("activity");
+        NotificationChannel feed = new NotificationChannel(CH_FEED, "اللي اتعمل في السيستم",
+                NotificationManager.IMPORTANCE_HIGH);
+        feed.enableVibration(true);
+        feed.setVibrationPattern(new long[]{0, 250, 150, 250});
+        nm.createNotificationChannel(feed);
     }
 
     private static PendingIntent openDayPlan(Context ctx) {
@@ -190,7 +207,8 @@ public class NotifyReceiver extends BroadcastReceiver {
                 .setContentText(lines.isEmpty() ? "" : lines.get(0))
                 .setAutoCancel(true)
                 .setContentIntent(openApp(ctx))
-                .setPriority(CH_MORNING.equals(channel) ? NotificationCompat.PRIORITY_HIGH : NotificationCompat.PRIORITY_DEFAULT)
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .setDefaults(CH_MORNING.equals(channel) ? 0 : NotificationCompat.DEFAULT_ALL)
                 .setCategory(CH_MORNING.equals(channel) ? NotificationCompat.CATEGORY_ALARM : NotificationCompat.CATEGORY_SOCIAL);
         if (lines.size() > 1) {
             NotificationCompat.InboxStyle st = new NotificationCompat.InboxStyle();
