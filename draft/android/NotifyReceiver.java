@@ -278,6 +278,13 @@ public class NotifyReceiver extends BroadcastReceiver {
         Collections.sort(keys);
         if (keys.isEmpty()) return;
         String newest = keys.get(keys.size() - 1);
+        try { // ⚡ الويدجت: آخر حركة حتى والبرنامج مقفول
+            JSONObject ne = all.optJSONObject(newest);
+            if (ne != null && !ne.optString("text", "").isEmpty()) {
+                String nb = ne.optString("by", "");
+                QuickWidget.saveBackgroundLast(ctx, (nb.isEmpty() ? "" : nb + ": ") + ne.optString("text", ""));
+            }
+        } catch (Exception ignored) { }
         if (last.isEmpty()) { // أول مرة: منبعتش القديم كله
             p.edit().putString("lastKey", newest).apply();
             return;

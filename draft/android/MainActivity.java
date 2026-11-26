@@ -554,6 +554,12 @@ public class MainActivity extends Activity {
             });
         }
 
+        /** ⚡ بيانات الجزء اللي تحت في الويدجت (مين شغال · آخر عملية · المستحق النهارده) */
+        @JavascriptInterface
+        public void setWidgetData(String json) {
+            QuickWidget.saveData(MainActivity.this, json);
+        }
+
         /** 👆 البصمة موجودة ومتسجلة على الموبايل ده؟ */
         @JavascriptInterface
         public boolean biometricAvailable() {

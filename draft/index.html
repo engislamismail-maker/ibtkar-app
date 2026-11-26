@@ -795,6 +795,26 @@ input[type="number"]{-moz-appearance:textfield;}
 #numpad-target-label{font-size:13px;font-weight:700;color:var(--muted);margin-bottom:10px;text-align:center;}
 .req-star{color:#C2547A;font-weight:900;margin-right:2px;}
 .nav-badge{position:absolute;top:2px;left:calc(50% - 20px);background:#C2547A;color:#fff;font-size:9px;font-weight:900;min-width:16px;height:16px;border-radius:8px;display:flex;align-items:center;justify-content:center;padding:0 3px;}
+.calx-card{ background:var(--white,#fff); border:1.5px solid var(--border,#E6DED2); border-radius:16px; padding:12px; margin-bottom:12px; }
+.calx-month{ display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; } .calx-month b{ font-size:16px; }
+.calx-grid .cal-cell{ aspect-ratio:auto; min-height:46px; justify-content:flex-start; padding-top:5px; overflow:hidden; }
+.calx-dots{ display:flex; gap:2px; } .calx-dots i{ width:6px; height:6px; border-radius:50%; display:block; }
+.cal-cell.selected .calx-dots i{ box-shadow:0 0 0 1.5px var(--cream); }
+.calx-bar{ position:absolute; left:-3px; right:-3px; bottom:3px; height:4px; opacity:.85; } .calx-bar + .calx-bar{ bottom:9px; }
+.calx-bar.s{ right:4px; border-radius:0 4px 4px 0; } .calx-bar.e{ left:4px; border-radius:4px 0 0 4px; } .calx-bar.s.e{ left:4px; right:4px; border-radius:4px; }
+.calx-legend{ display:flex; flex-wrap:wrap; gap:4px 10px; margin-top:8px; font-size:11px; color:var(--muted); } .calx-legend i{ width:8px; height:8px; border-radius:50%; display:inline-block; margin-inline-end:4px; }
+.calx-day-h{ display:flex; justify-content:space-between; align-items:center; gap:8px; padding-bottom:8px; margin-bottom:4px; border-bottom:1px solid var(--border,#E6DED2); font-size:14px; }
+.calx-row{ display:flex; gap:10px; align-items:flex-start; padding:9px 8px; margin:6px 0; border-radius:12px; background:var(--blush,#F7EEEA); border-inline-start:4px solid var(--k); cursor:default; }
+.calx-row[onclick]{ cursor:pointer; } .calx-ic{ font-size:18px; width:24px; text-align:center; flex:none; }
+.calx-main{ flex:1; min-width:0; } .calx-main b{ display:block; font-size:13.5px; } .calx-main small{ display:block; font-size:11.5px; color:var(--muted); line-height:1.6; } .calx-note{ color:var(--charcoal) !important; }
+.calx-edit{ font-size:12px; opacity:.5; }
+.calx-up{ background:var(--white,#fff); border:1.5px solid var(--border,#E6DED2); border-radius:14px; padding:10px; margin-bottom:8px; cursor:pointer; }
+.calx-up-h{ display:flex; gap:6px; align-items:center; font-weight:900; font-size:13.5px; } .calx-up-h span{ opacity:.6; font-weight:600; } .calx-up-h em{ margin-inline-start:auto; font-style:normal; background:var(--charcoal); color:#fff; font-size:11px; padding:1px 8px; border-radius:10px; }
+.calx-kinds{ display:grid; grid-template-columns:repeat(4,1fr); gap:6px; margin:8px 0 10px; }
+.calx-kinds button{ border:1.5px solid var(--border,#E6DED2); background:#fff; border-radius:12px; padding:8px 2px; font:inherit; font-size:18px; display:flex; flex-direction:column; align-items:center; gap:2px; cursor:pointer; }
+.calx-kinds button span{ font-size:10.5px; font-weight:700; } .calx-kinds button.on{ border-color:var(--k); background:var(--k); color:#fff; }
+.calx-2{ display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+.calx-quick{ display:flex; flex-wrap:wrap; gap:6px; margin:-4px 0 10px; } .calx-quick button{ border:1px solid var(--border,#E6DED2); background:#fff; border-radius:20px; padding:4px 10px; font:inherit; font-size:12px; cursor:pointer; }
 .weekcal-box{background:var(--white,#fff);border:1.5px solid var(--border,#E6DED2);border-radius:16px;padding:14px;margin-bottom:14px;}
 .weekcal-box.weekcal-today{border-color:var(--gold,#D59663);border-width:2.5px;}
 .weekcal-box-head{display:flex;justify-content:space-between;align-items:center;font-size:15px;font-weight:900;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid var(--border,#E6DED2);}
@@ -1663,7 +1683,7 @@ async function deleteReferenceSupplier(id){
   <div class="topbar">
     <div class="brand" onclick="switchView('home')" style="cursor:pointer;" title="الرجوع للرئيسية">
       <div style="font-size:38px;line-height:1;">📅</div>
-      <div><h1>الكالندر</h1><p>كل حاجة هتحصل الأسبوع الجاي، يوم بيوم</p></div>
+      <div><h1>الكالندر</h1><p>مواعيد الشغل يوم بيوم — دوس على أي يوم وضيف</p></div>
     </div>
   </div>
   <div id="weekcal-content"></div>
@@ -3999,6 +4019,7 @@ function describeRecord(r, key, parent){
     case 'lineItems': return ['money', `🧾 بند في كشف حساب: ${r.item||''} — ${money(r.cost)}`];
     case 'payments': return ['money', `🧾 دفعة عميل في كشف حساب — ${money(r.amount)}`];
     case 'quickEstimates': return ['projects', `🧮 تسعير: ${r.name||''}`];
+    case 'calEvents': return ['tasks', `📅 في الكالندر: ${r.title||''}${r.project ? ' — '+r.project : ''} (${r.from||''}${r.to && r.to!==r.from ? ' ← '+r.to : ''})`];
     case 'paymentReminders': return ['money', `⏰ تذكير دفعة ${r.personName||''}${r.amount ? ' — '+money(r.amount) : ''}`];
     case 'boardTasks': return ['tasks', `🗒️ مهمة: ${r.text||''}${r.done ? ' ✅' : ''}`];
     case 'socialMedia': return ['tasks', `📱 سوشيال ميديا: ${r.text||r.title||''}`];
@@ -17566,7 +17587,8 @@ const QUICK = {
   q_expense: ()=>{ switchView('accounts'); openAddExpense(); },
   q_income:  ()=>{ switchView('accounts'); openAddIncome(); },
   q_voice:   ()=> openVoiceEntry('accounts'),
-  q_note:    ()=> openVoiceEntry('archive')
+  q_note:    ()=> openVoiceEntry('archive'),
+  q_calendar: ()=>{ calSel = null; switchView('weekcal'); }
 };
 function runPendingQuick(){
   const a = pendingQuick; pendingQuick = null;
@@ -17584,6 +17606,169 @@ function runPendingQuick(){
 }; }
 // شاشة القفل ظاهرة دلوقتي (أول فتح)؟ نجهّزها تاني عشان زرار البصمة
 try{ if(lockVisible()) initAppLock(); }catch(e){}
+</script>
+<script>
+/* =====================================================================================
+   📅 الكالندر: شهر كامل فوق (كل يوم عليه علامات بلون نوعه) — تدوس على يوم تشوف اللي فيه
+   وتضيف عليه: مقاول/عامل شغال من يوم لحد يوم، ميعاد، دفعة، ملحوظة. وتحت: الأيام الجاية.
+   state.calEvents = [{ id, kind, title, project, from, to, time, note, by, createdAt }]
+   ===================================================================================== */
+const CAL_KINDS = {
+  work: { ic: '👷', name: 'شغل / مقاول', color: '#D59663' },
+  meet: { ic: '📌', name: 'ميعاد / زيارة', color: '#2E2A2C' },
+  pay:  { ic: '💰', name: 'دفعة فلوس', color: '#C2547A' },
+  note: { ic: '📝', name: 'ملحوظة', color: '#6E8B74' }
+};
+let calMonth = (()=>{ const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1); })();
+let calSel = null, calEditId = null;
+const calToday = ()=> todayStrFrom(new Date());
+const calFmt = (s, o)=> new Date(s + 'T00:00:00').toLocaleDateString('ar-EG', o || { day: 'numeric', month: 'long', numberingSystem: 'latn' });
+const calDaysBetween = (a, b)=> Math.round((new Date(b + 'T00:00:00') - new Date(a + 'T00:00:00')) / 86400000);
+function calEventsOn(ds){ return (state.calEvents||[]).filter(e=> e && e.from && ds >= e.from && ds <= (e.to || e.from)); }
+
+// كل اللي في اليوم: من الكالندر نفسه + أيام شغل العمال + زيارات الموردين + المهام + الاستلام + تذكير الدفعات + أقساط العملا
+function calItems(ds){
+  const out = [];
+  calEventsOn(ds).forEach(e=>{
+    const k = CAL_KINDS[e.kind] || CAL_KINDS.note, span = e.to && e.to !== e.from;
+    out.push({ kind: e.kind, ic: k.ic, color: k.color, title: e.title, sub: [e.project ? '📍 ' + projLabel(e.project) : '', e.time || '', span ? `يوم ${calDaysBetween(e.from, ds) + 1} من ${calDaysBetween(e.from, e.to) + 1} (${calFmt(e.from, {day:'numeric', month:'numeric', numberingSystem:'latn'})} ← ${calFmt(e.to, {day:'numeric', month:'numeric', numberingSystem:'latn'})})` : ''].filter(Boolean).join(' · '), note: e.note, id: e.id, by: e.by });
+  });
+  try{ getPaymentRemindersForDate(ds).forEach(r=> out.push({ kind: 'pay', ic: '💰', color: CAL_KINDS.pay.color, title: `دفعة ${r.type==='worker' ? 'مقاولة عامل' : 'مورد'}: ${r.personName}`, sub: r.amount ? 'إجمالي ' + fmtMoney(r.amount) : '', note: r.note, sys: true })); }catch(e){}
+  try{ (state.projects||[]).filter(p=> !p.archived).forEach(p=> installmentsStatus(p).forEach(i=>{ if(i.dueDate===ds && i.left>0) out.push({ kind: 'pay', ic: '💳', color: CAL_KINDS.pay.color, title: `قسط عميل: ${p.name}`, sub: `${i.what || ''} — باقي ${fmtMoney(i.left)}`, sys: true }); })); }catch(e){}
+  try{ getWorkerLogsForDate(ds).forEach(({worker, log})=> out.push({ kind: 'work', ic: '👷', color: CAL_KINDS.work.color, title: worker.name, sub: '📍 ' + projLabel(log.project) + ' · يوم شغل متسجل', sys: true })); }catch(e){}
+  try{ getSupplierVisitsForDate(ds).forEach(({supplier, job})=> out.push({ kind: 'meet', ic: '🔧', color: CAL_KINDS.meet.color, title: supplier.name, sub: `${job.type||''} — 📍 ${projLabel(job.project)}`, sys: true })); }catch(e){}
+  try{ getBoardTasksForDate(ds).forEach(t=> out.push({ kind: 'note', ic: '🗒️', color: CAL_KINDS.note.color, title: t.text, sub: t.assignedTo ? 'مطلوب من: ' + bdPersonName(t.assignedTo) : '', sys: true })); }catch(e){}
+  try{ getSnagRowsForDate(ds).forEach(({project, row})=> out.push({ kind: 'note', ic: '🏁', color: CAL_KINDS.note.color, title: row.task || row.category || '', sub: '📁 ' + project.name, sys: true })); }catch(e){}
+  return out;
+}
+function calRow(it){
+  return `<div class="calx-row" style="--k:${it.color}" ${it.id ? `onclick="calOpenForm(null,'${it.id}')"` : ''}>
+    <div class="calx-ic">${it.ic}</div>
+    <div class="calx-main"><b>${escapeHtml(it.title || '')}</b>${it.sub ? `<small>${escapeHtml(it.sub)}</small>` : ''}${it.note ? `<small class="calx-note">${escapeHtml(it.note)}</small>` : ''}</div>
+    ${it.id ? '<span class="calx-edit">✏️</span>' : ''}
+  </div>`;
+}
+renderWeekCalendar = function(){
+  const wrap = document.getElementById('weekcal-content'); if(!wrap) return;
+  const y = calMonth.getFullYear(), m = calMonth.getMonth(), today = calToday();
+  if(!calSel) calSel = today;
+  const first = new Date(y, m, 1).getDay(), days = new Date(y, m + 1, 0).getDate();
+  let grid = '<div class="cal-weekdays">' + ['أحد','اتنين','تلات','أربع','خميس','جمعة','سبت'].map(d=> `<div>${d}</div>`).join('') + '</div><div class="cal-grid calx-grid">';
+  for(let i=0;i<first;i++) grid += '<div class="cal-cell empty"></div>';
+  for(let d=1; d<=days; d++){
+    const ds = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const items = calItems(ds), kinds = [...new Set(items.map(i=> i.color))].slice(0, 4);
+    const bars = calEventsOn(ds).filter(e=> e.to && e.to !== e.from).slice(0, 2);
+    grid += `<div class="cal-cell ${ds===today ? 'today' : ''} ${ds===calSel ? 'selected' : ''} ${items.length ? 'has-logs' : ''}" onclick="calPick('${ds}')">
+      <div>${d}</div>
+      ${kinds.length ? `<div class="calx-dots">${kinds.map(c=> `<i style="background:${c}"></i>`).join('')}</div>` : ''}
+      ${bars.map(e=> `<div class="calx-bar ${ds===e.from ? 's' : ''} ${ds===e.to ? 'e' : ''}" style="background:${(CAL_KINDS[e.kind]||CAL_KINDS.note).color}"></div>`).join('')}
+    </div>`;
+  }
+  grid += '</div>';
+  const sel = calItems(calSel);
+  let upcoming = '';
+  for(let i=1;i<=7;i++){
+    const d = new Date(); d.setDate(d.getDate() + i); const ds = todayStrFrom(d), it = calItems(ds);
+    if(!it.length) continue;
+    upcoming += `<div class="calx-up" onclick="calPick('${ds}', true)"><div class="calx-up-h">${AR_WEEKDAY_NAMES[d.getDay()]} <span>${calFmt(ds)}</span><em>${it.length}</em></div>${it.slice(0, 3).map(calRow).join('')}${it.length > 3 ? `<div class="hint">+${it.length - 3} كمان</div>` : ''}</div>`;
+  }
+  wrap.innerHTML = `
+    <div class="calx-card">
+      <div class="calx-month">
+        <button type="button" class="btn btn-ghost btn-sm" onclick="calMove(-1)" title="الشهر اللي فات">›</button>
+        <b>${calMonth.toLocaleDateString('ar-EG', { month: 'long', year: 'numeric', numberingSystem: 'latn' })}</b>
+        <button type="button" class="btn btn-ghost btn-sm" onclick="calMove(1)" title="الشهر الجاي">‹</button>
+      </div>
+      ${grid}
+      <div class="calx-legend">${Object.values(CAL_KINDS).map(k=> `<span><i style="background:${k.color}"></i>${k.name}</span>`).join('')}</div>
+      ${calSel !== today || m !== new Date().getMonth() ? `<button type="button" class="btn btn-ghost btn-sm" style="margin-top:6px;" onclick="calGoToday()">📍 النهارده</button>` : ''}
+    </div>
+    <div class="calx-card calx-day">
+      <div class="calx-day-h"><div><b>${AR_WEEKDAY_NAMES[new Date(calSel + 'T00:00:00').getDay()]}</b> ${calFmt(calSel, { day: 'numeric', month: 'long', year: 'numeric', numberingSystem: 'latn' })}${calSel===today ? ' <span class="weekcal-today-tag">النهاردة</span>' : ''}</div>
+        <button type="button" class="btn btn-gold btn-sm" onclick="calOpenForm('${calSel}')">➕ ضيف</button></div>
+      ${sel.length ? sel.map(calRow).join('') : '<div class="no-hist" style="padding:12px 0;">مفيش حاجة في اليوم ده — دوس ➕ ضيف</div>'}
+    </div>
+    ${upcoming ? `<div class="sub" style="margin:14px 2px 6px;">🗓️ الأيام الجاية</div>${upcoming}` : ''}`;
+};
+function calPick(ds, scroll){ calSel = ds; const d = new Date(ds + 'T00:00:00'); calMonth = new Date(d.getFullYear(), d.getMonth(), 1); renderWeekCalendar(); if(scroll) window.scrollTo({ top: 0, behavior: 'smooth' }); }
+function calMove(n){ calMonth = new Date(calMonth.getFullYear(), calMonth.getMonth() + n, 1); renderWeekCalendar(); }
+function calGoToday(){ calPick(calToday()); }
+
+// ➕ / ✏️ الفورم
+function calOpenForm(ds, id){
+  const e = id ? (state.calEvents||[]).find(x=> x.id===id) : null; if(id && !e) return;
+  calEditId = e ? e.id : null;
+  const from = e ? e.from : (ds || calSel || calToday()), to = e ? (e.to || e.from) : from;
+  const names = [...new Set([...(state.workers||[]).map(w=> w.name), ...(state.suppliers||[]).map(s=> s.name)].filter(Boolean))];
+  const projs = (state.projects||[]).filter(p=> !p.archived).map(p=> p.name);
+  const ov = document.createElement('div'); ov.className = 'overlay show'; ov.id = 'overlay-calx';
+  ov.innerHTML = `<div class="modal" style="max-width:440px;"><button type="button" class="modal-close">×</button>
+    <h2>${e ? '✏️ تعديل' : '📅 ضيف على الكالندر'}</h2>
+    <div class="calx-kinds">${Object.entries(CAL_KINDS).map(([k, v])=> `<button type="button" data-k="${k}" style="--k:${v.color}" class="${(e ? e.kind : 'work')===k ? 'on' : ''}">${v.ic}<span>${v.name}</span></button>`).join('')}</div>
+    <div class="field"><label data-tl>مين / إيه</label><input type="text" data-f="title" list="calx-names" placeholder="مثلاً: حنفي — زاز، أو اجتماع مع العميل" value="${escapeHtml(e ? e.title : '')}"><datalist id="calx-names">${names.map(n=> `<option value="${escapeHtml(n)}">`).join('')}</datalist></div>
+    <div class="field"><label>المشروع</label><select data-f="project"><option value="">— من غير مشروع —</option>${projs.map(n=> `<option ${e && e.project===n ? 'selected' : ''}>${escapeHtml(n)}</option>`).join('')}</select></div>
+    <div class="calx-2"><div class="field"><label>من يوم</label><input type="date" data-f="from" value="${from}"></div><div class="field"><label>لحد يوم</label><input type="date" data-f="to" value="${to}"></div></div>
+    <div class="calx-quick">${[1,2,3,5,7].map(n=> `<button type="button" data-n="${n}">${n === 1 ? 'يوم واحد' : n + ' أيام'}</button>`).join('')}</div>
+    <div class="field"><label>الساعة (اختياري)</label><input type="time" data-f="time" value="${e && e.time ? e.time : ''}"></div>
+    <div class="field"><label>ملحوظة (اختياري)</label><textarea data-f="note" rows="2" placeholder="مثلاً: هيخلّص محارة الحمامات">${escapeHtml(e && e.note || '')}</textarea></div>
+    <div class="modal-actions"><button type="button" class="btn btn-primary btn-full" data-save>حفظ</button></div>
+    ${e ? '<div class="modal-actions"><button type="button" class="btn btn-ghost btn-full" data-del style="color:var(--rose);">مسح</button></div>' : ''}
+  </div>`;
+  const q = s=> ov.querySelector(s), f = k=> q(`[data-f="${k}"]`);
+  let kind = e ? e.kind : 'work';
+  const tl = { work: 'مين اللي شغال (مقاول / عامل)', meet: 'الميعاد مع مين / إيه', pay: 'الدفعة لمين / من مين', note: 'الملحوظة' };
+  const setKind = k=>{ kind = k; ov.querySelectorAll('[data-k]').forEach(b=> b.classList.toggle('on', b.dataset.k===k)); q('[data-tl]').textContent = tl[k]; };
+  setKind(kind);
+  ov.querySelectorAll('[data-k]').forEach(b=> b.onclick = ()=> setKind(b.dataset.k));
+  ov.querySelectorAll('[data-n]').forEach(b=> b.onclick = ()=>{ const d = new Date(f('from').value + 'T00:00:00'); d.setDate(d.getDate() + Number(b.dataset.n) - 1); f('to').value = todayStrFrom(d); });
+  f('from').onchange = ()=>{ if(!f('to').value || f('to').value < f('from').value) f('to').value = f('from').value; };
+  q('.modal-close').onclick = ()=> ov.remove();
+  q('[data-save]').onclick = async ()=>{
+    const title = f('title').value.trim(); if(!title){ showToast('اكتب مين أو إيه'); return; }
+    let a = f('from').value, b = f('to').value || a; if(!a){ showToast('اختار اليوم'); return; } if(b < a) [a, b] = [b, a];
+    const rec = { kind, title, project: f('project').value, from: a, to: b, time: f('time').value, note: f('note').value.trim() };
+    state.calEvents = state.calEvents || [];
+    if(calEditId){ Object.assign(state.calEvents.find(x=> x.id===calEditId) || {}, rec); }
+    else state.calEvents.push({ id: uid(), ...rec, by: getDeviceUser() || '', createdAt: new Date().toISOString() });
+    ov.remove(); calSel = a; await saveState(); renderWeekCalendar(); try{ widgetPush(true); }catch(e){}
+    showToast(calEditId ? 'اتعدّل' : `📅 اتحط في الكالندر${b !== a ? ` (${calDaysBetween(a, b) + 1} أيام)` : ''}`);
+  };
+  const del = q('[data-del]'); if(del) del.onclick = async ()=>{
+    if(!(await v2Confirm('تمسح ده من الكالندر؟', 'امسح', 'لا'))) return;
+    state.calEvents = (state.calEvents||[]).filter(x=> x.id !== calEditId); ov.remove(); await saveState(); renderWeekCalendar();
+  };
+  document.body.appendChild(ov);
+}
+// العلامة الحمرا على زرار الكالندر: الدفعات اللي النهارده كمان
+</script>
+<script>
+/* ⚡ بيانات الويدجت (الجزء اللي تحت): مين شغال النهارده · آخر عملية · فلوس مستحقة النهارده */
+let widgetLast = '';
+function widgetData(){
+  const ds = calToday(), items = calItems(ds);
+  const work = items.filter(i=> i.kind==='work').map(i=>{ const pm = (i.sub||'').match(/📍 ([^·]+)/); return i.title + (pm ? ` (${pm[1].trim()})` : ''); });
+  const due = items.filter(i=> i.kind==='pay').map(i=> i.title + (i.sub ? ' — ' + i.sub : ''));
+  const ops = [...(state.expenses||[]).map(e=> ({ e, k: 'e' })), ...(state.income||[]).map(e=> ({ e, k: 'i' }))]
+    .filter(x=> x.e && x.e.amount).sort((a, b)=> recordTime(b.e) - recordTime(a.e));
+  const l = ops[0];
+  const last = l ? `${l.k==='i' ? '💰 قبض' : '➖ مصروف'} ${fmtMoney(l.e.amount)} — ${projLabel(l.e.project) || ''}${l.e.description ? ' · ' + l.e.description : ''} · ${l.e.by || ''}${l.e._sn != null ? ' · #' + l.e._sn : ''}` : '';
+  const t = new Date();
+  return { work: work.slice(0, 4).join(' · ') + (work.length > 4 ? ` +${work.length - 4}` : ''), workN: work.length, last, due: due.slice(0, 2).join(' · ') + (due.length > 2 ? ` +${due.length - 2}` : ''), dueN: due.length,
+    at: t.toLocaleTimeString('ar-EG', { hour: 'numeric', minute: '2-digit', numberingSystem: 'latn' }), day: ds };
+}
+function widgetPush(force){
+  try{
+    if(!(window.IbtkarNative && IbtkarNative.setWidgetData) || !(state && state.projects)) return;
+    const d = widgetData(), key = JSON.stringify({ ...d, at: '' });
+    if(!force && key === widgetLast) return;
+    widgetLast = key; IbtkarNative.setWidgetData(JSON.stringify(d));
+  }catch(e){}
+}
+let widgetTimer = null;
+{ const _rh6 = renderHome; renderHome = function(){ _rh6(); clearTimeout(widgetTimer); widgetTimer = setTimeout(()=> widgetPush(false), 1500); }; }
+document.addEventListener('visibilitychange', ()=>{ if(document.hidden) widgetPush(true); });
+setInterval(()=> widgetPush(false), 5 * 60 * 1000);
 </script>
 </body>
 </html>
