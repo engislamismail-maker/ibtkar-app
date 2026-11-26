@@ -1682,7 +1682,7 @@ async function deleteReferenceSupplier(id){
 <div id="view-weekcal" class="view" style="display:none;">
   <div class="topbar">
     <div class="brand" onclick="switchView('home')" style="cursor:pointer;" title="الرجوع للرئيسية">
-      <div style="font-size:38px;line-height:1;">📅</div>
+      <span id="weekcal-brand-ic" class="bi bi-c"></span>
       <div><h1>الكالندر</h1><p>مواعيد الشغل يوم بيوم — دوس على أي يوم وضيف</p></div>
     </div>
   </div>
@@ -17695,6 +17695,9 @@ function calPick(ds, scroll){ calSel = ds; const d = new Date(ds + 'T00:00:00');
 function calMove(n){ calMonth = new Date(calMonth.getFullYear(), calMonth.getMonth() + n, 1); renderWeekCalendar(); }
 function calGoToday(){ calPick(calToday()); }
 
+// صفحة الكالندر جوّه نفس الإطار بتاع باقي الصفحات (كانت برّه فبيبان فوقها فراغ) + أيقونة الهوية
+{ const v = document.getElementById('view-weekcal'), w = document.querySelector('.wrap'); if(v && w && v.parentElement !== w) w.appendChild(v); }
+try{ const ic = document.getElementById('weekcal-brand-ic'); if(ic) ic.innerHTML = brandIcon(brandIconForEmoji('📅') || 'calendar', { circle: true, size: 46 }); }catch(e){}
 // ➕ / ✏️ الفورم
 function calOpenForm(ds, id){
   const e = id ? (state.calEvents||[]).find(x=> x.id===id) : null; if(id && !e) return;
