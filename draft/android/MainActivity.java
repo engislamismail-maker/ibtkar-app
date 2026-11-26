@@ -6,12 +6,14 @@ import android.content.ActivityNotFoundException;
 import android.content.ClipData;
 import android.content.ContentValues;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.provider.MediaStore;
 import android.util.Base64;
+import android.webkit.GeolocationPermissions;
 import android.webkit.JavascriptInterface;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
@@ -68,6 +70,7 @@ public class MainActivity extends Activity {
 
         WebSettings s = web.getSettings();
         s.setJavaScriptEnabled(true);
+        s.setGeolocationEnabled(true);
         s.setDomStorageEnabled(true);
         s.setDatabaseEnabled(true);
         s.setAllowFileAccess(false);
@@ -115,6 +118,18 @@ public class MainActivity extends Activity {
                 fileCallback = callback;
                 return launchFileChooser(params);
             }
+
+            // 📍 "موقعي دلوقتي" في بيانات المشروع — بيطلب إذن الموقع مرة واحدة
+            @Override
+            public void onGeolocationPermissionsShowPrompt(String origin, GeolocationPermissions.Callback callback) {
+                if (Build.VERSION.SDK_INT < 23 || checkSelfPermission("android.permission.ACCESS_FINE_LOCATION") == PackageManager.PERMISSION_GRANTED
+                        || checkSelfPermission("android.permission.ACCESS_COARSE_LOCATION") == PackageManager.PERMISSION_GRANTED) {
+                    callback.invoke(origin, true, false);
+                    return;
+                }
+                geoOrigin = origin; geoCallback = callback;
+                requestPermissions(new String[]{"android.permission.ACCESS_FINE_LOCATION", "android.permission.ACCESS_COARSE_LOCATION"}, 1004);
+            }
         });
 
         web.setDownloadListener((url, userAgent, contentDisposition, mimetype, contentLength) -> {
@@ -122,6 +137,19 @@ public class MainActivity extends Activity {
         });
 
         web.loadUrl(START_URL);
+    }
+
+    private String geoOrigin; private GeolocationPermissions.Callback geoCallback;
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] results) {
+        super.onRequestPermissionsResult(requestCode, permissions, results);
+        if (requestCode == 1004 && geoCallback != null) {
+            boolean ok = false;
+            for (int r : results) if (r == PackageManager.PERMISSION_GRANTED) ok = true;
+            geoCallback.invoke(geoOrigin, ok, false);
+            geoCallback = null; geoOrigin = null;
+        }
     }
 
     // ---------------------------------------------------------------- اختيار ملفات / كاميرا

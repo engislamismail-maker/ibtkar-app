@@ -2559,6 +2559,15 @@ async function deleteReferenceSupplier(id){
       <input type="text" id="projLocation" list="location-list" placeholder="مثلاً: New Giza">
     </div>
     <div class="field">
+      <label>📍 اللوكيشن على جوجل مابس (اختياري)</label>
+      <input type="url" id="projMapUrl" dir="ltr" placeholder="الصق لينك جوجل مابس هنا">
+      <div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap;">
+        <button type="button" class="btn btn-ghost btn-sm" onclick="projMapHere()">📡 موقعي دلوقتي</button>
+        <button type="button" class="btn btn-ghost btn-sm" onclick="projMapSearch()">🗺️ دوّر على جوجل مابس</button>
+      </div>
+      <div class="hint" id="projMapHint">لو إنت في الموقع دوس "موقعي دلوقتي". أو افتح جوجل مابس ← دوس على المكان ← مشاركة ← نسخ الرابط، وارجع الصقه هنا.</div>
+    </div>
+    <div class="field">
       <label>تفاصيل (اختياري)</label>
       <textarea id="projDetails" placeholder="نوع المشروع، المساحة، أي تفاصيل مهمة"></textarea>
     </div>
@@ -4485,7 +4494,7 @@ function getAllLocations(){
     if(o.project) set.add(o.project.trim());
   });
   (state.projects||[]).forEach(p=>{
-    if(p.location) set.add(p.location.trim());
+    if(p.name) set.add(p.name.trim());
   });
   (state.suppliers||[]).forEach(s=>{
     (s.jobOrders||[]).forEach(j=>{
@@ -4499,7 +4508,11 @@ function getAllLocations(){
 }
 function getVisibleLocations(){
   const hidden = new Set((state.hiddenLocations||[]).map(x=>x.trim()));
-  return getAllLocations().filter(loc=>!hidden.has(loc));
+  // المنطقة (٦ أكتوبر مثلاً) تفصيلة جوّه المشروع — مش اسم يتختار في التسجيل
+  const norm = x=> (x||'').trim().toLowerCase();
+  const names = new Set((state.projects||[]).map(p=> norm(p.name)));
+  const locs = new Set((state.projects||[]).map(p=> norm(p.location)).filter(l=> l && !names.has(l)));
+  return getAllLocations().filter(loc=>!hidden.has(loc) && !locs.has(norm(loc)));
 }
 function populateLocationDatalist(){
   const dl = document.getElementById('location-list');
@@ -4850,7 +4863,7 @@ function renderExpenses(){
       ${thumb}
       <div class="expense-main">
         <div class="expense-top">
-          <span class="expense-project">${escapeHtml(e.project)}</span>
+          <span class="expense-project">${escapeHtml(projLabel(e.project))}</span>
           <span class="expense-amount ${isIncome ? 'income' : 'expense'}">${isIncome ? '+' : '-'}${fmtMoney(e.amount)}</span>
         </div>
         <div class="expense-desc">
@@ -5426,7 +5439,7 @@ function openTxnDetail(id, kind){
   document.getElementById('expense-detail-rows').innerHTML = `
     <div class="detail-row"><span>المبلغ</span><b style="color:${isIncome ? 'var(--green)' : 'var(--rose)'}">${fmtMoney(e.amount)}</b></div>
     ${isIncome ? `<div class="detail-row"><span>طريقة الدخول</span><b>${escapeHtml(e.method || '—')}</b></div>` : `<div class="detail-row"><span>طريقة الدفع</span><b>${escapeHtml(e.method || '—')}</b></div>`}
-    <div class="detail-row"><span>المشروع</span><b>${escapeHtml(e.project)}</b></div>
+    <div class="detail-row"><span>المشروع</span><b>${escapeHtml(projLabel(e.project))}</b></div>
     <div class="detail-row"><span>${isIncome ? 'ملاحظات' : 'البند'}</span><b>${escapeHtml(e.description || '—')}</b></div>
     ${linkedLog ? `<div class="detail-row"><span>قبض لـ</span><b>${escapeHtml(linkedWorker.name)} — ${escapeHtml(linkedLog.code || '')}</b></div>` : ''}
     ${linkedContract ? `<div class="detail-row"><span>دفعة مقاولة لـ</span><b>${escapeHtml(linkedWorker.name)} — ${escapeHtml(contractLabel(linkedContract))}</b></div>` : ''}
@@ -5624,7 +5637,7 @@ async function buildPaymentReceiptCanvas(){
     ${deductionBlock}
     ${remainingBlock}
     <div style="display:flex;gap:28px;margin-bottom:6px;flex-wrap:wrap;">
-      ${data.project ? `<div><div style="font-size:12px;color:#8C8177;">المشروع</div><div style="font-size:14px;font-weight:700;">${escapeHtml(data.project)}</div></div>` : ''}
+      ${data.project ? `<div><div style="font-size:12px;color:#8C8177;">المشروع</div><div style="font-size:14px;font-weight:700;">${escapeHtml(projLabel(data.project))}</div></div>` : ''}
       <div><div style="font-size:12px;color:#8C8177;">التاريخ</div><div style="font-size:14px;font-weight:700;">${dateLabel}</div></div>
       ${data.code ? `<div><div style="font-size:12px;color:#8C8177;">الكود</div><div style="font-size:15px;font-weight:900;letter-spacing:.5px;" dir="ltr">${escapeHtml(data.code)}</div></div>` : ''}
       ${data.by ? `<div><div style="font-size:12px;color:#8C8177;">بواسطة</div><div style="font-size:14px;font-weight:700;">${escapeHtml(data.by)}</div></div>` : ''}
@@ -5791,7 +5804,7 @@ function renderWorkers(){
         <div class="worker-stat-row">
           <span>أيام العمل: <b>${daysCount}</b></span>
           <span>أوامر عمل: <b>${woCount}</b></span>
-          ${lastLog ? `<span>آخر مشروع: <b>${escapeHtml(lastLog.project)}</b></span>` : ''}
+          ${lastLog ? `<span>آخر مشروع: <b>${escapeHtml(projLabel(lastLog.project))}</b></span>` : ''}
         </div>
         ${unpaidCount>0 ? `<div style="margin-top:8px;"><span class="paid-badge unpaid">⏳ ${unpaidCount} يوم لسه مدفوعش</span></div>` : ''}
         <div class="card-actions">
@@ -6406,6 +6419,51 @@ function renderHomeCollection(){
 { const _renderHome = renderHome; renderHome = function(){ _renderHome(); try{ renderHomeCollection(); }catch(e){ console.error(e); } }; }
 
 /* ===================== 📄 التقرير اليومي (DRAFT) ===================== */
+// اسم المشروع بس في أي مكان برّه المشروع (حتى لو العملية القديمة متسجلة بالمنطقة) — المنطقة واللوكيشن تفاصيل جوّه المشروع
+function projLabel(s){
+  const n = (s||'').trim().toLowerCase(); if(!n) return s || '';
+  const ps = state.projects || [];
+  if(ps.some(p=> (p.name||'').trim().toLowerCase()===n)) return s;
+  const m = ps.filter(p=> (p.location||'').trim().toLowerCase()===n);
+  return m.length===1 ? m[0].name : s;
+}
+/* 📍 لوكيشن جوجل مابس للمشروع */
+function projMapClean(v){
+  v = String(v||'').trim(); if(!v) return '';
+  const m = v.match(/https?:\/\/\S+/); if(m) return m[0];
+  const ll = v.match(/^(-?\d{1,2}\.\d+)\s*,\s*(-?\d{1,3}\.\d+)$/); if(ll) return `https://www.google.com/maps?q=${ll[1]},${ll[2]}`;
+  return 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(v);
+}
+function projMapHere(){
+  const hint = document.getElementById('projMapHint');
+  if(!navigator.geolocation){ showToast('الجهاز ده مش بيدّي الموقع — الصق لينك جوجل مابس'); return; }
+  if(hint) hint.textContent = '📡 بيجيب موقعك… (لو طلب إذن الموقع وافق)';
+  navigator.geolocation.getCurrentPosition(pos=>{
+    const { latitude: a, longitude: b, accuracy } = pos.coords;
+    document.getElementById('projMapUrl').value = `https://www.google.com/maps?q=${a.toFixed(6)},${b.toFixed(6)}`;
+    if(hint) hint.textContent = `✅ اتحط موقعك (دقة حوالي ${Math.round(accuracy)} متر) — دوس حفظ.`;
+  }, err=>{
+    if(hint) hint.textContent = err && err.code===1 ? '❌ إذن الموقع مقفول — افتحه من إعدادات الموبايل للتطبيق، أو الصق لينك جوجل مابس.' : '❌ مقدرتش أجيب الموقع — اتأكد إن الـ GPS شغال، أو الصق لينك جوجل مابس.';
+  }, { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 });
+}
+function projMapSearch(){
+  const q = [document.getElementById('projName').value, document.getElementById('projLocation').value].filter(Boolean).join(' ');
+  window.open('https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(q || 'مصر'), '_blank');
+}
+function projMapOpen(id){ const p = (state.projects||[]).find(x=> x.id===id); if(p && p.mapUrl) window.open(p.mapUrl, '_blank'); }
+async function projMapShare(id){
+  const p = (state.projects||[]).find(x=> x.id===id); if(!p || !p.mapUrl) return;
+  const text = `📍 لوكيشن مشروع ${p.name}${p.location ? ' — ' + p.location : ''}\n${p.mapUrl}`;
+  const ov = document.createElement('div'); ov.className = 'overlay show';
+  ov.innerHTML = `<div class="modal" style="max-width:360px;"><button type="button" class="modal-close">×</button><h2>📤 شير اللوكيشن</h2>
+    <div class="sub" style="white-space:pre-wrap;direction:rtl;">${escapeHtml(text)}</div>
+    <button type="button" class="btn btn-primary btn-full" style="margin-top:8px;" data-wa>💬 واتساب</button>
+    <button type="button" class="btn btn-ghost btn-full" style="margin-top:6px;" data-cp>📋 نسخ اللينك</button></div>`;
+  ov.querySelector('.modal-close').onclick = ()=> ov.remove();
+  ov.querySelector('[data-wa]').onclick = ()=>{ window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank'); ov.remove(); };
+  ov.querySelector('[data-cp]').onclick = async ()=>{ try{ await navigator.clipboard.writeText(text); showToast('📋 اتنسخ'); }catch(e){ const t = document.createElement('textarea'); t.value = text; document.body.appendChild(t); t.select(); try{ document.execCommand('copy'); showToast('📋 اتنسخ'); }catch(_){} t.remove(); } ov.remove(); };
+  document.body.appendChild(ov);
+}
 function projectMatchesName(p, name){
   const n = (name||'').trim().toLowerCase();
   return !!n && [p.name, p.location].some(x=> (x||'').trim().toLowerCase()===n);
@@ -6737,7 +6795,7 @@ function renderWorkerWorkOrders(workerId){
       <div class="worker-entry-dot">📋</div>
       <div class="worker-entry-main">
         <div class="worker-entry-top">
-          <b>${escapeHtml(o.project)}</b>
+          <b>${escapeHtml(projLabel(o.project))}</b>
           <time>${dateStr}</time>
         </div>
         <div class="worker-entry-meta">${assistants>0 ? `+${assistants} مساعد${assistants>1?'ين':''}` : 'من غير مساعدين'}</div>
@@ -6784,7 +6842,7 @@ function renderWorkerLogList(){
       <div class="worker-entry-dot">👷</div>
       <div class="worker-entry-main">
         <div class="worker-entry-top">
-          <b>${escapeHtml(l.project)}</b>
+          <b>${escapeHtml(projLabel(l.project))}</b>
           <time>${dateStr}</time>
         </div>
         <div class="worker-entry-meta">${helpers===0 ? 'جه لوحده' : `معاه ${helpers} مرافق${helpers>1 ? 'ين' : ''}`}${(l.startTime && l.endTime) ? ` — من ${l.startTime} لحد ${l.endTime}` : ''}</div>
@@ -6992,7 +7050,7 @@ function renderCalendarDayDetail(){
             <b>${escapeHtml(worker.name)}</b>
             <span style="font-size:12px;color:var(--muted);">${escapeHtml(worker.role || '')}</span>
           </div>
-          <div class="worker-entry-meta">📍 ${escapeHtml(log.project)} — ${helpers===0 ? 'لوحده' : `+${helpers} مرافق`}</div>
+          <div class="worker-entry-meta">📍 ${escapeHtml(projLabel(log.project))} — ${helpers===0 ? 'لوحده' : `+${helpers} مرافق`}</div>
           <div style="margin-top:4px;"><span class="paid-badge ${log.paid ? 'paid' : 'unpaid'}">${log.paid ? '✅ مدفوع' : '⏳ لسه مدفوعش'}</span></div>
         </div>
       </div>`;
@@ -7007,7 +7065,7 @@ function renderCalendarDayDetail(){
         <div class="worker-entry-dot">📋</div>
         <div class="worker-entry-main">
           <div class="worker-entry-top"><b>${escapeHtml(o.workerName)}</b><span style="font-size:12px;color:var(--muted);">${escapeHtml(o.role || '')}</span></div>
-          <div class="worker-entry-meta">📍 ${escapeHtml(o.project)} — ${assistants>0 ? `+${assistants} مساعد${assistants>1?'ين':''}` : 'من غير مساعدين'}</div>
+          <div class="worker-entry-meta">📍 ${escapeHtml(projLabel(o.project))} — ${assistants>0 ? `+${assistants} مساعد${assistants>1?'ين':''}` : 'من غير مساعدين'}</div>
           ${o.tools && o.tools.length ? `<div class="worker-entry-meta">🧰 ${o.tools.map(t=>escapeHtml(t)).join('، ')}</div>` : ''}
         </div>
       </div>`;
@@ -7081,14 +7139,14 @@ function weekCalDayBox(dateStr, dayIndex){
     sections += workerEntries.map(({worker,log})=>`
       <div class="weekcal-row">
         <div class="weekcal-row-icon">👷</div>
-        <div class="weekcal-row-main"><b>${escapeHtml(worker.name)}</b><div>📍 ${escapeHtml(log.project)}</div></div>
+        <div class="weekcal-row-main"><b>${escapeHtml(worker.name)}</b><div>📍 ${escapeHtml(projLabel(log.project))}</div></div>
       </div>`).join('');
   }
   if(supplierVisits.length){
     sections += supplierVisits.map(({supplier,job})=>`
       <div class="weekcal-row">
         <div class="weekcal-row-icon">🔧</div>
-        <div class="weekcal-row-main"><b>${escapeHtml(supplier.name)}</b><div>${escapeHtml(job.type||'')} — 📍 ${escapeHtml(job.project)}</div></div>
+        <div class="weekcal-row-main"><b>${escapeHtml(supplier.name)}</b><div>${escapeHtml(job.type||'')} — 📍 ${escapeHtml(projLabel(job.project))}</div></div>
       </div>`).join('');
   }
   if(tasks.length){
@@ -7217,7 +7275,7 @@ function renderSupplierCalendarDayDetail(){
             <b>${escapeHtml(supplier.name)}</b>
             <span style="font-size:12px;color:var(--muted);">${escapeHtml(job.type)}</span>
           </div>
-          <div class="worker-entry-meta">📍 ${escapeHtml(job.project)}${supplier.specialty ? ' — '+escapeHtml(supplier.specialty) : ''}</div>
+          <div class="worker-entry-meta">📍 ${escapeHtml(projLabel(job.project))}${supplier.specialty ? ' — '+escapeHtml(supplier.specialty) : ''}</div>
           ${job.note ? `<div class="worker-entry-note">${escapeHtml(job.note)}</div>` : ''}
         </div>
       </div>`;
@@ -7342,7 +7400,7 @@ function renderWorkOrderList(){
           <b>${escapeHtml(o.workerName)}</b>
           <time>${dateStr}</time>
         </div>
-        <div class="worker-entry-meta">📍 ${escapeHtml(o.project)} — ${assistants>0 ? `+${assistants} مساعد${assistants>1?'ين':''}` : 'من غير مساعدين'}</div>
+        <div class="worker-entry-meta">📍 ${escapeHtml(projLabel(o.project))} — ${assistants>0 ? `+${assistants} مساعد${assistants>1?'ين':''}` : 'من غير مساعدين'}</div>
         ${o.tools && o.tools.length ? `<div class="worker-entry-meta">🧰 ${o.tools.map(t=>escapeHtml(t)).join('، ')}</div>` : ''}
         ${o.note ? `<div class="worker-entry-meta">${escapeHtml(o.note)}</div>` : ''}
         <div class="wo-actions">
@@ -7386,7 +7444,7 @@ async function buildWorkOrderPDFBlob(orderId){
       <div style="font-size:18px;font-weight:900;">${escapeHtml(o.workerName)}${o.role ? ' — ' + escapeHtml(o.role) : ''}</div>
     </div>
     <div style="display:flex;gap:28px;margin-bottom:18px;flex-wrap:wrap;">
-      <div><div style="font-size:12px;color:#8C8177;">المكان</div><div style="font-size:15px;font-weight:700;">${escapeHtml(o.project)}</div></div>
+      <div><div style="font-size:12px;color:#8C8177;">المكان</div><div style="font-size:15px;font-weight:700;">${escapeHtml(projLabel(o.project))}</div></div>
       <div><div style="font-size:12px;color:#8C8177;">تاريخ التنفيذ</div><div style="font-size:15px;font-weight:700;">${dateStr}</div></div>
       <div><div style="font-size:12px;color:#8C8177;">عدد المساعدين</div><div style="font-size:15px;font-weight:700;">${assistants}</div></div>
     </div>
@@ -7559,6 +7617,7 @@ function openAddProject(){
   document.getElementById('projClient').value = '';
   document.getElementById('projStartDate').value = new Date().toISOString().slice(0,10);
   document.getElementById('projLocation').value = '';
+  document.getElementById('projMapUrl').value = '';
   document.getElementById('projDetails').value = '';
   document.getElementById('projNotes').value = '';
   populateLocationDatalist();
@@ -7576,6 +7635,7 @@ function openEditProject(){
   document.getElementById('projClient').value = p.client || '';
   document.getElementById('projStartDate').value = p.startDate || '';
   document.getElementById('projLocation').value = p.location || '';
+  document.getElementById('projMapUrl').value = p.mapUrl || '';
   document.getElementById('projDetails').value = p.details || '';
   document.getElementById('projNotes').value = p.notes || '';
   populateLocationDatalist();
@@ -7587,6 +7647,7 @@ async function saveProject(){
   const client = document.getElementById('projClient').value.trim();
   const startDate = document.getElementById('projStartDate').value;
   const location = document.getElementById('projLocation').value.trim();
+  const mapUrl = projMapClean(document.getElementById('projMapUrl').value);
   const details = document.getElementById('projDetails').value.trim();
   const notes = document.getElementById('projNotes').value.trim();
   if(!name){ showToast('اكتب اسم المشروع'); return; }
@@ -7596,11 +7657,11 @@ async function saveProject(){
   const wasEditing = !!editingProjectId;
   if(wasEditing){
     const p = state.projects.find(x=>x.id===editingProjectId);
-    if(p) Object.assign(p, { name, client, startDate, location, details, notes });
+    if(p) Object.assign(p, { name, client, startDate, location, mapUrl, details, notes });
   }else{
     // seed a starting snag list so every new project has a ready-to-fill punch list
     const startingSnagList = [1,2,3,4].map(()=> ({ id: uid(), task: '', category: '', assignee: '', done: false, createdAt: new Date().toISOString() }));
-    state.projects.push({ id: uid(), name, client, startDate, location, details, notes, createdAt: new Date().toISOString(), snagList: startingSnagList });
+    state.projects.push({ id: uid(), name, client, startDate, location, mapUrl, details, notes, createdAt: new Date().toISOString(), snagList: startingSnagList });
   }
   closeModal('overlay-add-project');
   editingProjectId = null;
@@ -7704,6 +7765,7 @@ function openProjectDashboard(id){
   document.getElementById('pd-meta').innerHTML = `
     <span>📍 <b>${escapeHtml(p.location || '—')}</b></span>
     <span>بدأ في: <b>${startLabel}</b></span>
+    ${p.mapUrl ? `<span style="display:flex;gap:6px;flex-wrap:wrap;width:100%;margin-top:4px;"><button type="button" class="btn btn-ghost btn-sm" onclick="projMapOpen('${p.id}')">🗺️ افتح اللوكيشن</button><button type="button" class="btn btn-gold btn-sm" onclick="projMapShare('${p.id}')">📤 شير اللوكيشن</button></span>` : `<span style="width:100%;"><button type="button" class="btn btn-ghost btn-sm" onclick="openEditProject()">📍 حط لوكيشن جوجل مابس</button></span>`}
   `;
   document.getElementById('pd-details-wrap').innerHTML = p.details
     ? `<div class="sub" style="margin-top:10px;">تفاصيل</div><div class="project-dash-notes">${escapeHtml(p.details)}</div>` : '';
@@ -8426,7 +8488,7 @@ function renderProjectBanner(containerId){
   if(!el) return;
   if(!activeProjectContext){ el.innerHTML = ''; return; }
   el.innerHTML = `<div class="project-context-banner">
-    <span>🏗️ شغال دلوقتي على مشروع: <b>${escapeHtml(activeProjectContext.name)}</b> — 📍 ${escapeHtml(activeProjectContext.location || '')}</span>
+    <span>🏗️ شغال دلوقتي على مشروع: <b>${escapeHtml(activeProjectContext.name)}</b></span>
     <span style="display:flex;gap:6px;flex-wrap:wrap;">
       <button type="button" class="project-back-btn" onclick="returnToProjectDashboard()">↩️ رجوع للمشروع</button>
       <button type="button" onclick="clearProjectContext()">عرض الكل</button>
@@ -8591,6 +8653,7 @@ function buildProjectReportBodyHTML(project, details, range, sections){
       ${infoRow('اسم المشروع', project.name)}
       ${infoRow('العميل', project.client)}
       ${infoRow('الموقع', project.location)}
+      ${project.mapUrl ? infoRow('اللوكيشن على الخريطة', project.mapUrl) : ''}
       ${infoRow('بدأ في', startLabel)}
       ${infoRow('الفترة', formatRangeLabel(range))}
       ${infoRow('تاريخ التقرير', fmtDateTime(new Date().toISOString()))}
@@ -9429,7 +9492,7 @@ function renderCurrentlyWorking(){
     <div class="pd-row">
       <div class="pd-row-main">
         <div class="pd-row-title">${escapeHtml(w.name)}${w.role ? ' — '+escapeHtml(w.role) : ''}${w.source==='order' ? ' <span style="font-size:11px;color:var(--muted);">(أمر عمل)</span>' : ''}</div>
-        <div class="pd-row-sub">📍 ${escapeHtml(w.project)} — من ${w.startTime} لحد ${w.endTime}</div>
+        <div class="pd-row-sub">📍 ${escapeHtml(projLabel(w.project))} — من ${w.startTime} لحد ${w.endTime}</div>
       </div>
     </div>
   `).join('');
@@ -9484,7 +9547,7 @@ function renderTodayBox(){
     <div class="pd-row">
       <div class="pd-row-main">
         <div class="pd-row-title">${escapeHtml(w.name)}${w.role ? ' — '+escapeHtml(w.role) : ''}${w.source==='order' ? ' <span style="font-size:11px;color:var(--muted);">(أمر عمل)</span>' : ''}</div>
-        <div class="pd-row-sub">📍 ${escapeHtml(w.project)}</div>
+        <div class="pd-row-sub">📍 ${escapeHtml(projLabel(w.project))}</div>
       </div>
     </div>
   `).join('') : '<div class="no-hist">مفيش عمال متسجلين النهاردة</div>';
@@ -9494,7 +9557,7 @@ function renderTodayBox(){
     <div class="pd-row">
       <div class="pd-row-main">
         <div class="pd-row-title">${escapeHtml(s.name)}${s.specialty ? ' — '+escapeHtml(s.specialty) : ''}</div>
-        <div class="pd-row-sub">📍 ${escapeHtml(s.project)} — ${escapeHtml(s.type)}</div>
+        <div class="pd-row-sub">📍 ${escapeHtml(projLabel(s.project))} — ${escapeHtml(s.type)}</div>
       </div>
     </div>
   `).join('') : '<div class="no-hist">مفيش موردين متجدولين النهاردة</div>';
@@ -10971,7 +11034,7 @@ async function buildClientStatementPDFBlob(){
   document.getElementById('cs-print-client-info').innerHTML = `
     <table style="width:100%;border-collapse:collapse;margin-bottom:4px;">
       <tr><td style="background:#2E2A2C;color:#fff;padding:8px 12px;font-weight:900;font-size:11.5px;width:30%;">اسم العميل</td><td style="background:#FFF7E0;padding:8px 12px;font-size:11.5px;">${escapeHtml(p.client || '')}</td></tr>
-      <tr><td style="background:#2E2A2C;color:#fff;padding:8px 12px;font-weight:900;font-size:11.5px;">موقع المشروع</td><td style="background:#FFF7E0;padding:8px 12px;font-size:11.5px;">${escapeHtml(p.location || '')}</td></tr>
+      <tr><td style="background:#2E2A2C;color:#fff;padding:8px 12px;font-weight:900;font-size:11.5px;">موقع المشروع</td><td style="background:#FFF7E0;padding:8px 12px;font-size:11.5px;">${escapeHtml(p.location || '')}</td></tr>${p.mapUrl ? `<tr><td style="background:#2E2A2C;color:#fff;padding:8px 12px;font-weight:900;font-size:11.5px;">اللوكيشن</td><td style="background:#FFF7E0;padding:8px 12px;font-size:11px;direction:ltr;text-align:right;"><a href="${escapeHtml(p.mapUrl)}">${escapeHtml(p.mapUrl)}</a></td></tr>` : ''}
       <tr><td style="background:#2E2A2C;color:#fff;padding:8px 12px;font-weight:900;font-size:11.5px;">تاريخ البدء</td><td style="background:#FFF7E0;padding:8px 12px;font-size:11.5px;">${startLabel}</td></tr>
       <tr><td style="background:#2E2A2C;color:#fff;padding:8px 12px;font-weight:900;font-size:11.5px;">كود المشروع</td><td style="background:#FFF7E0;padding:8px 12px;font-size:11.5px;">${escapeHtml(cs.projectCode || '')}</td></tr>
     </table>
@@ -15772,7 +15835,7 @@ renderExpenses = function(){
     const isIncome = e._kind==='income';
     const thumb = e.image ? `<img class="expense-thumb" src="${e.image}" alt="مرفق">` : `<div class="expense-thumb-placeholder ${isIncome ? 'income' : ''}">${isIncome ? '💰' : '🧾'}</div>`;
     return `<div class="expense-card" onclick="openTxnDetail('${e.id}','${e._kind}')">${thumb}<div class="expense-main">
-      <div class="expense-top"><span class="expense-project">${escapeHtml(e.project)}</span><span class="expense-amount ${isIncome ? 'income' : 'expense'}">${isIncome ? '+' : '-'}${fmtMoney(e.amount)}</span></div>
+      <div class="expense-top"><span class="expense-project">${escapeHtml(projLabel(e.project))}</span><span class="expense-amount ${isIncome ? 'income' : 'expense'}">${isIncome ? '+' : '-'}${fmtMoney(e.amount)}</span></div>
       <div class="expense-desc"><span class="txn-kind-badge ${isIncome ? 'income' : 'expense'}">${isIncome ? (e.method || 'قبض') : 'مصروف'}</span> ${escapeHtml(e.description || '')}</div>
       <div class="expense-date">${e._sn != null ? `<b dir="ltr" class="acc-sn">${snLabel(e._sn, e.date)}</b>` : fmtDateTime(e.date)}${e.by ? ` · <span class="actor-badge">${escapeHtml(e.by)}</span>` : ''}${e.txCode ? ` · <span dir="ltr" class="acc-code">${escapeHtml(e.txCode)}</span>` : ''}</div>
     </div></div>`;
