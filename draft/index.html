@@ -16366,8 +16366,19 @@ function v3Dedupe(st, L, ctx){
     list.forEach(o=>{ if(o!==keep){ const i = o.arr.indexOf(o.x); if(i>=0) o.arr.splice(i,1); } });
   });
 }
+// علامة المسح لازم تشيل الرقم المسلسل بتاع العملية — حتى لو الجهاز اللي مسح ما كانش وصله الرقم لسه
+function v3TombSn(st){
+  const want = new Map(); ((st && st.tombstones) || []).forEach(t=>{ if(t && t.target && !t.undone && t.sn == null) want.set(t.target, t); });
+  if(!want.size) return 0; let n = 0;
+  const walk = (node, top)=>{
+    if(Array.isArray(node)){ node.forEach(x=>{ if(v3IsRec(x) && x._sn != null && want.has(x.id)){ const t = want.get(x.id); t.sn = x._sn; t._u = Date.now(); want.delete(x.id); n++; } walk(x, false); }); return; }
+    if(syncIsPlain(node)) Object.keys(node).forEach(k=>{ if(top && (V3_OPAQUE.has(k) || V3_KEEP.has(k))) return; const v = node[k]; if(v && typeof v==='object') walk(v, false); });
+  };
+  walk(st, true); return n;
+}
 function v3Merge(L, R, ctx){
   const out = v3MergeObj(L || {}, R || {}, '__root__', '', ctx, 1, 0, true);
+  v3TombSn(out);
   v3RemoveIds(out, v3Tombs(out));
   try{ v3Dedupe(out, L || {}, ctx); }catch(e){}
   return out;
@@ -16714,7 +16725,9 @@ async function v3Allocate(ids, claimBackfill){
   }, undefined, false);
   return (res && res.committed) ? (range || {}) : null;
 }
-function v3PutSn(ids, from){ const live = v3Live(state); let n = 0; ids.forEach((id, i)=>{ const x = live[id]; if(x && x.rec._sn == null){ x.rec._sn = from + i; n++; } }); return n; }
+function v3PutSn(ids, from){ const live = v3Live(state); let n = 0; ids.forEach((id, i)=>{ const x = live[id]; if(x && x.rec._sn == null){ x.rec._sn = from + i; n++; } else if(!x) n += v3TombTake(id, from + i); }); return n; }
+// رقم اتحجز لعملية اتمسحت بموافقة إسلام قبل ما الرقم يوصلها: يتسجل على علامة المسح (يتحسب "اتمسح" مش "ناقص")
+function v3TombTake(id, sn){ const t = (state.tombstones||[]).find(z=> z && z.target===id && !z.undone && z.sn == null); if(!t) return 0; t.sn = sn; t._u = Date.now(); return 1; }
 let v3SnAgain = false;
 async function v3AssignSerials(){
   if(!fbReady) return;
@@ -16727,7 +16740,8 @@ async function v3AssignSerials(){
     const reserved = new Map(); (c.recent||[]).forEach(r=> (r.ids||[]).forEach((id, i)=>{ if(!reserved.has(id)) reserved.set(id, r.from + i); }));
     let live = v3Live(state);
     const used = new Set(Object.values(live).map(x=> x.rec._sn).filter(v=> v != null));
-    reserved.forEach((sn, id)=>{ const x = live[id]; if(x && x.rec._sn == null && !used.has(sn)){ x.rec._sn = sn; used.add(sn); changed++; } });
+    reserved.forEach((sn, id)=>{ const x = live[id]; if(x && x.rec._sn == null && !used.has(sn)){ x.rec._sn = sn; used.add(sn); changed++; } else if(!x) changed += v3TombTake(id, sn); });
+    changed += v3TombSn(state);
     // ٢) اللي اتسجل على الجهاز ده ولسه ما اتحجزلوش رقم خالص (عمر العملية ما يتحجزلها رقمين)
     const mine = v3NeedSn.filter(id=> live[id] && live[id].rec._sn == null && v3SnEligible(live[id]) && !reserved.has(id))
       .sort((a,b)=> v3RecTime(live[a].rec) - v3RecTime(live[b].rec));
