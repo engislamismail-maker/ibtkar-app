@@ -17120,5 +17120,135 @@ jumpToProjectView = function(view){
 };
 { const _cpc = clearProjectContext; clearProjectContext = function(){ try{ accF = { type:'all', person:'all', project:'', worker:'', supplier:'', method:'', from:'', to:'' }; }catch(e){} return _cpc(); }; }
 </script>
+<script>
+/* =====================================================================================
+   📦 عمليات اترجعت من صور الشاشة (المعادي + الخمايل + نيو جيزه) — جوّه البرنامج متشفّرة
+   (الريبو عام) وبتتفك بكود من ١٢ رقم. لإسلام بس، ومرة واحدة.
+   كل عملية بتتقارن بالموجود: نفس المشروع + نفس المبلغ + نفس اليوم = "موجودة" ومش بترجع.
+   مفيش حاجة موجودة بتتمسح أو تتغيّر — بيضيف بس اللي إنت تعلّم عليه.
+   ===================================================================================== */
+let rpPkg = null, rpTried = false;
+const rpFlag = id=> 'restorePack_' + id;
+const rpDone = id=> !!(state[rpFlag(id)] || (()=>{ try{ return localStorage.getItem('ibtkar-' + rpFlag(id)); }catch(e){ return null; } })());
+async function rpLoad(){
+  if(rpTried) return rpPkg; rpTried = true;
+  try{ const r = await fetch('restore-pack.enc.json', { cache: 'no-store' }); if(r.ok){ const p = await r.json(); if(p && p.id && p.data) rpPkg = p; } }catch(e){}
+  return rpPkg;
+}
+async function rpDecrypt(pkg, code){
+  const b = s=> Uint8Array.from(atob(s), c=> c.charCodeAt(0));
+  const base = await crypto.subtle.importKey('raw', new TextEncoder().encode(code), 'PBKDF2', false, ['deriveKey']);
+  const key = await crypto.subtle.deriveKey({ name: 'PBKDF2', salt: b(pkg.salt), iterations: pkg.iterations, hash: 'SHA-256' }, base, { name: 'AES-GCM', length: 256 }, false, ['decrypt']);
+  return JSON.parse(new TextDecoder().decode(await crypto.subtle.decrypt({ name: 'AES-GCM', iv: b(pkg.iv) }, key, b(pkg.data))));
+}
+// اسم المشروع بعد التنضيف (ة/ه، ى/ي، أ/ا، مسافات، كبير/صغير)
+const rpNorm = s=> String(s||'').toLowerCase().replace(/[أإآ]/g,'ا').replace(/ة/g,'ه').replace(/ى/g,'ي').replace(/[\s‏‎_-]+/g,'');
+const rpDay = d=>{ const t = new Date(d); return isNaN(t) ? '' : t.getFullYear() + '-' + (t.getMonth()+1) + '-' + t.getDate(); };
+function rpProjectName(name, aliases){
+  const keys = new Set([name, ...(aliases||[])].map(rpNorm));
+  const p = (state.projects||[]).find(p=> keys.has(rpNorm(p.name)));
+  return p ? p.name : name;
+}
+// بيحسب حالة كل عملية في الباكدج: موجودة / هترجع / اتمسحت بموافقة إسلام
+function rpAnalyze(data){
+  const rows = [];
+  [['expenses','e'],['income','i']].forEach(([key, k])=>{
+    const cur = (state[key]||[]).filter(x=> x && x.id);
+    const used = new Set();
+    (data[key]||[]).forEach(r=>{
+      const al = (data.aliases||{})[r.project] || [];
+      const keys = new Set([r.project, ...al].map(rpNorm));
+      let status = 'missing', match = null;
+      const same = cur.find(x=> x.id===r.id);
+      if(same){ status = 'exists'; match = same; used.add(same.id); }
+      else if((state.tombstones||[]).some(t=> t.target===r.id && !t.undone)) status = 'deleted';
+      else {
+        match = cur.find(x=> !used.has(x.id) && keys.has(rpNorm(x.project)) && Number(x.amount)===Number(r.amount) && rpDay(x.date)===rpDay(r.date));
+        if(match){ status = 'exists'; used.add(match.id); }
+      }
+      rows.push({ k, key, r, status, match, aliases: al });
+    });
+  });
+  return rows;
+}
+function rpAskCode(){
+  return new Promise(res=>{
+    const ov = document.createElement('div'); ov.className = 'overlay show';
+    ov.innerHTML = `<div class="modal" style="max-width:380px;"><button type="button" class="modal-close">×</button><h2>🔐 كود العمليات المترجعة</h2>
+      <div class="sub">اكتب الكود اللي من ١٢ رقم (اتبعتلك في الشات).</div>
+      <input type="tel" inputmode="numeric" maxlength="12" dir="ltr" style="width:100%;font-size:22px;letter-spacing:3px;text-align:center;margin:8px 0;" data-c>
+      <div class="hint" data-e></div><button type="button" class="btn btn-primary btn-full" data-ok>فتح</button></div>`;
+    const done = v=>{ ov.remove(); res(v); };
+    ov.querySelector('.modal-close').onclick = ()=> done(null);
+    const inp = ov.querySelector('[data-c]'), err = ov.querySelector('[data-e]');
+    ov.querySelector('[data-ok]').onclick = async ()=>{
+      const code = inp.value.replace(/\D/g,''); if(code.length !== 12){ err.textContent = 'الكود ١٢ رقم'; return; }
+      err.textContent = 'بيفك…';
+      try{ done(await rpDecrypt(rpPkg, code)); }catch(e){ err.textContent = '❌ الكود غلط'; }
+    };
+    document.body.appendChild(ov); setTimeout(()=> inp.focus(), 50);
+  });
+}
+async function openRestorePack(){
+  if(!v3IsAdmin()){ showToast('ده لإسلام بس'); return; }
+  if(!(await rpLoad())){ showToast('مفيش عمليات مترجعة في النسخة دي'); return; }
+  const data = await rpAskCode(); if(!data) return;
+  const ov = document.createElement('div'); ov.className = 'overlay show'; ov.id = 'overlay-rp';
+  ov.innerHTML = `<div class="modal" style="max-width:560px;"><button type="button" class="modal-close">×</button><h2>📦 عمليات اترجعت من الصور</h2>
+    <div class="sub">${escapeHtml(data.label || '')}<br>كل عملية اتقارنت باللي عندك: لو فيه عملية بنفس المشروع ونفس المبلغ ونفس اليوم تبقى <b>✅ موجودة</b> ومش هترجع. راجع وعلّم على اللي عايزه يرجع.</div>
+    <div data-out></div></div>`;
+  ov.querySelector('.modal-close').onclick = ()=> ov.remove();
+  document.body.appendChild(ov);
+  const out = ov.querySelector('[data-out]');
+  const draw = ()=>{
+    const rows = rpAnalyze(data);
+    const lbl = { exists: '✅ موجودة', missing: '➕ هترجع', deleted: '🗑️ اتمسحت بموافقتك' };
+    const groups = {}; rows.forEach((x, i)=>{ (groups[x.r.project] = groups[x.r.project] || []).push([x, i]); });
+    const miss = rows.filter(x=> x.status==='missing');
+    out.innerHTML = `<div class="hint" style="margin:6px 0;">➕ هترجع: <b>${miss.length}</b> (${fmtMoney(miss.reduce((s,x)=> s + (x.k==='i' ? 0 : Number(x.r.amount)||0), 0))} مصروف${miss.some(x=> x.k==='i') ? ' + ' + fmtMoney(miss.reduce((s,x)=> s + (x.k==='i' ? Number(x.r.amount)||0 : 0), 0)) + ' قبض' : ''}) · ✅ موجودة: <b>${rows.filter(x=> x.status==='exists').length}</b></div>
+      ${Object.keys(groups).map(g=>{ const list = groups[g]; const m = list.filter(([x])=> x.status==='missing').length;
+        return `<details class="card" style="margin:6px 0;padding:8px 10px;" ${m ? 'open' : ''}><summary style="font-weight:800;cursor:pointer;">🏗️ ${escapeHtml(rpProjectName(g, list[0][0].aliases))} — ${list.length} عملية · ${m} هترجع</summary>
+        ${list.map(([x, i])=> `<label class="pd-row" style="gap:8px;"><input type="checkbox" data-i="${i}" ${x.status==='missing' ? 'checked' : ''} ${x.status==='exists' ? 'disabled' : ''}>
+          <div class="pd-row-main"><div class="pd-row-title">${x.k==='i' ? '💰 قبض' : '🧾'} ${fmtMoney(x.r.amount)} — ${escapeHtml(x.r.description || x.r.method || '')}</div>
+          <div class="pd-row-sub">${fmtDateTime(x.r.date)} · ${escapeHtml(x.r.by || '')} · ${escapeHtml(x.r.method || '')}${x.status==='exists' && x.match && x.match.id!==x.r.id ? ` · عندك: "${escapeHtml(x.match.description || '')}"` : ''}</div></div><small>${lbl[x.status]}</small></label>`).join('')}</details>`; }).join('')}
+      <button type="button" class="btn btn-primary btn-full" style="margin-top:10px;" data-go ${miss.length ? '' : 'disabled'}>↩️ رجّع المتعلّم عليه</button>
+      <button type="button" class="btn btn-ghost btn-full" style="margin-top:6px;" data-close>خلاص — مش محتاج حاجة تانية من هنا</button>`;
+    out.querySelector('[data-close]').onclick = async ()=>{ state[rpFlag(rpPkg.id)] = state[rpFlag(rpPkg.id)] || { at: new Date().toISOString(), by: getDeviceUser(), added: 0 }; try{ localStorage.setItem('ibtkar-' + rpFlag(rpPkg.id), '1'); }catch(e){} await saveState(); renderEverything(); ov.remove(); };
+    out.querySelector('[data-go]').onclick = async ()=>{
+      const pick = [...out.querySelectorAll('input[data-i]:checked')].map(c=> rows[+c.dataset.i]);
+      if(!pick.length){ showToast('علّم على اللي عايز ترجّعه'); return; }
+      if(pick.some(x=> x.status==='deleted')){ if(!(await v3AskPassword('ترجيع عمليات كانت اتمسحت بموافقتك.'))) return; }
+      let n = 0; const now = Date.now();
+      rpAnalyze(data).forEach(x=>{
+        if(!pick.some(p=> p.r.id===x.r.id) || x.status==='exists') return;
+        const rec = { ...x.r, project: rpProjectName(x.r.project, x.aliases), addedBy: x.r.by || getDeviceUser(), addedAt: new Date(now).toISOString() };
+        delete rec._sn;
+        (state.tombstones||[]).forEach(t=>{ if(t.target===rec.id && !t.undone){ t.undone = true; t._u = now; } });
+        state[x.key] = state[x.key] || []; state[x.key].push(rec); n++;
+      });
+      state[rpFlag(rpPkg.id)] = { at: new Date().toISOString(), by: getDeviceUser(), added: (Number((state[rpFlag(rpPkg.id)]||{}).added)||0) + n };
+      try{ localStorage.setItem('ibtkar-' + rpFlag(rpPkg.id), '1'); }catch(e){}
+      v3AuthUntil = Date.now() + 4000;
+      await saveState(); renderEverything();
+      try{ feedPush(`↩️ رجّع ${n} عملية من صور الشاشة (${[...new Set(pick.map(x=> x.r.project))].join('، ')})`); }catch(e){}
+      showToast(`↩️ رجعت ${n} عملية مكانها`);
+      draw();
+    };
+  };
+  draw();
+}
+// زرار في الرئيسية لإسلام لحد ما يراجعها — ومن النسخ الاحتياطية في أي وقت
+function renderRestorePackBtn(){
+  const home = document.getElementById('view-home'); if(!home) return;
+  let el = document.getElementById('rp-btn');
+  const show = rpPkg && fbReady && v3IsAdmin() && !rpDone(rpPkg.id);
+  if(!show){ if(el) el.remove(); return; }
+  if(!el){ el = document.createElement('button'); el.type = 'button'; el.id = 'rp-btn'; el.className = 'v3-delreq-btn'; el.style.cssText = 'margin-bottom:8px;background:var(--gold);'; el.onclick = openRestorePack; const a = document.getElementById('v3-delreq') || document.getElementById('home-dayplan-wrap'); if(a) a.before(el); else home.appendChild(el); }
+  el.textContent = '📦 فيه عمليات اترجعت من الصور (' + (rpPkg.label || '') + ') — راجعها ورجّع الناقص';
+}
+{ const _rh5 = renderHome; renderHome = function(){ _rh5(); try{ renderRestorePackBtn(); }catch(e){} }; }
+(function rpBoot(){ const t = setInterval(async ()=>{ if(!fbReady) return; clearInterval(t); await rpLoad(); try{ renderRestorePackBtn(); }catch(e){} }, 1500); })();
+{ const _ob5 = openBackupModal; openBackupModal = function(){ _ob5(); if(v3IsAdmin() && !document.getElementById('rp-open')){ const a = document.getElementById('rc-btn') || document.getElementById('v3-audit-btn') || document.getElementById('autobk-list'); if(a) a.insertAdjacentHTML('afterend', '<button type="button" class="btn btn-ghost btn-sm" id="rp-open" style="margin:4px 0 8px;" onclick="closeModal(\'overlay-backup\'); openRestorePack()">📦 العمليات المترجعة من الصور</button>'); } }; }
+</script>
 </body>
 </html>

@@ -20,6 +20,7 @@ cp "$ROOT/index.html" "$ROOT/manifest.json" "$ROOT"/icon-*.png "$WWW/"
 cp "$ANDROID_DIR/web/native-bridge.js" "$ANDROID_DIR/web/backup-import.js" "$WWW/"
 # نسخة الويب الاحتياطية (متشفّرة) — بتترجّع مرة واحدة من جوّه التطبيق
 [ -f "$ANDROID_DIR/web/web-backup.enc.json" ] && cp "$ANDROID_DIR/web/web-backup.enc.json" "$WWW/"
+[ -f "$ANDROID_DIR/web/restore-pack.enc.json" ] && cp "$ANDROID_DIR/web/restore-pack.enc.json" "$WWW/"
 
 (
   cd "$TMP"
