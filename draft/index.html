@@ -1078,6 +1078,9 @@ body.ks-on .bottom-nav,body.ks-on #settings-fab{display:none;}
 .expense-card .expense-main{ min-width:0; }
 .expense-card .expense-date{ white-space:normal !important; display:flex; flex-wrap:wrap; align-items:center; gap:2px 4px; line-height:1.9; }
 .acc-sn{ font-size:11.5px; color:var(--charcoal); font-weight:700; }
+.us-row{ display:flex; align-items:center; gap:8px; font-size:13px; }
+.us-bar{ flex:1; height:10px; background:var(--blush); border-radius:99px; overflow:hidden; }
+.us-bar span{ display:block; height:100%; border-radius:99px; }
 /* ===================== IBTKAR GE 2026 — الهوية البصرية (DRAFT) =====================
    ألوان الدليل، تصميم مسطح من غير ظلال، كروت Blush من غير إطار، خط دهبي تحت العناوين،
    جداول بهيدر روز وصفوف متبادلة، والإجمالي فحمي بأرقام دهبي. */
@@ -3043,6 +3046,7 @@ async function deleteReferenceSupplier(id){
     <div class="modal-actions"><button class="btn btn-gold btn-full" onclick="openIdeaCategoriesEditor()">💡 تصنيفات الأفكار والإلهام</button></div>
     <div class="modal-actions"><button class="btn btn-gold btn-full" onclick="openCatalogEditor()">🧮 كتالوج التسعير السريع</button></div>
     <div class="modal-actions"><button class="btn btn-gold btn-full" onclick="openSecuritySettings()">🔐 الأمان والحسابات</button></div>
+    <div class="modal-actions"><button class="btn btn-gold btn-full" onclick="closeModal('overlay-settings'); openUsage()">📊 استهلاك Firebase (الخطة المجانية)</button></div>
     <div class="modal-actions"><button class="btn btn-gold btn-full" onclick="openCompanyInfoSettings()">🧾 بيانات الشركة للتقارير</button></div>
     <div class="modal-actions"><button class="btn btn-gold btn-full" onclick="openGeneralSettings()">⚙️ إعدادات عامة</button></div>
   </div>
@@ -16981,6 +16985,114 @@ const FEED_EDIT_KEYS = new Set(['expenses', 'income', 'logs', 'safeAccounts', 's
     (state.tombstones||[]).filter(t=> !tombsBefore.has(t.id) && t.label && t.label!=='سلة المحذوفات' && !V3_FREE.has((prevLive[t.target]||{}).key)).slice(0, 4)
       .forEach(t=> feedPush('🗑️ مسح: ' + t.label + (t.sn != null ? ` · #${t.sn}` : '')));
   }catch(e){}
+}; }
+</script>
+<script>
+/* =====================================================================================
+   📊 استهلاك Firebase (الخطة المجانية Spark: ١٠ جيجا تحميل في الشهر + ١ جيجا تخزين)
+   جوجل مش بتدّي البرنامج الرقم الرسمي من غير مفاتيح أدمن (مينفعش تتحط في البرنامج)، فكل جهاز
+   بيعدّ هو حمّل كام من السيرفر ويبعت رقمه، والشاشة بتجمعهم — رقم تقديري محسوب بزيادة.
+   🚨 ولو السيرفر بطّل يقبل الحفظ (الحد خلص أو أي سبب)، البرنامج بيقفل ويقول بوضوح.
+   ===================================================================================== */
+const USAGE_REF = 'ibtkar_draft_usage';
+const FREE_DL_BYTES = 10 * 1024 ** 3, FREE_STORE_BYTES = 1 * 1024 ** 3;
+const usageMonth = ()=>{ const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2, '0'); };
+const usageDevice = (()=>{ try{ let id = localStorage.getItem('ibtkar-device-id'); if(!id){ id = 'dev_' + Math.random().toString(36).slice(2, 10); localStorage.setItem('ibtkar-device-id', id); } return id; }catch(e){ return 'dev_x'; } })();
+let usageLocal = (()=>{ try{ const u = JSON.parse(localStorage.getItem('ibtkar-usage-local')) || {}; return u.month===usageMonth() ? u : { month: usageMonth(), bytes: 0 }; }catch(e){ return { month: usageMonth(), bytes: 0 }; } })();
+let usageDirty = false;
+function usageAdd(n){
+  if(!(n > 0)) return;
+  if(usageLocal.month !== usageMonth()) usageLocal = { month: usageMonth(), bytes: 0 };
+  usageLocal.bytes += n; usageDirty = true;
+  try{ localStorage.setItem('ibtkar-usage-local', JSON.stringify(usageLocal)); }catch(e){}
+}
+const usageSize = v=>{ try{ return v == null ? 0 : JSON.stringify(v).length; }catch(e){ return 0; } };
+// كل نسخة بتيجي من السيرفر (المزامنة) = تحميل كامل (أسوأ حالة — Firebase ساعات بيبعت التغيير بس)
+{ const _hr = syncHandleRemote; syncHandleRemote = function(remote){ usageAdd(usageSize(remote)); return _hr(remote); }; }
+// النسخ الاحتياطية اللي بتتنزّل أو تترجّع
+{ const _bg = bkGet; bkGet = async function(k){ const v = await _bg(k); usageAdd(usageSize(v)); return v; }; }
+async function usageFlush(){
+  if(!usageDirty || !fbReady) return; usageDirty = false;
+  try{ await fbDB.ref(USAGE_REF + '/' + usageLocal.month + '/' + usageDevice).set({ bytes: usageLocal.bytes, user: getDeviceUser() || '', at: new Date().toISOString() }); }catch(e){ usageDirty = true; }
+}
+setInterval(usageFlush, 5 * 60 * 1000);
+document.addEventListener('visibilitychange', ()=>{ if(document.hidden) usageFlush(); });
+
+async function usageRead(){
+  await usageFlush();
+  const snap = await fbDB.ref(USAGE_REF + '/' + usageMonth()).once('value');
+  const devs = snap.val() || {}; usageAdd(usageSize(devs));
+  const list = Object.values(devs).filter(d=> d && d.bytes);
+  const dl = list.reduce((s, d)=> s + (Number(d.bytes)||0), 0);
+  // التخزين: البيانات + النسخ الليلية (آخر ١٤ يوم) + الإشعارات
+  let backups = 0; try{ backups = (await bkKeys()).length; }catch(e){}
+  const dataBytes = usageSize(state), store = dataBytes * (1 + backups) + 200 * 1024;
+  const now = new Date(), day = now.getDate(), days = new Date(now.getFullYear(), now.getMonth()+1, 0).getDate();
+  const projected = day > 0 ? dl / day * days : dl;
+  return { dl, store, dataBytes, backups, projected, devices: list, day, days };
+}
+const fmtBytes = b=> b >= 1024 ** 3 ? (b / 1024 ** 3).toFixed(2) + ' جيجا' : b >= 1024 ** 2 ? (b / 1024 ** 2).toFixed(1) + ' ميجا' : Math.round(b / 1024) + ' ك.ب';
+function usageBar(v, max){ const p = Math.min(100, v / max * 100); const c = p >= 90 ? 'var(--deep-rose)' : p >= 70 ? 'var(--gold)' : 'var(--sage, #6E8B74)'; return `<div class="us-bar"><span style="width:${p.toFixed(1)}%;background:${c}"></span></div><small>${p.toFixed(1)}٪</small>`; }
+async function openUsage(){
+  const ov = document.createElement('div'); ov.className = 'overlay show';
+  ov.innerHTML = `<div class="modal" style="max-width:460px;"><button type="button" class="modal-close">×</button><h2>📊 استهلاك Firebase</h2><div data-b>بيحسب…</div></div>`;
+  ov.querySelector('.modal-close').onclick = ()=> ov.remove(); document.body.appendChild(ov);
+  try{
+    const u = await usageRead();
+    ov.querySelector('[data-b]').innerHTML = `
+      <div class="sub">الخطة المجانية (Spark): <b>١٠ جيجا تحميل في الشهر</b> و<b>١ جيجا تخزين</b>. لو التحميل عدّى الحد، السيرفر بيقف لحد أول الشهر الجاي.</div>
+      <div class="dp-q">⬇️ التحميل — شهر ${usageMonth()}</div>
+      <div class="us-row"><b>${fmtBytes(u.dl)}</b> من ١٠ جيجا ${usageBar(u.dl, FREE_DL_BYTES)}</div>
+      <div class="hint">بالمعدل ده، آخر الشهر هنوصل لحوالي <b>${fmtBytes(u.projected)}</b> (${(u.projected / FREE_DL_BYTES * 100).toFixed(0)}٪ من الحد) — يوم ${u.day} من ${u.days}.</div>
+      <table class="wr-t" style="margin-top:6px;">${u.devices.sort((a,b)=> b.bytes - a.bytes).map(d=> `<tr><td>${escapeHtml(d.user || 'جهاز')}</td><td class="v">${fmtBytes(d.bytes)}</td></tr>`).join('') || '<tr><td>لسه مفيش أرقام من الأجهزة</td></tr>'}</table>
+      <div class="dp-q">💾 التخزين</div>
+      <div class="us-row"><b>${fmtBytes(u.store)}</b> من ١ جيجا ${usageBar(u.store, FREE_STORE_BYTES)}</div>
+      <div class="hint">البيانات ${fmtBytes(u.dataBytes)} + ${u.backups} نسخة ليلية.</div>
+      <div class="card" style="margin-top:10px;font-size:12.5px;line-height:1.8;">ده <b>رقم تقديري محسوب بزيادة</b> (كل جهاز بيعدّ اللي حمّله). الرقم الرسمي بالظبط: console.firebase.google.com ← ibtkar-system ← Realtime Database ← Usage.</div>`;
+  }catch(e){ ov.querySelector('[data-b]').textContent = 'مقدرتش أجيب الأرقام دلوقتي — اتأكد من النت'; }
+}
+
+/* ---------- ⚠️ تنبيه قبل ما الحد يخلص ---------- */
+let usageWarn = null;
+async function usageTick(){
+  if(!fbReady) return;
+  try{ const u = await usageRead(); const p = Math.max(u.dl / FREE_DL_BYTES, u.projected / FREE_DL_BYTES * 0.85, u.store / FREE_STORE_BYTES);
+    usageWarn = p >= 0.7 ? { p, u } : null; renderUsageWarn(); }catch(e){}
+}
+function renderUsageWarn(){
+  const home = document.getElementById('view-home'); if(!home) return;
+  let el = document.getElementById('us-warn');
+  if(!usageWarn){ if(el) el.remove(); return; }
+  if(!el){ el = document.createElement('button'); el.type = 'button'; el.id = 'us-warn'; el.className = 'v3-delreq-btn'; el.style.marginBottom = '8px'; el.onclick = openUsage; const a = document.getElementById('v3-delreq') || document.getElementById('home-dayplan-wrap'); if(a) a.before(el); else home.appendChild(el); }
+  const red = usageWarn.u.dl / FREE_DL_BYTES >= 0.9;
+  el.style.background = red ? 'var(--deep-rose)' : 'var(--gold)';
+  el.textContent = `${red ? '🚨' : '⚠️'} Firebase: اتحمّل ${fmtBytes(usageWarn.u.dl)} من ١٠ جيجا الشهر ده${usageWarn.u.projected > FREE_DL_BYTES ? ' — بالمعدل ده هنعدّي الحد قبل آخر الشهر' : ''} — حوّل لخطة Blaze`;
+}
+{ const _rh4 = renderHome; renderHome = function(){ _rh4(); try{ renderUsageWarn(); }catch(e){} }; }
+setTimeout(usageTick, 30000); setInterval(usageTick, 60 * 60 * 1000);
+
+/* ---------- 🚨 السيرفر بطّل يقبل الحفظ ---------- */
+let pushFailSince = 0;
+{ const _pn2 = syncPushNow; syncPushNow = async function(){
+  try{ const r = await _pn2(); if(v3LastSync && Date.now() - v3LastSync < 5000) pushFailSince = 0; return r; }
+  catch(e){ if(!pushFailSince) pushFailSince = Date.now(); v3OfflineCheck(); throw e; }
+}; }
+// فيه حاجة متسجلة على الجهاز من أكتر من دقيقة ونص ولسه ما اتقبلتش على السيرفر، والنت شغال
+function serverRefusing(){
+  if(navigator.onLine === false || !v3HasDirty()) return false;
+  const oldest = Math.min(...Object.values(v3Dirty).map(d=> Number(d && d.t) || Date.now()));
+  return Date.now() - oldest > 90000 || (pushFailSince && Date.now() - pushFailSince > 45000);
+}
+{ const _oc = v3OfflineCheck; v3OfflineCheck = function(){
+  _oc();
+  const stuckConnect = typeof syncListening!=='undefined' && syncListening && !v3Conn && navigator.onLine !== false && v3StartedAt && Date.now() - Math.max(v3OffSince, v3StartedAt) > 30000;
+  if(!v3OfflineDisabled && (serverRefusing() || stuckConnect)){
+    let el = document.getElementById('v3-offline');
+    if(!el){ el = document.createElement('div'); el.id = 'v3-offline'; el.innerHTML = '<div class="v3-off-box"><div class="v3-off-ic">🚨</div><b id="v3-off-t"></b><p id="v3-off-p"></p><button type="button" class="btn btn-gold" onclick="pushFailSince = 0; try{ fbDB.goOnline(); }catch(e){} syncPush().catch(()=>{}); v3OfflineCheck();">🔄 حاول تاني</button></div>'; document.body.appendChild(el); }
+    el.querySelector('.v3-off-ic').textContent = '🚨';
+    document.getElementById('v3-off-t').textContent = 'السيرفر مش بيقبل يحفظ — وقّف تسجيل';
+    document.getElementById('v3-off-p').textContent = 'النت عندك شغال بس Firebase مش بيرد أو رافض الحفظ — غالباً حد الخطة المجانية خلص. ' + (v3HasDirty() ? 'آخر حاجات اتسجلت محفوظة على الجهاز ده وهتطلع أول ما السيرفر يرجع. ' : '') + 'كلّم إسلام: يحوّل الخطة لـ Blaze من Firebase Console (٥ دقايق) أو يستنى أول الشهر.';
+  }
 }; }
 </script>
 </body>
