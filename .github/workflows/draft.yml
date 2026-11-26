@@ -39,6 +39,7 @@ jobs:
           cp draft/portal.html portal.html 2>/dev/null || true
           cp draft/android/*.java android/app/src/main/java/com/ibtkar/app/
           cp draft/android/AndroidManifest.xml android/app/src/main/AndroidManifest.xml
+          [ -d draft/android/res ] && cp -r draft/android/res/. android/app/src/main/res/
           sed -i "s/applicationId 'com.ibtkar.app'/applicationId 'com.ibtkar.app.draft'/" android/app/build.gradle
           sed -i 's#<string name="app_name">.*</string>#<string name="app_name">إبتكار تجريبي</string>#' android/app/src/main/res/values/strings.xml
           grep -q "com.ibtkar.app.draft" android/app/build.gradle

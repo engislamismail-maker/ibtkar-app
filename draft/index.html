@@ -3096,7 +3096,7 @@ async function deleteReferenceSupplier(id){
     <h2>⚙️ الإعدادات</h2>
     <div class="modal-actions"><button class="btn btn-primary btn-full" onclick="openDeviceUserSettings()" id="settings-device-user-btn">👤 أنا مين على الجهاز ده</button></div>
     <div class="pd-groups set-groups">
-      <div class="pd-group g1"><div class="pd-group-t">🔐 الحسابات والأمان</div><div class="pd-tiles"><button type="button" class="btn pd-tile" onclick="closeModal('overlay-settings'); openUsersAdmin()">👥 المستخدمين</button><button type="button" class="btn pd-tile" onclick="openSecuritySettings()">🔑 رقم فتح البرنامج</button><button type="button" class="btn pd-tile" onclick="closeModal('overlay-settings'); openBackupPasswordGate()">🗂️ النسخ الاحتياطية</button><button type="button" class="btn pd-tile" onclick="closeModal('overlay-settings'); openTrashModal()">🗑️ سلة المحذوفات</button></div></div>
+      <div class="pd-group g1"><div class="pd-group-t">🔐 الحسابات والأمان</div><div class="pd-tiles"><button type="button" class="btn pd-tile" onclick="closeModal('overlay-settings'); openUsersAdmin()">👥 المستخدمين</button><button type="button" class="btn pd-tile" onclick="openSecuritySettings()">🔑 رقم فتح البرنامج</button><button type="button" class="btn pd-tile" onclick="openBioSettings()">👆 الفتح بالبصمة</button><button type="button" class="btn pd-tile" onclick="closeModal('overlay-settings'); openBackupPasswordGate()">🗂️ النسخ الاحتياطية</button><button type="button" class="btn pd-tile" onclick="closeModal('overlay-settings'); openTrashModal()">🗑️ سلة المحذوفات</button></div></div>
       <div class="pd-group g2"><div class="pd-group-t">💰 الفلوس وكشف الحساب</div><div class="pd-tiles"><button type="button" class="btn pd-tile" onclick="openStatementCategoriesEditor()">💰 بنود كشف الحساب</button><button type="button" class="btn pd-tile" onclick="openStatementTypesEditor()">🏷️ أنواع البنود</button><button type="button" class="btn pd-tile" onclick="openGeneralSettings()">📊 نسبة الإدارة ومدة السلة</button><button type="button" class="btn pd-tile" onclick="openCompanyInfoSettings()">🧾 بيانات الشركة للتقارير</button></div></div>
       <div class="pd-group g3"><div class="pd-group-t">🏗️ المشاريع والشغل</div><div class="pd-tiles"><button type="button" class="btn pd-tile" onclick="openChecklistTemplateEditor()">✅ تشيك ليست الجودة</button><button type="button" class="btn pd-tile" onclick="openCatalogEditor()">🧮 كتالوج التسعير</button><button type="button" class="btn pd-tile" onclick="openLocationsEditor()">📍 أسماء المشاريع في القوايم</button><button type="button" class="btn pd-tile" onclick="openIdeaCategoriesEditor()">💡 تصنيفات الأفكار</button></div></div>
       <div class="pd-group g4"><div class="pd-group-t">🔔 التنبيهات والسيرفر</div><div class="pd-tiles"><button type="button" class="btn pd-tile" onclick="closeModal('overlay-settings'); openV2Settings()">⏰ منبّه ٩ الصبح والتنبيهات</button><button type="button" class="btn pd-tile" onclick="closeModal('overlay-settings'); openUsage()">📈 استهلاك Firebase</button><button type="button" class="btn pd-tile" onclick="closeModal('overlay-settings'); openSerialAudit()">🔎 مراجعة الأرقام المسلسلة</button><button type="button" class="btn pd-tile" onclick="closeModal('overlay-settings'); openReceiptRestore()">📥 رجّع عمليات من إيصالات</button></div></div>
@@ -17458,6 +17458,132 @@ function openEditSupplier(){
   showToast('اتحفظت بيانات المورد');
   openSupplierLog(id);
 }; }
+</script>
+<script>
+/* =====================================================================================
+   👆 البصمة + 🔒 القفل التلقائي + ⚡ ويدجت التسجيل السريع
+   - البصمة بتفتح البرنامج باسم الشخص اللي فعّلها على الموبايل ده (بعد ما دخل برقمه مرة).
+   - لو البرنامج اتساب في الخلفية أكتر من دقيقتين → يتقفل تاني (رقم أو بصمة).
+   - زرار الويدجت دايماً بيطلب رقم/بصمة الأول، وبعدها يفتح الفورم على طول.
+   ===================================================================================== */
+const BIO_KEY = 'ibtkar-bio-user', BIO_ASKED = 'ibtkar-bio-asked';
+const RELOCK_MS = 2 * 60 * 1000;
+let lastUnlockAt = 0, hiddenAt = 0, pendingQuick = null, bioPrompting = false;
+const lsGet = k=>{ try{ return localStorage.getItem(k); }catch(e){ return null; } };
+const lsSet = (k, v)=>{ try{ if(v == null) localStorage.removeItem(k); else localStorage.setItem(k, v); }catch(e){} };
+function bioAvail(){ try{ return !!(window.IbtkarNative && IbtkarNative.biometricAvailable && IbtkarNative.biometricAvailable()); }catch(e){ return false; } }
+function bioAsk(title){
+  return new Promise(res=>{
+    let done = false; const fin = ok=>{ if(done) return; done = true; window.ibtkarBioResult = null; bioPrompting = false; res(!!ok); };
+    window.ibtkarBioResult = fin; bioPrompting = true;
+    try{ IbtkarNative.biometricAuth(title || 'افتح إبتكار'); }catch(e){ fin(false); }
+  });
+}
+function bioUser(){ return lsGet(BIO_KEY); }
+function lockVisible(){ const ls = document.getElementById('app-lock-screen'); return !!ls && getComputedStyle(ls).display !== 'none'; }
+
+// زرار البصمة في شاشة القفل
+function renderBioBtn(){
+  const ls = document.getElementById('app-lock-screen'); if(!ls) return;
+  let b = document.getElementById('lock-bio-btn');
+  const on = !!bioUser() && bioAvail();
+  if(!on){ if(b) b.remove(); return; }
+  if(!b){
+    b = document.createElement('button'); b.type = 'button'; b.id = 'lock-bio-btn'; b.className = 'btn btn-primary btn-full';
+    b.style.cssText = 'margin-top:10px;max-width:320px;';
+    b.onclick = ()=> bioUnlock();
+    const a = ls.querySelector('.lock-actions'); if(a) a.after(b); else ls.appendChild(b);
+  }
+  const u = bioUser();
+  b.textContent = '👆 افتح بالبصمة' + (u && u !== '*' ? ` (${u})` : '');
+}
+async function bioUnlock(){
+  if(bioPrompting || !bioUser()) return;
+  const ok = await bioAsk('افتح إبتكار');
+  if(!ok) return;
+  const u = bioUser();
+  const users = (typeof usersCached === 'function') ? usersCached() : [];
+  if(users.length){
+    const rec = users.find(x=> x.name === u);
+    if(!rec){ lsSet(BIO_KEY, null); renderBioBtn(); showLockError('البصمة اتلغت — ادخل برقمك وفعّلها تاني'); return; }
+    try{ localStorage.setItem(DEVICE_USER_KEY, rec.name); }catch(e){}
+    window.__loginAs = rec.name;
+  }
+  unlockApp();
+}
+{ const _ial = initAppLock; initAppLock = function(){
+  _ial();
+  try{ renderBioBtn(); if(bioUser() && bioAvail()) setTimeout(()=>{ if(lockVisible()) bioUnlock(); }, 450); }catch(e){}
+}; }
+
+// القفل تاني (بعد الخلفية أو من الويدجت) — من غير ما نعيد تحميل البيانات
+function relockApp(){
+  const ls = document.getElementById('app-lock-screen'); if(!ls || lockVisible()) return;
+  window.__relock = true;
+  document.querySelectorAll('input:focus, textarea:focus').forEach(x=> x.blur());
+  ls.style.display = 'flex';
+  initAppLock();
+}
+{ const _ua = unlockApp; unlockApp = function(){
+  lastUnlockAt = Date.now();
+  if(window.__relock && typeof syncListening !== 'undefined' && syncListening){
+    window.__relock = false;
+    document.getElementById('app-lock-screen').style.display = 'none';
+    try{ applyDeviceUser(); }catch(e){}
+  } else { window.__relock = false; _ua(); }
+  runPendingQuick();
+  setTimeout(bioOffer, 1800);
+}; }
+document.addEventListener('visibilitychange', ()=>{
+  if(document.hidden){ hiddenAt = Date.now(); return; }
+  if(hiddenAt && Date.now() - hiddenAt > RELOCK_MS && !bioPrompting && lastUnlockAt) relockApp();
+  hiddenAt = 0;
+});
+
+// بعد أول دخول بالرقم: نعرض تفعيل البصمة (مرة واحدة على الجهاز)
+async function bioOffer(){
+  if(bioUser() || lsGet(BIO_ASKED) || !bioAvail() || lockVisible()) return;
+  lsSet(BIO_ASKED, '1');
+  const ok = await v2Confirm('👆 تفتح البرنامج بالبصمة بعد كده؟\nأسرع من الرقم، ومحدش يقدر يفتحه غير صاحب البصمة.', 'أيوه فعّلها', 'لا');
+  if(ok) await bioEnable();
+}
+async function bioEnable(){
+  if(!bioAvail()){ showToast('الموبايل ده مفيهوش بصمة متسجلة — سجّلها من إعدادات الموبايل الأول'); return false; }
+  if(!(await bioAsk('أكّد بصمتك'))){ showToast('ما اتفعّلتش'); return false; }
+  lsSet(BIO_KEY, getDeviceUser() || '*');
+  showToast('👆 اتفعّلت — البرنامج هيفتح بالبصمة'); return true;
+}
+async function openBioSettings(){
+  if(!bioAvail()){ showToast('البصمة مش متاحة على الجهاز ده (أو مش متسجلة في إعدادات الموبايل)'); return; }
+  if(bioUser()){
+    const off = await v2Confirm(`👆 البصمة شغالة على الموبايل ده (بتفتح باسم ${bioUser() === '*' ? 'الجهاز' : bioUser()}).\nتقفلها؟`, 'اقفلها', 'سيبها');
+    if(off){ lsSet(BIO_KEY, null); showToast('اتقفلت البصمة — هيفتح بالرقم بس'); }
+  } else await bioEnable();
+}
+
+// ⚡ أزرار الويدجت
+const QUICK = {
+  q_expense: ()=>{ switchView('accounts'); openAddExpense(); },
+  q_income:  ()=>{ switchView('accounts'); openAddIncome(); },
+  q_voice:   ()=> openVoiceEntry('accounts'),
+  q_note:    ()=> openVoiceEntry('archive')
+};
+function runPendingQuick(){
+  const a = pendingQuick; pendingQuick = null;
+  if(!a || !QUICK[a]) return;
+  const go = ()=>{ document.querySelectorAll('.overlay.show').forEach(o=>{ if(o.id) o.classList.remove('show'); }); try{ QUICK[a](); }catch(e){ console.error('quick', e); } };
+  // لسه البيانات بتحمّل أول مرة؟ نستنى شوية
+  if(!(state && state.projects)) setTimeout(go, 1500); else setTimeout(go, 350);
+}
+{ const _la = window.ibtkarLaunchAction; window.ibtkarLaunchAction = function(a){
+  if(!a || !QUICK[a]) return _la && _la(a);
+  pendingQuick = a;
+  if(lockVisible()) return;                                  // هيتنفّذ بعد الرقم/البصمة
+  if(Date.now() - lastUnlockAt < 15000) return runPendingQuick(); // لسه فاتح حالاً
+  relockApp();                                                // لازم رقم/بصمة الأول
+}; }
+// شاشة القفل ظاهرة دلوقتي (أول فتح)؟ نجهّزها تاني عشان زرار البصمة
+try{ if(lockVisible()) initAppLock(); }catch(e){}
 </script>
 </body>
 </html>

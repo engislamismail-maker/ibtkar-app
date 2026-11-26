@@ -2,6 +2,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.USE_BIOMETRIC" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
@@ -68,6 +69,19 @@
             android:turnScreenOn="true"
             android:screenOrientation="portrait"
             android:theme="@android:style/Theme.Material.NoActionBar.Fullscreen" />
+
+        <!-- ⚡ ويدجت التسجيل السريع على الشاشة الرئيسية -->
+        <receiver
+            android:name=".QuickWidget"
+            android:exported="false"
+            android:label="إبتكار — تسجيل سريع">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_quick_info" />
+        </receiver>
 
         <!-- تنبيه ٩ الصبح + إشعارات اللي اتعمل في السيستم (نسخة تجريبية) -->
         <receiver

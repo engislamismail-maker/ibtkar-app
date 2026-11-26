@@ -10,6 +10,7 @@ import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.CancellationSignal;
 import android.os.Environment;
 import android.provider.MediaStore;
 import android.util.Base64;
@@ -553,6 +554,45 @@ public class MainActivity extends Activity {
             });
         }
 
+        /** 👆 البصمة موجودة ومتسجلة على الموبايل ده؟ */
+        @JavascriptInterface
+        public boolean biometricAvailable() {
+            try {
+                if (Build.VERSION.SDK_INT >= 30) {
+                    android.hardware.biometrics.BiometricManager bm = getSystemService(android.hardware.biometrics.BiometricManager.class);
+                    return bm != null && bm.canAuthenticate(android.hardware.biometrics.BiometricManager.Authenticators.BIOMETRIC_STRONG) == android.hardware.biometrics.BiometricManager.BIOMETRIC_SUCCESS;
+                }
+                if (Build.VERSION.SDK_INT >= 29) {
+                    android.hardware.biometrics.BiometricManager bm = getSystemService(android.hardware.biometrics.BiometricManager.class);
+                    return bm != null && bm.canAuthenticate() == android.hardware.biometrics.BiometricManager.BIOMETRIC_SUCCESS;
+                }
+                if (Build.VERSION.SDK_INT >= 28) {
+                    android.hardware.fingerprint.FingerprintManager fm = getSystemService(android.hardware.fingerprint.FingerprintManager.class);
+                    return fm != null && fm.isHardwareDetected() && fm.hasEnrolledFingerprints();
+                }
+            } catch (Exception e) { /* مفيش بصمة */ }
+            return false;
+        }
+
+        /** 👆 يطلب البصمة — والنتيجة بترجع لـ window.ibtkarBioResult(true/false) */
+        @JavascriptInterface
+        public void biometricAuth(String title) {
+            if (Build.VERSION.SDK_INT < 28) { bioResult(false); return; }
+            runOnUiThread(() -> {
+                try {
+                    android.hardware.biometrics.BiometricPrompt.Builder b = new android.hardware.biometrics.BiometricPrompt.Builder(MainActivity.this)
+                            .setTitle(title == null || title.isEmpty() ? "افتح إبتكار" : title)
+                            .setSubtitle("حط صباعك على الحساس")
+                            .setNegativeButton("استخدم الرقم", getMainExecutor(), (d, w) -> bioResult(false));
+                    if (Build.VERSION.SDK_INT >= 30) b.setAllowedAuthenticators(android.hardware.biometrics.BiometricManager.Authenticators.BIOMETRIC_STRONG);
+                    b.build().authenticate(new CancellationSignal(), getMainExecutor(), new android.hardware.biometrics.BiometricPrompt.AuthenticationCallback() {
+                        @Override public void onAuthenticationSucceeded(android.hardware.biometrics.BiometricPrompt.AuthenticationResult r) { bioResult(true); }
+                        @Override public void onAuthenticationError(int code, CharSequence msg) { bioResult(false); }
+                    });
+                } catch (Exception e) { bioResult(false); }
+            });
+        }
+
         /** تجربة: يفتح شاشة المنبّه بالرنّة دلوقتي. */
         @JavascriptInterface
         public void testAlarm() {
@@ -564,6 +604,10 @@ public class MainActivity extends Activity {
         public void testMorning() {
             NotifyReceiver.showMorningNow(MainActivity.this);
         }
+    }
+
+    private void bioResult(boolean ok) {
+        runOnUiThread(() -> { if (web != null) web.evaluateJavascript("window.ibtkarBioResult && window.ibtkarBioResult(" + ok + ")", null); });
     }
 
     // ---------------------------------------------------------------- دورة حياة + زرار الرجوع
