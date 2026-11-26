@@ -1066,6 +1066,13 @@ body.ks-on .bottom-nav,body.ks-on #settings-fab{display:none;}
 .op-file{ display:flex; align-items:center; gap:6px; background:var(--blush); border-radius:10px; padding:6px 8px; margin-bottom:6px; font-size:12.5px; }
 .op-file span{ flex:1; min-width:0; overflow-wrap:anywhere; }
 #pd-txn-list .pd-row.op-old{ opacity:.55; }
+.sup-stats{ display:grid; grid-template-columns:repeat(3,1fr); gap:6px; margin-top:12px; }
+.sup-stats > div{ background:var(--cream,#F6F1EA); border-radius:12px; padding:8px 6px; text-align:center; }
+.sup-stats b{ display:block; font-size:14px; } .sup-stats small{ font-size:11px; opacity:.75; }
+.sup-actions{ display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:12px; }
+.sup-act{ border:1.5px solid var(--gold,#C5A059); background:#fff; border-radius:14px; padding:12px 8px; display:flex; flex-direction:column; align-items:center; gap:2px; font-family:inherit; cursor:pointer; color:var(--charcoal,#2E2A2C); }
+.sup-act:active{ background:rgba(197,160,89,.12); }
+.sup-act-ic{ font-size:22px; } .sup-act b{ font-size:14px; } .sup-act small{ font-size:11px; opacity:.7; }
 .pd-txn-tap{ cursor:pointer; border-radius:10px; transition:background .15s; }
 .pd-txn-tap:active, .pd-txn-tap:hover{ background:rgba(197,160,89,.12); }
 .pd-txn-rc{ font-size:12px; opacity:.55; }
@@ -2438,6 +2445,15 @@ async function deleteReferenceSupplier(id){
       <input type="text" id="newSupplierAddress" placeholder="مثلاً: مدينة نصر، القاهرة">
     </div>
     <div class="field">
+      <label>📍 لوكيشن المكتب / المعرض على جوجل مابس (اختياري)</label>
+      <input type="url" id="newSupplierMapUrl" dir="ltr" placeholder="الصق لينك جوجل مابس هنا">
+      <div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap;">
+        <button type="button" class="btn btn-ghost btn-sm" onclick="projMapHere('newSupplierMapUrl','supMapHint')">📡 موقعي دلوقتي</button>
+        <button type="button" class="btn btn-ghost btn-sm" onclick="supMapSearch()">🗺️ دوّر على جوجل مابس</button>
+      </div>
+      <div class="hint" id="supMapHint">لو إنت عنده دوس "موقعي دلوقتي"، أو الصق لينك من جوجل مابس.</div>
+    </div>
+    <div class="field">
       <label>الرقم الضريبي / السجل التجاري (اختياري)</label>
       <input type="text" id="newSupplierTaxId" placeholder="مثلاً: 123-456-789">
     </div>
@@ -2488,25 +2504,59 @@ async function deleteReferenceSupplier(id){
     <div id="supplier-log-status-dots"></div>
     <div class="sub" id="supplier-log-specialty"></div>
     <div class="worker-meta-line" id="supplier-log-meta"></div>
+    <div id="supplier-log-map" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;"></div>
 
-    <div class="sub" style="margin-top:16px;">🏗️ مشاريع المورد — الكود اللي بيتسجل بيه الدفع</div>
+    <div class="sup-stats" id="supplier-log-stats"></div>
+
+    <div class="sup-actions">
+      <button type="button" class="sup-act" onclick="openSupplierSub('overlay-sup-contract')"><span class="sup-act-ic">📝</span><b>إنشاء مقاولة</b><small>شغلانة جديدة مع المورد</small></button>
+      <button type="button" class="sup-act" onclick="openSupplierSub('overlay-sup-job')"><span class="sup-act-ic">📋</span><b>تسجيل عملية</b><small>تركيب / صيانة / كشف</small></button>
+    </div>
+
+    <div class="sub" style="margin-top:16px;">🏗️ المقاولات والدفعات <small style="opacity:.7;">— دوس على أي دفعة يطلعلك إيصالها</small></div>
+    <div id="supplier-project-list" style="margin-bottom:8px;"></div>
+
+    <div class="sub" style="margin-top:16px;">📋 العمليات</div>
+    <div id="supplier-job-list" style="margin-top:6px;"></div>
+
+    <div class="modal-actions" style="margin-top:18px;">
+      <button class="btn btn-primary btn-full" onclick="openEditSupplier()">✏️ تعديل بيانات المورد</button>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost btn-full" onclick="deleteSupplierConfirm()" style="color:var(--rose);">حذف المورد نهائيًا</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="overlay-sup-contract">
+  <div class="modal" style="max-width:440px;">
+    <button class="modal-close" onclick="closeModal('overlay-sup-contract')">×</button>
+    <h2>📝 إنشاء مقاولة</h2>
+    <div class="sub" id="sup-contract-for"></div>
     <div class="field">
       <label>اسم الشغلانة / المقاولة</label>
       <input type="text" id="supplierProjectTitle" placeholder="مثلاً: سيراميك الحمامات، ألوميتال الشبابيك">
     </div>
     <div class="field">
       <label>في أي مشروع <span class="req-star">*</span></label>
-      <input type="text" id="supplierProjectName" list="location-list" placeholder="مثلاً: New Giza">
+      <input type="text" id="supplierProjectName" list="location-list" placeholder="اختار المشروع">
     </div>
     <div class="field">
       <label>الشغلانة دي هتقفل بكام؟ (اختياري)</label>
       <input type="number" id="supplierProjectTotalValue" min="0" placeholder="مثلاً: 100000">
-      <div class="hint">لو حددتها، هنعرف تلقائي قد إيه لسه متبقي عليه في "مديونيات الشركة"</div>
-      <button type="button" class="btn btn-gold btn-sm btn-full" style="margin-top:8px;" onclick="addSupplierProject()">+ إضافة مشروع</button>
+      <div class="hint">لو حددتها، هنعرف تلقائي قد إيه لسه متبقي عليه في "مديونيات الشركة". الدفعات بتتسجل من الحسابات وتتربط بالمقاولة دي.</div>
     </div>
-    <div id="supplier-project-list" style="margin-bottom:8px;"></div>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-primary btn-full" onclick="addSupplierProject()">حفظ المقاولة</button>
+    </div>
+  </div>
+</div>
 
-    <div class="sub" style="margin-top:16px;">📋 تسجيل عملية جديدة</div>
+<div class="overlay" id="overlay-sup-job">
+  <div class="modal" style="max-width:440px;">
+    <button class="modal-close" onclick="closeModal('overlay-sup-job')">×</button>
+    <h2>📋 تسجيل عملية جديدة</h2>
+    <div class="sub" id="sup-job-for"></div>
     <div class="field">
       <label>نوع العملية</label>
       <select id="supplierJobType">
@@ -2518,7 +2568,7 @@ async function deleteReferenceSupplier(id){
     </div>
     <div class="field">
       <label>المشروع / المكان</label>
-      <input type="text" id="supplierJobProject" list="location-list" placeholder="مثلاً: New Giza">
+      <input type="text" id="supplierJobProject" list="location-list" placeholder="اختار المشروع">
     </div>
     <div class="field">
       <label>التاريخ</label>
@@ -2530,12 +2580,6 @@ async function deleteReferenceSupplier(id){
     </div>
     <div class="modal-actions">
       <button class="btn btn-primary btn-full" onclick="addSupplierJobOrder()">حفظ العملية</button>
-    </div>
-
-    <div id="supplier-job-list" style="margin-top:18px;"></div>
-
-    <div class="modal-actions">
-      <button class="btn btn-ghost btn-full" onclick="deleteSupplierConfirm()" style="color:var(--rose);">حذف المورد نهائيًا</button>
     </div>
   </div>
 </div>
@@ -6452,13 +6496,14 @@ function projMapClean(v){
   const ll = v.match(/^(-?\d{1,2}\.\d+)\s*,\s*(-?\d{1,3}\.\d+)$/); if(ll) return `https://www.google.com/maps?q=${ll[1]},${ll[2]}`;
   return 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(v);
 }
-function projMapHere(){
-  const hint = document.getElementById('projMapHint');
+function projMapHere(inputId, hintId){
+  inputId = inputId || 'projMapUrl'; hintId = hintId || 'projMapHint';
+  const hint = document.getElementById(hintId);
   if(!navigator.geolocation){ showToast('الجهاز ده مش بيدّي الموقع — الصق لينك جوجل مابس'); return; }
   if(hint) hint.textContent = '📡 بيجيب موقعك… (لو طلب إذن الموقع وافق)';
   navigator.geolocation.getCurrentPosition(pos=>{
     const { latitude: a, longitude: b, accuracy } = pos.coords;
-    document.getElementById('projMapUrl').value = `https://www.google.com/maps?q=${a.toFixed(6)},${b.toFixed(6)}`;
+    document.getElementById(inputId).value = `https://www.google.com/maps?q=${a.toFixed(6)},${b.toFixed(6)}`;
     if(hint) hint.textContent = `✅ اتحط موقعك (دقة حوالي ${Math.round(accuracy)} متر) — دوس حفظ.`;
   }, err=>{
     if(hint) hint.textContent = err && err.code===1 ? '❌ إذن الموقع مقفول — افتحه من إعدادات الموبايل للتطبيق، أو الصق لينك جوجل مابس.' : '❌ مقدرتش أجيب الموقع — اتأكد إن الـ GPS شغال، أو الصق لينك جوجل مابس.';
@@ -10122,7 +10167,7 @@ function renderSupplierProjectsList(){
       .slice()
       .sort((a,b)=> new Date(a.date) - new Date(b.date)); // oldest first so "الدفعة الأولى/الثانية..." reads naturally
     const total = payments.reduce((sum,e)=> sum + (Number(e.amount)||0), 0);
-    const paymentRows = payments.map((e,idx)=> `<div class="pd-row" style="padding-inline-start:12px;cursor:pointer;" onclick="openTxnDetail('${e.id}','expense')" title="تفاصيل / إيصال">
+    const paymentRows = payments.map((e,idx)=> `<div class="pd-row" style="padding-inline-start:12px;cursor:pointer;" onclick="pdTxnReceipt('${e.id}','expense')" title="الإيصال">
         <div class="pd-row-main">
           <div class="pd-row-sub">الدفعة ${idx+1} — ${fmtDateTime(e.date)}${e.method ? ' · '+escapeHtml(e.method) : ''} · 🧾</div>
         </div>
@@ -17330,6 +17375,93 @@ function renderRestorePackBtn(){
 { const _rh5 = renderHome; renderHome = function(){ _rh5(); try{ renderRestorePackBtn(); }catch(e){} }; }
 (function rpBoot(){ const t = setInterval(async ()=>{ if(!fbReady) return; clearInterval(t); await rpLoad(); try{ renderRestorePackBtn(); }catch(e){} }, 1500); })();
 { const _ob5 = openBackupModal; openBackupModal = function(){ _ob5(); if(v3IsAdmin() && !document.getElementById('rp-open')){ const a = document.getElementById('rc-btn') || document.getElementById('v3-audit-btn') || document.getElementById('autobk-list'); if(a) a.insertAdjacentHTML('afterend', '<button type="button" class="btn btn-ghost btn-sm" id="rp-open" style="margin:4px 0 8px;" onclick="closeModal(\'overlay-backup\'); openRestorePack()">📦 العمليات المترجعة من الصور</button>'); } }; }
+</script>
+<script>
+/* =====================================================================================
+   🔧 صفحة المورد زي صفحة المشروع: زرارين فوق (إنشاء مقاولة / تسجيل عملية)، وتحتهم المقاولات
+   ودفعاتها (أي دفعة تدوس عليها = إيصالها) والعمليات، وفي الآخر تعديل بيانات المورد.
+   ===================================================================================== */
+function supCurrent(){ return (state.suppliers||[]).find(x=> x.id===activeSupplierId); }
+function supMapSearch(){
+  const q = [document.getElementById('newSupplierName').value, document.getElementById('newSupplierAddress').value].filter(Boolean).join(' ');
+  window.open('https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(q || 'مصر'), '_blank');
+}
+function supMapOpen(){ const s = supCurrent(); if(s && s.mapUrl) window.open(s.mapUrl, '_blank'); }
+function supMapShare(){
+  const s = supCurrent(); if(!s || !s.mapUrl) return;
+  const text = `📍 لوكيشن ${s.name}${s.address ? ' — ' + s.address : ''}${s.phone ? '\n📞 ' + s.phone : ''}\n${s.mapUrl}`;
+  window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank');
+}
+function renderSupplierExtras(){
+  const s = supCurrent(); if(!s) return;
+  const m = document.getElementById('supplier-log-map');
+  if(m) m.innerHTML = s.mapUrl ? `<button type="button" class="btn btn-ghost btn-sm" onclick="supMapOpen()">🗺️ افتح اللوكيشن</button><button type="button" class="btn btn-gold btn-sm" onclick="supMapShare()">📤 شير اللوكيشن</button>` : '';
+  const paid = (state.expenses||[]).filter(e=> e.supplierId===s.id).reduce((a,e)=> a + (Number(e.amount)||0), 0);
+  let left = 0; (s.projects||[]).forEach(p=>{ if(p.totalValue) left += Math.max(0, p.totalValue - computeSupplierProjectTotal(s.id, p.id)); });
+  const st = document.getElementById('supplier-log-stats');
+  if(st) st.innerHTML = `<div><b>${fmtMoney(paid)}</b><small>اتدفعله</small></div><div><b style="color:${left>0 ? 'var(--rose)' : 'inherit'}">${fmtMoney(left)}</b><small>لسه ليه</small></div><div><b>${(s.projects||[]).length} · ${(s.jobOrders||[]).length}</b><small>مقاولة · عملية</small></div>`;
+}
+{ const _osl = openSupplierLog; openSupplierLog = function(id){ _osl(id); try{ renderSupplierExtras(); }catch(e){ console.error(e); } }; }
+function openSupplierSub(id){
+  const s = supCurrent(); if(!s) return;
+  const f = document.getElementById(id==='overlay-sup-contract' ? 'sup-contract-for' : 'sup-job-for'); if(f) f.textContent = 'مع ' + s.name;
+  if(id==='overlay-sup-job') document.getElementById('supplierJobDate').value = new Date().toISOString().slice(0,10);
+  populateLocationDatalist();
+  document.getElementById(id).classList.add('show');
+}
+{ const _asp = addSupplierProject; addSupplierProject = async function(){ const s = supCurrent(); const n = s ? (s.projects||[]).length : 0; await _asp(); const s2 = supCurrent(); if(s2 && (s2.projects||[]).length > n){ closeModal('overlay-sup-contract'); renderSupplierExtras(); } }; }
+{ const _asj = addSupplierJobOrder; addSupplierJobOrder = async function(){ const s = supCurrent(); const n = s ? (s.jobOrders||[]).length : 0; await _asj(); const s2 = supCurrent(); if(s2 && (s2.jobOrders||[]).length > n){ closeModal('overlay-sup-job'); renderSupplierExtras(); } }; }
+{ const _dsp = deleteSupplierProject; deleteSupplierProject = async function(id){ await _dsp(id); renderSupplierExtras(); }; }
+{ const _dsj = deleteSupplierJobOrder; deleteSupplierJobOrder = async function(id){ await _dsj(id); renderSupplierExtras(); }; }
+
+/* ✏️ تعديل بيانات المورد — نفس فورم المورد الجديد */
+let editingSupplierId = null;
+{ const _oas = openAddSupplier; openAddSupplier = function(){
+  _oas(); editingSupplierId = null;
+  const el = document.getElementById('newSupplierMapUrl'); if(el) el.value = '';
+  const ov = document.getElementById('overlay-add-supplier');
+  ov.querySelector('h2').textContent = 'مورد جديد';
+  ov.querySelector('.modal-actions .btn-primary').textContent = 'إضافة المورد';
+}; }
+function openEditSupplier(){
+  const s = supCurrent(); if(!s) return;
+  closeModal('overlay-supplier-log');
+  openAddSupplier();
+  editingSupplierId = s.id;
+  const set = (id, v)=>{ const el = document.getElementById(id); if(el) el.value = v || ''; };
+  set('newSupplierName', s.name); set('newSupplierSpecialty', s.specialty); set('newSupplierPhone', s.phone);
+  set('newSupplierAddress', s.address); set('newSupplierMapUrl', s.mapUrl); set('newSupplierTaxId', s.taxId);
+  set('newSupplierContactPerson', s.contactPerson); set('newSupplierPaymentMethod', s.paymentMethod);
+  set('newSupplierReferral', s.referral); set('newSupplierNotes', s.notes);
+  newSupplierRating = s.rating || 0; renderSupplierRatingStars('newSupplierRatingStars', newSupplierRating);
+  if(s.logo){ newSupplierLogo = s.logo; document.getElementById('supplier-logo-preview').src = s.logo; document.getElementById('supplier-logo-preview-wrap').style.display = 'block'; }
+  const ov = document.getElementById('overlay-add-supplier');
+  ov.querySelector('h2').textContent = '✏️ تعديل بيانات المورد';
+  ov.querySelector('.modal-actions .btn-primary').textContent = 'حفظ التعديلات';
+}
+{ const _as = addSupplier; addSupplier = async function(){
+  const mapUrl = projMapClean((document.getElementById('newSupplierMapUrl')||{}).value);
+  if(!editingSupplierId){
+    const before = new Set((state.suppliers||[]).map(x=> x.id));
+    await _as();
+    const nw = (state.suppliers||[]).find(x=> !before.has(x.id));
+    if(nw && mapUrl){ nw.mapUrl = mapUrl; await saveState(); }
+    return;
+  }
+  const s = (state.suppliers||[]).find(x=> x.id===editingSupplierId); if(!s){ editingSupplierId = null; return; }
+  const v = id=> (document.getElementById(id).value || '').trim();
+  const name = v('newSupplierName'); if(!name){ showToast('اكتب اسم المورد'); return; }
+  Object.assign(s, { name, specialty: v('newSupplierSpecialty'), phone: v('newSupplierPhone'),
+    address: v('newSupplierAddress') || null, mapUrl: mapUrl || null, taxId: v('newSupplierTaxId') || null,
+    contactPerson: v('newSupplierContactPerson') || null, paymentMethod: v('newSupplierPaymentMethod') || null,
+    rating: newSupplierRating || 0, referral: v('newSupplierReferral') || null, notes: v('newSupplierNotes'),
+    logo: newSupplierLogo || null });
+  const id = editingSupplierId; editingSupplierId = null;
+  closeModal('overlay-add-supplier'); clearSupplierLogo();
+  renderSuppliers(); await saveState();
+  showToast('اتحفظت بيانات المورد');
+  openSupplierLog(id);
+}; }
 </script>
 </body>
 </html>
