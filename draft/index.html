@@ -17095,5 +17095,30 @@ function serverRefusing(){
   }
 }; }
 </script>
+<script>
+/* "الحسابات/العمال/المخازن في المشروع ده": بالمشروع نفسه (اسمه أو مكانه) مش بالمكان بس */
+jumpToProjectView = function(view){
+  const p = (state.projects || []).find(x=>x.id===activeProjectDashboardId);
+  if(!p) return;
+  activeProjectContext = p;
+  closeModal('overlay-project-dashboard');
+  switchView(view);
+  const norm = v=> (v||'').trim().toLowerCase();
+  if(view==='accounts'){
+    accF = { type:'all', person:'all', project: p.id, worker:'', supplier:'', method:'', from:'', to:'' };
+    const i = document.getElementById('expenseSearchInput'); if(i) i.value = '';
+    renderExpenses(); return;
+  }
+  // العمال والمخزن بيدوروا بالكلام: نستخدم الاسم لو هو اللي متسجل، وإلا المكان
+  const refs = view==='warehouse'
+    ? (state.items||[]).flatMap(it=> (it.log||[]).map(h=> h.destination))
+    : (state.workers||[]).flatMap(w=> (w.logs||[]).map(l=> l.project));
+  const term = refs.some(r=> norm(r)===norm(p.name)) || !p.location ? p.name : p.location;
+  const input = document.getElementById(view==='warehouse' ? 'searchInput' : 'workerSearchInput');
+  if(input) input.value = term || '';
+  if(view==='warehouse') render(); else renderWorkers();
+};
+{ const _cpc = clearProjectContext; clearProjectContext = function(){ try{ accF = { type:'all', person:'all', project:'', worker:'', supplier:'', method:'', from:'', to:'' }; }catch(e){} return _cpc(); }; }
+</script>
 </body>
 </html>
