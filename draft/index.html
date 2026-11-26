@@ -1058,6 +1058,7 @@ body.ks-on .bottom-nav,body.ks-on #settings-fab{display:none;}
 .pd-tiles{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:6px; }
 .pd-tiles:has(> :nth-child(3):last-child){ grid-template-columns:repeat(3,minmax(0,1fr)); }
 .pd-tiles:has(> :nth-child(3):last-child) .pd-tile{ flex-direction:column; justify-content:center !important; text-align:center; gap:3px; font-size:12px !important; }
+.set-groups{ display:grid; gap:10px; margin-top:12px; }
 .pd-tile{ width:100%; min-height:44px; padding:7px 8px !important; font-size:12.5px !important; font-weight:700; justify-content:flex-start !important; text-align:start; background:var(--blush) !important; color:var(--charcoal) !important; border:0 !important; box-shadow:none !important; }
 .op-link{ display:block; margin:14px auto 2px; background:none; border:0; color:var(--muted); font-size:11.5px; text-decoration:underline; cursor:pointer; opacity:.7; font-family:inherit; }
 .op-f{ display:flex; flex-direction:column; gap:3px; font-size:12.5px; font-weight:700; margin-top:8px; color:var(--charcoal); }
@@ -3094,17 +3095,12 @@ async function deleteReferenceSupplier(id){
     <button class="modal-close" onclick="closeModal('overlay-settings')">×</button>
     <h2>⚙️ الإعدادات</h2>
     <div class="modal-actions"><button class="btn btn-primary btn-full" onclick="openDeviceUserSettings()" id="settings-device-user-btn">👤 أنا مين على الجهاز ده</button></div>
-    <div class="modal-actions"><button class="btn btn-gold btn-full" onclick="closeModal('overlay-settings');openV2Settings()">⏰ منبّه ٩ الصبح والتنبيهات والتقرير</button></div>
-    <div class="modal-actions"><button class="btn btn-gold btn-full" onclick="openChecklistTemplateEditor()">🏗️ إدارة تشيك ليست الجودة</button></div>
-    <div class="modal-actions"><button class="btn btn-gold btn-full" onclick="openStatementCategoriesEditor()">💰 بنود كشف حساب العميل</button></div>
-    <div class="modal-actions"><button class="btn btn-gold btn-full" onclick="openStatementTypesEditor()">🏷️ أنواع البنود (توريد / مصنعية / مقاولة...)</button></div>
-    <div class="modal-actions"><button class="btn btn-gold btn-full" onclick="openLocationsEditor()">📍 أسماء المشاريع في القوايم (إظهار / إخفاء)</button></div>
-    <div class="modal-actions"><button class="btn btn-gold btn-full" onclick="openIdeaCategoriesEditor()">💡 تصنيفات الأفكار والإلهام</button></div>
-    <div class="modal-actions"><button class="btn btn-gold btn-full" onclick="openCatalogEditor()">🧮 كتالوج التسعير السريع</button></div>
-    <div class="modal-actions"><button class="btn btn-gold btn-full" onclick="openSecuritySettings()">🔐 الأمان والحسابات</button></div>
-    <div class="modal-actions"><button class="btn btn-gold btn-full" onclick="closeModal('overlay-settings'); openUsage()">📊 استهلاك Firebase (الخطة المجانية)</button></div>
-    <div class="modal-actions"><button class="btn btn-gold btn-full" onclick="openCompanyInfoSettings()">🧾 بيانات الشركة للتقارير</button></div>
-    <div class="modal-actions"><button class="btn btn-gold btn-full" onclick="openGeneralSettings()">⚙️ إعدادات عامة</button></div>
+    <div class="pd-groups set-groups">
+      <div class="pd-group g1"><div class="pd-group-t">🔐 الحسابات والأمان</div><div class="pd-tiles"><button type="button" class="btn pd-tile" onclick="closeModal('overlay-settings'); openUsersAdmin()">👥 المستخدمين</button><button type="button" class="btn pd-tile" onclick="openSecuritySettings()">🔑 رقم فتح البرنامج</button><button type="button" class="btn pd-tile" onclick="closeModal('overlay-settings'); openBackupPasswordGate()">🗂️ النسخ الاحتياطية</button><button type="button" class="btn pd-tile" onclick="closeModal('overlay-settings'); openTrashModal()">🗑️ سلة المحذوفات</button></div></div>
+      <div class="pd-group g2"><div class="pd-group-t">💰 الفلوس وكشف الحساب</div><div class="pd-tiles"><button type="button" class="btn pd-tile" onclick="openStatementCategoriesEditor()">💰 بنود كشف الحساب</button><button type="button" class="btn pd-tile" onclick="openStatementTypesEditor()">🏷️ أنواع البنود</button><button type="button" class="btn pd-tile" onclick="openGeneralSettings()">📊 نسبة الإدارة ومدة السلة</button><button type="button" class="btn pd-tile" onclick="openCompanyInfoSettings()">🧾 بيانات الشركة للتقارير</button></div></div>
+      <div class="pd-group g3"><div class="pd-group-t">🏗️ المشاريع والشغل</div><div class="pd-tiles"><button type="button" class="btn pd-tile" onclick="openChecklistTemplateEditor()">✅ تشيك ليست الجودة</button><button type="button" class="btn pd-tile" onclick="openCatalogEditor()">🧮 كتالوج التسعير</button><button type="button" class="btn pd-tile" onclick="openLocationsEditor()">📍 أسماء المشاريع في القوايم</button><button type="button" class="btn pd-tile" onclick="openIdeaCategoriesEditor()">💡 تصنيفات الأفكار</button></div></div>
+      <div class="pd-group g4"><div class="pd-group-t">🔔 التنبيهات والسيرفر</div><div class="pd-tiles"><button type="button" class="btn pd-tile" onclick="closeModal('overlay-settings'); openV2Settings()">⏰ منبّه ٩ الصبح والتنبيهات</button><button type="button" class="btn pd-tile" onclick="closeModal('overlay-settings'); openUsage()">📈 استهلاك Firebase</button><button type="button" class="btn pd-tile" onclick="closeModal('overlay-settings'); openSerialAudit()">🔎 مراجعة الأرقام المسلسلة</button><button type="button" class="btn pd-tile" onclick="closeModal('overlay-settings'); openReceiptRestore()">📥 رجّع عمليات من إيصالات</button></div></div>
+    </div>
   </div>
 </div>
 
