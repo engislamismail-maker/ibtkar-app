@@ -17562,8 +17562,10 @@ document.addEventListener('visibilitychange', ()=>{
 });
 
 // بعد أول دخول بالرقم: نعرض تفعيل البصمة (مرة واحدة على الجهاز)
-async function bioOffer(){
+async function bioOffer(tries){
   if(bioUser() || lsGet(BIO_ASKED) || !bioAvail() || lockVisible()) return;
+  // لو فيه شباك تاني مفتوح (زي "شغل النهارده") نستنى لحد ما يتقفل — عشان السؤال ما يستخباش وراه
+  if(document.querySelector('.overlay.show') && (tries||0) < 60){ setTimeout(()=> bioOffer((tries||0) + 1), 2000); return; }
   lsSet(BIO_ASKED, '1');
   const ok = await v2Confirm('👆 تفتح البرنامج بالبصمة بعد كده؟\nأسرع من الرقم، ومحدش يقدر يفتحه غير صاحب البصمة.', 'أيوه فعّلها', 'لا');
   if(ok) await bioEnable();
