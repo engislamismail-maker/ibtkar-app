@@ -1066,6 +1066,9 @@ body.ks-on .bottom-nav,body.ks-on #settings-fab{display:none;}
 .op-file{ display:flex; align-items:center; gap:6px; background:var(--blush); border-radius:10px; padding:6px 8px; margin-bottom:6px; font-size:12.5px; }
 .op-file span{ flex:1; min-width:0; overflow-wrap:anywhere; }
 #pd-txn-list .pd-row.op-old{ opacity:.55; }
+.pd-txn-tap{ cursor:pointer; border-radius:10px; transition:background .15s; }
+.pd-txn-tap:active, .pd-txn-tap:hover{ background:rgba(197,160,89,.12); }
+.pd-txn-rc{ font-size:12px; opacity:.55; }
 #v3-delreq{ margin:8px 0 10px; }
 .v3-delreq-btn{ width:100%; border:0; border-radius:12px; padding:10px; background:var(--deep-rose); color:#fff; font:800 13.5px Tajawal,sans-serif; cursor:pointer; }
 .v3-delreq-note{ background:var(--blush); border-radius:12px; padding:8px 10px; font-size:12.5px; color:var(--deep-rose); font-weight:700; }
@@ -5487,6 +5490,21 @@ function buildReceiptDataForTxn(e, kind){
   if(rs) return { ...base, recipientName:rs.name, recipientRole:'مورد مرجعي' };
   return { ...base, recipientName: e.description || e.project || 'مصروف عام', recipientRole:'مصروف عام' };
 }
+// 🧾 من جوّه المشروع: أي عملية تدوس عليها يطلعلك إيصالها على طول
+function pdTxnReceipt(id, kind){
+  const list = kind==='income' ? (state.income||[]) : (state.expenses||[]);
+  const e = list.find(x=> x.id===id); if(!e){ showToast('العملية دي مش موجودة'); return; }
+  activeExpenseId = id; activeTxnKind = kind;
+  const ov = document.getElementById('overlay-receipt-offer');
+  offerPaymentReceipt(buildReceiptDataForTxn(e, kind), null);
+  // فوق شاشة المشروع
+  ov.style.zIndex = 160;
+  const h = ov.querySelector('h2'); if(h) h.textContent = '🧾 إيصال العملية';
+  const sum = document.getElementById('receipt-offer-summary');
+  if(sum) sum.innerHTML = `${escapeHtml(e.description || e.method || '')} — <b>${fmtMoney(e.amount)}</b><br><small>${e._sn != null && typeof snLabel==='function' ? `<b dir="ltr">${snLabel(e._sn, e.date)}</b>` : fmtDateTime(e.date)} · ${escapeHtml(e.by || '')}${e.method ? ' · ' + escapeHtml(e.method) : ''}</small>`;
+  const closeBtn = ov.querySelector('.modal-actions:last-child .btn-ghost'); if(closeBtn) closeBtn.textContent = 'رجوع';
+}
+{ const _cm = closeModal; closeModal = function(id){ _cm(id); if(id==='overlay-receipt-offer'){ const ov = document.getElementById(id); if(ov){ ov.style.zIndex = ''; const h = ov.querySelector('h2'); if(h) h.textContent = '🧾 تطلع إيصال بالدفعة دي؟'; const c = ov.querySelector('.modal-actions:last-child .btn-ghost'); if(c) c.textContent = 'مش محتاج'; } } }; }
 function reissueTxnReceipt(){
   const list = activeTxnKind==='income' ? (state.income||[]) : (state.expenses||[]);
   const e = list.find(x=>x.id===activeExpenseId);
@@ -7820,9 +7838,9 @@ function openProjectDashboard(id){
   txnEl.innerHTML = d.transactions.length ? d.transactions.map(t=>{
     const isIncome = t._kind==='income';
     const methodAlreadyInTitle = isIncome && !t.description; // title fell back to showing the method itself
-    return `<div class="pd-row">
+    return `<div class="pd-row pd-txn-tap" role="button" tabindex="0" onclick="pdTxnReceipt('${t.id}','${t._kind}')" title="دوس عشان تطلع الإيصال">
       <div class="pd-row-main">
-        <div class="pd-row-title">${escapeHtml(t.description || (isIncome ? (t.method||'قبض') : 'مصروف'))}</div>
+        <div class="pd-row-title">${escapeHtml(t.description || (isIncome ? (t.method||'قبض') : 'مصروف'))} <span class="pd-txn-rc">🧾</span></div>
         <div class="pd-row-sub">${fmtDateTime(t.date)} · ${escapeHtml(t.by || '—')}${(t.method && !methodAlreadyInTitle) ? ' · '+escapeHtml(t.method) : ''}</div>
       </div>
       <div class="pd-row-val ${isIncome ? 'income' : 'expense'}">${isIncome ? '+' : '-'}${fmtMoney(t.amount)}</div>
