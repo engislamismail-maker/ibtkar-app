@@ -795,6 +795,10 @@ input[type="number"]{-moz-appearance:textfield;}
 #numpad-target-label{font-size:13px;font-weight:700;color:var(--muted);margin-bottom:10px;text-align:center;}
 .req-star{color:#C2547A;font-weight:900;margin-right:2px;}
 .nav-badge{position:absolute;top:2px;left:calc(50% - 20px);background:#C2547A;color:#fff;font-size:9px;font-weight:900;min-width:16px;height:16px;border-radius:8px;display:flex;align-items:center;justify-content:center;padding:0 3px;}
+.notif-tabs{ display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-bottom:10px; }
+.notif-tabs button{ border:1.5px solid var(--line,#E7D9DD); background:#fff; border-radius:12px; padding:8px 6px; font:inherit; font-size:12.5px; font-weight:700; cursor:pointer; color:var(--charcoal); }
+.notif-tabs button.on{ background:var(--charcoal); color:#fff; border-color:var(--charcoal); }
+.msg-row{ border-inline-start:3px solid var(--gold,#D59663); }
 .calx-card{ background:var(--white,#fff); border:1.5px solid var(--border,#E6DED2); border-radius:16px; padding:12px; margin-bottom:12px; }
 .calx-month{ display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; } .calx-month b{ font-size:16px; }
 .calx-grid .cal-cell{ aspect-ratio:auto; min-height:46px; justify-content:flex-start; padding-top:5px; overflow:hidden; }
@@ -17799,6 +17803,48 @@ let widgetTimer = null;
 { const _rh6 = renderHome; renderHome = function(){ _rh6(); clearTimeout(widgetTimer); widgetTimer = setTimeout(()=> widgetPush(false), 1500); }; }
 document.addEventListener('visibilitychange', ()=>{ if(document.hidden) widgetPush(true); });
 setInterval(()=> widgetPush(false), 5 * 60 * 1000);
+</script>
+<script>
+/* =====================================================================================
+   💬 رسائل البرنامج: أي رسالة بتطلع تحت بسرعة (اتحفظ، اترجّع، غلط…) بتتسجل كمان
+   في الإشعارات ← "💬 رسائل البرنامج" عشان ترجعلها. محفوظة على الجهاز ده (آخر ٢٠٠).
+   ===================================================================================== */
+const MSG_KEY = 'ibtkar-msg-log';
+let msgTab = 'feed';
+function msgLoad(){ try{ return JSON.parse(localStorage.getItem(MSG_KEY)) || []; }catch(e){ return []; } }
+function msgAdd(text){
+  text = String(text || '').trim(); if(!text) return;
+  if(/^🔔 /.test(text)) return;                       // دي أصلاً في "اللي اتعمل في السيستم"
+  const list = msgLoad(), last = list[0];
+  if(last && last.t === text && Date.now() - last.at < 3000) return; // نفس الرسالة مرتين ورا بعض
+  list.unshift({ t: text, at: Date.now() });
+  try{ localStorage.setItem(MSG_KEY, JSON.stringify(list.slice(0, 200))); }catch(e){}
+  if(document.getElementById('overlay-notifs') && document.getElementById('overlay-notifs').classList.contains('show') && msgTab === 'msgs') renderNotifs();
+}
+{ const _st = showToast; showToast = function(msg){ try{ msgAdd(msg); }catch(e){} return _st.apply(this, arguments); }; }
+{ const _ut = showUndoToast; showUndoToast = function(msg){ try{ msgAdd(msg); }catch(e){} return _ut.apply(this, arguments); }; }
+
+// تابين في شاشة الإشعارات
+{ const _rn = renderNotifs; renderNotifs = function(){
+  const ov = document.getElementById('overlay-notifs'); if(!ov) return _rn();
+  let tabs = document.getElementById('notif-tabs');
+  if(!tabs){
+    tabs = document.createElement('div'); tabs.id = 'notif-tabs'; tabs.className = 'notif-tabs';
+    document.getElementById('notif-list').before(tabs);
+  }
+  const n = msgLoad().length;
+  tabs.innerHTML = `<button type="button" data-t="feed" class="${msgTab==='feed' ? 'on' : ''}">🔔 اللي اتعمل في السيستم</button><button type="button" data-t="msgs" class="${msgTab==='msgs' ? 'on' : ''}">💬 رسائل البرنامج${n ? ` (${n > 99 ? '99+' : n})` : ''}</button>`;
+  tabs.querySelectorAll('[data-t]').forEach(b=> b.onclick = ()=>{ msgTab = b.dataset.t; renderNotifs(); });
+  const sub = ov.querySelector('.sub');
+  if(msgTab === 'feed'){ if(sub) sub.textContent = 'اللي اتعمل في السيستم — الجديد ملوّن'; return _rn(); }
+  if(sub) sub.textContent = 'كل رسالة طلعت تحت على الجهاز ده (الأحدث فوق)';
+  const list = msgLoad();
+  document.getElementById('notif-list').innerHTML = (list.length ? list.slice(0, 100).map(m=>
+    `<div class="notif-row msg-row"><div>${escapeHtml(m.t)}</div><small>${fmtDateTime(new Date(m.at).toISOString())}</small></div>`).join('')
+    + `<button type="button" class="btn btn-ghost btn-sm" style="margin-top:8px;" id="msg-clear">🧹 امسح الرسائل</button>`
+    : '<div class="no-hist">لسه مفيش رسائل</div>');
+  const c = document.getElementById('msg-clear'); if(c) c.onclick = ()=>{ try{ localStorage.removeItem(MSG_KEY); }catch(e){} renderNotifs(); };
+}; }
 </script>
 </body>
 </html>
