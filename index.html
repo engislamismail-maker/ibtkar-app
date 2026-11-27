@@ -2633,6 +2633,11 @@ async function deleteReferenceSupplier(id){
       <div class="hint" id="projMapHint">لو إنت في الموقع دوس "موقعي دلوقتي". أو افتح جوجل مابس ← دوس على المكان ← مشاركة ← نسخ الرابط، وارجع الصقه هنا.</div>
     </div>
     <div class="field">
+      <label>💼 نسبة الإشراف بتاعتنا في المشروع ده (٪)</label>
+      <input type="number" id="projAdminPct" min="0" max="100" step="0.5" inputmode="decimal" placeholder="15">
+      <div class="hint">بتختلف من مشروع للتاني. بتتحسب على كل اللي اتصرف على المشروع، وهي نفس نسبة كشف حساب العميل.</div>
+    </div>
+    <div class="field">
       <label>تفاصيل (اختياري)</label>
       <textarea id="projDetails" placeholder="نوع المشروع، المساحة، أي تفاصيل مهمة"></textarea>
     </div>
@@ -7695,6 +7700,7 @@ function openAddProject(){
   document.getElementById('projStartDate').value = new Date().toISOString().slice(0,10);
   document.getElementById('projLocation').value = '';
   document.getElementById('projMapUrl').value = '';
+  document.getElementById('projAdminPct').value = (state.settings && state.settings.defaultAdminPercent != null) ? state.settings.defaultAdminPercent : 15;
   document.getElementById('projDetails').value = '';
   document.getElementById('projNotes').value = '';
   populateLocationDatalist();
@@ -7713,6 +7719,7 @@ function openEditProject(){
   document.getElementById('projStartDate').value = p.startDate || '';
   document.getElementById('projLocation').value = p.location || '';
   document.getElementById('projMapUrl').value = p.mapUrl || '';
+  document.getElementById('projAdminPct').value = ensureClientStatement(p).adminPercent;
   document.getElementById('projDetails').value = p.details || '';
   document.getElementById('projNotes').value = p.notes || '';
   populateLocationDatalist();
@@ -7739,6 +7746,11 @@ async function saveProject(){
     // seed a starting snag list so every new project has a ready-to-fill punch list
     const startingSnagList = [1,2,3,4].map(()=> ({ id: uid(), task: '', category: '', assignee: '', done: false, createdAt: new Date().toISOString() }));
     state.projects.push({ id: uid(), name, client, startDate, location, mapUrl, details, notes, createdAt: new Date().toISOString(), snagList: startingSnagList });
+  }
+  { // نسبة الإشراف بتاعة المشروع ده
+    const raw = document.getElementById('projAdminPct').value, pct = raw === '' ? null : Number(raw);
+    const pr = wasEditing ? state.projects.find(x=> x.id===editingProjectId) : state.projects[state.projects.length - 1];
+    if(pr && pct != null && isFinite(pct) && pct >= 0 && pct <= 100) ensureClientStatement(pr).adminPercent = pct;
   }
   closeModal('overlay-add-project');
   editingProjectId = null;
@@ -15563,6 +15575,8 @@ function projectMoney(p){
     if(lbl==='الصافي لحد دلوقتي' || lbl==='الصافي قبل نسبة الإشراف'){ sp.textContent = 'الصافي قبل نسبة الإشراف'; const net = m.received - m.spent; b.textContent = fmtMoney(net); b.style.color = net >= 0 ? 'var(--green)' : 'var(--rose)'; }
   });
   let box = document.getElementById('pd-money'); if(!box){ box = document.createElement('div'); box.id = 'pd-money'; stats.after(box); }
+  // مع الرصيد الافتتاحي: المستخلص الجديد بيتقارن بمصروفات ما بعد اليوم الفاصل بس (القديم في الكشف القديم)
+  m.spentCmp = m.spent - (m.opening ? (Number(m.opening.spent)||0) : 0);
   box.innerHTML = `<div class="pd-money">
     <div class="pd-money-h"><span>💰 فلوس المشروع</span><span class="pd-code" dir="ltr">#${escapeHtml(p.projectCode || '')}</span></div>
     <div class="pd-money-row"><span>اتقبض من العميل لحد دلوقتي</span><b class="ok">${fmtMoney(m.received)}</b></div>
@@ -15572,8 +15586,8 @@ function projectMoney(p){
     ${m.statementTotal ? `<div class="pd-money-row sub"><span>المستخلص كله (بالإشراف)</span><b>${fmtMoney(m.statementTotal)}</b></div>
       ${m.statementLeft >= 0 ? `<div class="pd-money-row sub"><span>لسه على العميل في المستخلص</span><b>${fmtMoney(m.statementLeft)}</b></div>`
         : `<div class="pd-money-row sub"><span>العميل دافع زيادة عن المستخلص (رصيد مقدم ليه)</span><b class="ok">${fmtMoney(-m.statementLeft)}</b></div>`}
-      ${Math.abs(m.spent - m.statementWork) >= 1 ? `<div class="step-warn">${m.spent > m.statementWork ? `⚠️ فيه ${fmtMoney(m.spent - m.statementWork)} مصروفات مش متسجلة في المستخلص` : `⚠️ المستخلص فيه ${fmtMoney(m.statementWork - m.spent)} زيادة عن المصروفات المسجلة`} — عشان كده "الفاضل" و"الرصيد" مش نفس الرقم.</div>` : ''}` : ''}
-    <div class="hint">النسبة بتتغير من 🧾 كشف حساب العميل.</div></div>`;
+      ${Math.abs(m.spentCmp - m.statementWork) >= 1 ? `<div class="step-warn">${m.spentCmp > m.statementWork ? `⚠️ فيه ${fmtMoney(m.spentCmp - m.statementWork)} مصروفات${m.opening ? ' بعد الرصيد الافتتاحي' : ''} مش متسجلة في المستخلص` : `⚠️ المستخلص فيه ${fmtMoney(m.statementWork - m.spentCmp)} زيادة عن المصروفات المسجلة${m.opening ? ' بعد الرصيد الافتتاحي' : ''}`} — عشان كده "الفاضل" و"الرصيد" مش نفس الرقم.</div>` : ''}` : ''}
+    <div class="hint">النسبة بتتغير من <a href="#" onclick="event.preventDefault(); openEditProject();">✏️ تعديل بيانات المشروع</a> أو من 🧾 كشف حساب العميل.</div></div>`;
 }; }
 
 /* ---------- ٥. خامات المشروع: أسعارها من المورد + الكميات اللي جت ---------- */
@@ -16138,6 +16152,7 @@ function openOpening(){
     <label class="op-f">📅 اليوم الفاصل<input type="date" id="opDate" value="${o.date || bdTodayStr()}"></label>
     ${num('opRec', '💰 إجمالي اللي العميل دفعه لحد اليوم ده', o.received)}
     ${num('opSpent', '🧾 إجمالي اللي اتصرف على المشروع (من غير نسبة الإشراف)', o.spent)}
+    ${num('opPct', '💼 نسبة الإشراف بتاعتنا في المشروع ده (٪)', cs.adminPercent, 'زي اللي في الإكسل (مثلاً 18) — بتتحسب على كل اللي اتصرف')}
     ${num('opSup', '💼 نسبة إشراف اتسحبت قبل كده من المشروع ده', o.supWithdrawn, 'لو مش متأكد سيبها فاضية')}
     ${num('opCarry', '📄 المتبقي على العميل في آخر الكشف القديم', cs.carried, 'لو العميل ليه فلوس (رصيد دائن) اكتبها بالسالب. بيظهر سطر "رصيد مرحّل" في كشف الحساب الجديد')}
     <div class="dp-q">📎 كشف الحساب القديم (إكسل أو PDF)</div>
@@ -16161,6 +16176,7 @@ function openOpening(){
     const prev = p.opening || {};
     p.opening = { date, received: v('opRec'), spent: v('opSpent'), supWithdrawn: v('opSup'), file: pendingFile === undefined ? (prev.file || null) : pendingFile, by: getDeviceUser() || '', at: new Date().toISOString() };
     cs.carried = v('opCarry');
+    { const pc = parseFloat(ov.querySelector('#opPct').value); if(!isNaN(pc) && pc >= 0 && pc <= 100) cs.adminPercent = pc; }
     await saveState(); close(); openProjectDashboard(p.id);
     try{ renderHome(); }catch(e){}
     showToast('✅ اتحفظ الرصيد الافتتاحي');
