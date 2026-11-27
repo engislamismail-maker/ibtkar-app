@@ -72,4 +72,6 @@ fs.writeFileSync(file, html);
 console.log('prepare-web: OK');
 JS
 
+# مكتبات ٣D والـ QR (استوديو المطبخ + الإيصالات)
+"$ANDROID_DIR/scripts/vendor-extra.sh" "$WWW"
 du -sh "$WWW"

@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>متابعة المشروع</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;900&display=swap">
+<style>
+/* Client page: read-only view of one project, published by the IBTKAR app */
+:root{ --bg:#F5F1EC; --card:#FFFFFF; --ink:#2E2A2C; --muted:#6B6467; --line:#E7D9DD; --gold:#D59663; --green:#6E8B74; --rose:#C2547A; }
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:'Tajawal','Segoe UI',Tahoma,sans-serif;font-size:15px;line-height:1.6;
+  padding:max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) 32px max(16px, env(safe-area-inset-left))}
+.wrap{max-width:560px;margin:0 auto;display:grid;gap:12px}
+.head{text-align:center;padding:10px 0 4px}
+.brand{font-weight:900;color:var(--gold);letter-spacing:.5px}
+h1{margin:2px 0 0;font-size:22px;font-weight:900}
+.hello{color:var(--muted);font-size:14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px 16px}
+.card h2{margin:0 0 8px;font-size:15px;font-weight:900}
+.bar{height:10px;border-radius:10px;background:#E9E2D9;overflow:hidden}
+.bar div{height:100%;background:var(--green)}
+.big{font-size:28px;font-weight:900;font-variant-numeric:tabular-nums}
+.photos{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.photos img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:10px;cursor:zoom-in}
+.row{display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-bottom:1px solid var(--line);font-size:14px}
+.row:last-child{border-bottom:none}
+.n{font-variant-numeric:tabular-nums;white-space:nowrap}
+.ok{color:var(--green);font-weight:700}
+.due{color:var(--rose);font-weight:700}
+.day{margin-bottom:8px}
+.day b{font-size:13.5px}
+.day ul{margin:2px 0 0;padding-inline-start:18px;font-size:13.5px}
+.muted{color:var(--muted);font-size:12.5px}
+.foot{text-align:center;color:var(--muted);font-size:12px;padding-top:6px}
+.hero{text-align:center}
+.hero .big{font-size:40px}
+.now{margin-top:8px;font-size:14px}
+.now b{color:var(--green)}
+.chips{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:4px}
+.chips div{background:var(--bg);border-radius:12px;padding:8px 4px;text-align:center}
+.chips b{display:block;font-size:17px}
+.chips span{font-size:11.5px;color:var(--muted)}
+details{border-top:1px solid var(--line);padding:6px 0}
+details:first-of-type{border-top:none}
+summary{cursor:pointer;font-weight:700;font-size:14px;list-style:none;display:flex;justify-content:space-between;gap:8px}
+summary::-webkit-details-marker{display:none}
+summary .muted{font-weight:400}
+.st{display:flex;gap:8px;align-items:center;padding:4px 0;font-size:13.5px}
+.st i{font-style:normal;width:20px;text-align:center}
+.st.done{color:var(--muted)}
+.st.doing{font-weight:700}
+.rc{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);cursor:pointer;font-size:14px}
+.rc:last-child{border-bottom:none}
+.rc .new{background:#EEF3EC;color:var(--green);font-size:11px;font-weight:700;border-radius:8px;padding:1px 6px;margin-inline-start:6px}
+.qbar{height:6px;border-radius:6px;background:#E9E2D9;overflow:hidden;margin-top:4px}
+.qbar div{height:100%;background:var(--gold)}
+#rcpt{position:fixed;inset:0;background:rgba(20,18,19,.6);display:none;align-items:center;justify-content:center;padding:16px}
+#rcpt.show{display:flex}
+#rcpt .paper{background:#fff;border-radius:16px;padding:20px;max-width:380px;width:100%;max-height:90vh;overflow:auto}
+#rcpt .paper img{width:100%;border-radius:10px;margin-top:10px}
+.rrow{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px dashed var(--line);font-size:14px}
+.wk{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px}
+.wk button{flex:none;border:1.5px solid var(--line);background:#fff;border-radius:20px;padding:7px 12px;font:700 13px Tajawal,sans-serif;color:var(--ink);cursor:pointer}
+.wk button.on{background:var(--gold);border-color:var(--gold);color:#fff}
+.wr-card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:16px;direction:rtl}
+.wr-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.wr-co{font-size:11px;color:var(--muted);font-weight:700}
+.wr-title{font-size:17px;font-weight:900}
+.wr-range{font-size:12px;color:var(--muted)}
+.wr-pct{font-size:28px;font-weight:900;color:var(--green)}
+.step-bar{height:8px;border-radius:8px;background:#E9E2D9;overflow:hidden;margin:6px 0}
+.step-bar span{display:block;height:100%;background:var(--green)}
+table.wr-kpis{width:100%;border-collapse:separate;border-spacing:6px;margin:8px 0}
+table.wr-kpis td{background:var(--bg);border-radius:10px;padding:8px 4px;text-align:center}
+table.wr-kpis b{display:block;font-size:14px}
+table.wr-kpis span{font-size:11px;color:var(--muted)}
+.wr-sec{margin-top:14px}
+.wr-h{font-weight:900;font-size:14px;margin-bottom:4px;color:var(--gold)}
+.wr-t{width:100%;border-collapse:collapse;font-size:13.5px}
+.wr-t td{padding:7px 4px;border-bottom:1px solid #EFE8DE;vertical-align:top;line-height:1.6}
+.wr-t td.v{text-align:left;white-space:nowrap;padding-inline-start:10px}
+.wr-t small{color:var(--muted)}
+.wr-card .bad{color:var(--rose)} .wr-t .ok{color:var(--green)}
+.wr-imgs{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:8px}
+.wr-imgs img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:10px;cursor:zoom-in}
+.wr-empty{font-size:13px;color:var(--muted)}
+.wr-client .wr-co{display:none}
+.wr-card{padding:0;overflow:hidden;border-color:#E7D9DD;border-radius:12px}
+.wr-card > *:not(.wr-band){margin-inline:16px}
+.wr-card > table.wr-kpis,.wr-card > .step-bar{width:calc(100% - 32px)}
+.wr-top{padding-top:14px;padding-bottom:10px;border-bottom:1px solid #E7D9DD;position:relative}
+.wr-top::after{content:"";position:absolute;bottom:-1px;right:0;width:64px;height:3px;background:var(--gold)}
+.wr-logo{height:30px;width:auto;display:block;margin-bottom:4px}
+.head .brand{display:none}
+.wr-pct{color:var(--rose)}
+table.wr-kpis{border-spacing:0;border-collapse:separate}
+table.wr-kpis td{background:#F8EEF0;border-inline-start:6px solid #fff}
+table.wr-kpis td:first-child{border-inline-start:none}
+.wr-h{display:flex;align-items:center;gap:7px;color:var(--ink)}
+.bi{display:inline-flex;line-height:0}
+.wr-t{border:1px solid #E7D9DD}
+.wr-t td{border-bottom:none;padding:7px 8px}
+.wr-t tr:nth-child(even) td{background:#F8EEF0}
+.wr-t.wr-total td{background:#2E2A2C !important;color:#fff}
+.wr-t.wr-total td b{color:var(--gold)}
+.wr-t.wr-total td:first-child b{color:#fff}
+.wr-foot{margin-bottom:10px}
+.wr-band{background:#2E2A2C;color:#E7D9DD;font-size:10.5px;text-align:center;padding:9px 12px;direction:ltr}
+.brand{color:var(--rose)}
+h1{color:var(--ink)}
+.wr-foot{font-size:11px;color:var(--muted);margin-top:12px;text-align:center}
+#viewer{position:fixed;inset:0;background:rgba(20,18,19,.95);display:none;align-items:center;justify-content:center;padding:16px}
+#viewer.show{display:flex}
+#viewer img{max-width:100%;max-height:100%;object-fit:contain}
+</style>
+</head>
+<body>
+<div class="wrap" id="app"><div class="card" style="text-align:center">جاري التحميل…</div></div>
+<div id="viewer" onclick="this.classList.remove('show')"><img alt=""></div>
+<div id="rcpt" onclick="if(event.target===this)this.classList.remove('show')"><div class="paper"></div></div>
+
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-database-compat.js"></script>
+<script>
+firebase.initializeApp({
+  apiKey: "AIzaSyBFcNGuBPeJSSjBf_Ff1B4wGGClMPOXVpI",
+  authDomain: "ibtkar-system.firebaseapp.com",
+  databaseURL: "https://ibtkar-system-default-rtdb.firebaseio.com",
+  projectId: "ibtkar-system",
+  appId: "1:20537859000:web:9710db0df9d33b20318d4d"
+});
+const esc = s=> String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const money = n=> Number(n||0).toLocaleString('en-US') + ' ج.م';
+const fmt = d=> d ? new Date(d.length===10 ? d+'T00:00:00' : d).toLocaleDateString('ar-EG',{day:'numeric',month:'long',numberingSystem:'latn'}) : '';
+const token = new URLSearchParams(location.search).get('t');
+const app = document.getElementById('app');
+function week(i){
+  const w = window.__p.weeks[i]; const body = document.getElementById('wkBody');
+  body.innerHTML = w.html;
+  body.querySelectorAll('img').forEach(img=> img.onclick = ()=> show(img.src));
+  document.querySelectorAll('.wk button').forEach((b,j)=> b.classList.toggle('on', j===i));
+}
+function receipt(i){
+  const p = window.__p, r = p.receipts[i], box = document.getElementById('rcpt');
+  box.querySelector('.paper').innerHTML = `<div style="text-align:center"><div class="brand">${esc(p.company)}</div><h2 style="margin:4px 0 2px">🧾 إيصال استلام رقم ${r.no}</h2><div class="muted">${esc(p.project)}</div></div>
+    <div style="margin-top:12px"><div class="rrow"><span>استلمنا من</span><b>${esc(p.client || 'العميل')}</b></div><div class="rrow"><span>المبلغ</span><b>${money(r.amount)}</b></div>
+    <div class="rrow"><span>التاريخ</span><b>${fmt(r.date)}</b></div>${r.method ? `<div class="rrow"><span>طريقة الدفع</span><b>${esc(r.method)}</b></div>` : ''}</div>
+    ${r.img ? `<img src="${r.img}" alt="">` : ''}
+    <button onclick="document.getElementById('rcpt').classList.remove('show')" style="margin-top:14px;width:100%;border:none;border-radius:12px;padding:11px;background:var(--gold);color:#fff;font:700 15px Tajawal,sans-serif">قفل</button>`;
+  box.classList.add('show');
+}
+function show(src){ const v = document.getElementById('viewer'); v.querySelector('img').src = src; v.classList.add('show'); }
+
+if(!token){ app.innerHTML = '<div class="card">اللينك ناقص — اطلب اللينك تاني من الشركة.</div>'; }
+else {
+  const ref = firebase.database().ref('ibtkar_portal/' + token);
+  ref.child('page').once('value').then(snap=>{
+    const p = snap.val();
+    if(!p){ app.innerHTML = '<div class="card">الصفحة دي مش متاحة دلوقتي — اطلب اللينك تاني من الشركة.</div>'; return; }
+    window.__p = p;
+    if(p.weeks){
+      let h = `<div class="head"><div class="brand">${esc(p.company)}</div><h1>${esc(p.project)}</h1>${p.client ? `<div class="hello">أهلاً ${esc(p.client)}</div>` : ''}</div>`;
+      if(p.weeks.length > 1) h += `<div class="wk">${p.weeks.map((w,i)=>`<button type="button" class="${i===0?'on':''}" onclick="week(${i})">${i===0 ? 'الأسبوع ده' : fmt(w.from) + ' – ' + fmt(w.to)}</button>`).join('')}</div>`;
+      h += `<div id="wkBody"></div><div class="foot">صفحة للعرض بس</div>`;
+      app.innerHTML = h; week(0);
+      const ua0 = navigator.userAgent;
+      ref.child('views').push({ at: new Date().toISOString(), device: /iPhone|iPad/.test(ua0) ? 'آيفون' : /Android/.test(ua0) ? 'أندرويد' : /Windows/.test(ua0) ? 'كمبيوتر ويندوز' : /Mac/.test(ua0) ? 'ماك' : 'جهاز' }).catch(()=>{});
+      return;
+    }
+    let h = '';
+    // ① وصلنا لفين
+    if(p.progress!=null || (p.now && p.now.length)){
+      h += `<div class="card hero"><h2>📈 وصلنا لفين</h2>${p.progress!=null ? `<div class="big">${p.progress}%</div><div class="bar"><div style="width:${p.progress}%"></div></div>` : ''}
+        ${p.now && p.now.length ? `<div class="now">🔨 شغالين دلوقتي في: <b>${p.now.map(esc).join('، ')}</b></div>` : ''}
+        ${p.next && p.next.length ? `<div class="muted">⏭️ اللي جاي: ${p.next.map(esc).join('، ')}</div>` : ''}</div>`;
+    }
+    // ② الأسبوع ده
+    if(p.week){
+      const w = p.week;
+      h += `<div class="card"><h2>📅 الأسبوع ده <span class="muted">${fmt(w.from)} – ${fmt(w.to)}</span></h2>
+        <div class="chips"><div><b>${w.days}</b><span>يوم شغل في الموقع</span></div><div><b>${(w.done||[]).length}</b><span>مرحلة خلصت</span></div><div><b>${Number(w.paid||0).toLocaleString('en-US')}</b><span>ج.م دفعتها</span></div></div>
+        ${(w.done||[]).length ? `<div style="margin-top:8px;font-size:14px">✅ خلصنا: ${w.done.map(esc).join('، ')}</div>` : ''}</div>`;
+    }
+    // ③ مراحل المشروع
+    if(p.steps && p.steps.length){
+      const phases = []; p.steps.forEach(s=>{ let g = phases.find(x=>x.ph===s.ph); if(!g){ g = {ph:s.ph, list:[]}; phases.push(g); } g.list.push(s); });
+      h += `<div class="card"><h2>🪜 مراحل المشروع</h2>${phases.map(g=>{
+        const done = g.list.filter(s=>s.s==='done').length, active = g.list.some(s=>s.s==='doing');
+        const icon = done===g.list.length ? '✅' : active || done ? '🔨' : '⚪';
+        return `<details ${active ? 'open' : ''}><summary><span>${icon} ${esc(g.ph||'')}</span><span class="muted">${done} من ${g.list.length}</span></summary>
+          ${g.list.map(s=>`<div class="st ${s.s}"><i>${s.s==='done'?'✅':s.s==='doing'?'🔨':'⚪'}</i><span>${esc(s.t)}${s.s==='done' && s.d ? ` <span class="muted">· ${fmt(s.d)}</span>` : ''}</span></div>`).join('')}</details>`;
+      }).join('')}</div>`;
+    }
+    if(p.photos && p.photos.length) h += `<div class="card"><h2>📸 من الموقع</h2><div class="photos">${p.photos.map(src=>`<img src="${src}" onclick="show(this.src)" alt="">`).join('')}</div></div>`;
+    // ④ الدفعات والإيصالات
+    if(p.payments || p.receipts){
+      h += `<div class="card"><h2>💰 الدفعات</h2>`;
+      if(p.payments){
+        h += p.payments.map(x=>`<div class="row"><span>${esc(x.what)}${x.due ? ` <span class="muted">· ${fmt(x.due)}</span>` : ''}</span><span class="n ${x.left>0?'due':'ok'}">${x.left>0 ? money(x.left) + ' فاضل' : '✓ مدفوعة'}</span></div>`).join('') || '';
+        h += `<div class="muted" style="margin:6px 0 4px">إجمالي اللي اتدفع: ${money(p.received)}</div>`;
+      }
+      if(p.receipts && p.receipts.length){
+        h += `<div style="font-weight:900;font-size:14px;margin-top:10px">🧾 الإيصالات — دوس على أي واحد</div>` +
+          p.receipts.map((r,i)=>`<div class="rc" onclick="receipt(${i})"><span>🧾 إيصال رقم ${r.no} <span class="muted">· ${fmt(r.date)}</span>${r.week ? '<span class="new">الأسبوع ده</span>' : ''}</span><b class="n">${money(r.amount)}</b></div>`).join('');
+      }
+      h += `</div>`;
+    }
+    // ⑤ الجودة
+    if(p.quality && p.quality.length){
+      h += `<div class="card"><h2>✅ مراجعات الجودة</h2><div class="muted" style="margin-bottom:6px">كل بند بنراجعه في الموقع على المواصفات</div>${p.quality.map(q=>`<details><summary><span>${esc(q.trade)}</span><span class="muted">${q.ok} من ${q.total} اتراجع</span></summary>
+        <div class="qbar"><div style="width:${q.total ? Math.round(q.ok/q.total*100) : 0}%"></div></div>
+        ${(q.last||[]).length ? `<ul style="margin:6px 0 0;padding-inline-start:18px;font-size:13px">${q.last.map(x=>`<li>✓ ${esc(x)}</li>`).join('')}</ul>` : ''}</details>`).join('')}</div>`;
+    }
+    if(p.reports && p.reports.length) h += `<div class="card"><details><summary><span>📄 آخر الأيام في الموقع</span><span class="muted">${p.reports.length} يوم</span></summary>${p.reports.map(r=>`<div class="day"><b>${fmt(r.date)}</b> <span class="muted">· ${r.onSite} في الموقع</span>${r.done && r.done.length ? `<ul>${r.done.map(x=>`<li>✅ ${esc(x)}</li>`).join('')}</ul>` : ''}${r.next && r.next.length ? `<ul>${r.next.map(x=>`<li>⏭️ ${esc(x)}</li>`).join('')}</ul>` : ''}</div>`).join('')}</details></div>`;
+    if(p.choices && p.choices.length) h += `<div class="card"><h2>🎯 اختياراتك</h2>${p.choices.map(c=>`<div class="row"><span>${esc(c.category)}${c.category&&c.name?': ':''}${esc(c.name)}</span><span class="${c.confirmed?'ok':'muted'}">${c.confirmed?'✓ متأكد':'⏳ مستني ردك'}</span></div>`).join('')}</div>`;
+    h += `<div class="foot">آخر تحديث: ${fmt(p.updatedAt)} · صفحة للعرض بس</div>`;
+    app.innerHTML = h;
+    // visit log for the company
+    const ua = navigator.userAgent;
+    const device = /iPhone|iPad/.test(ua) ? 'آيفون' : /Android/.test(ua) ? 'أندرويد' : /Windows/.test(ua) ? 'كمبيوتر ويندوز' : /Mac/.test(ua) ? 'ماك' : 'جهاز';
+    ref.child('views').push({ at: new Date().toISOString(), device }).catch(()=>{});
+  }).catch(()=>{ app.innerHTML = '<div class="card">مقدرتش أفتح الصفحة — اتأكد من النت وجرب تاني.</div>'; });
+}
+</script>
+</body>
+</html>
