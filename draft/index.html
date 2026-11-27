@@ -15575,6 +15575,8 @@ function projectMoney(p){
     const lbl = sp.textContent;
     if(lbl==='إجمالي المصروف') b.textContent = fmtMoney(m.spent);
     if(lbl==='إجمالي المقبوض') b.textContent = fmtMoney(m.received);
+    // رصيد العميل مكان "حركات صرف مخزون": الفلوس اللي معانا من العميل بعد المصروف ونسبتنا
+    if(lbl==='حركات صرف مخزون' || lbl==='رصيد العميل معانا' || lbl==='على العميل'){ sp.textContent = m.left >= 0 ? 'رصيد العميل معانا' : 'على العميل'; b.textContent = fmtMoney(Math.abs(m.left)); b.style.color = m.left >= 0 ? 'var(--green)' : 'var(--rose)'; st.style.boxShadow = 'inset 0 0 0 2px ' + (m.left >= 0 ? 'var(--sage, #6E8B74)' : 'var(--rose)'); }
     if(lbl==='الصافي لحد دلوقتي' || lbl==='الصافي قبل نسبة الإشراف'){ sp.textContent = 'الصافي قبل نسبة الإشراف'; const net = m.received - m.spent; b.textContent = fmtMoney(net); b.style.color = net >= 0 ? 'var(--green)' : 'var(--rose)'; }
   });
   let box = document.getElementById('pd-money'); if(!box){ box = document.createElement('div'); box.id = 'pd-money'; stats.after(box); }
@@ -15585,11 +15587,7 @@ function projectMoney(p){
     <div class="pd-money-row"><span>اتقبض من العميل لحد دلوقتي</span><b class="ok">${fmtMoney(m.received)}</b></div>
     <div class="pd-money-row"><span>اتصرف على المشروع</span><b class="bad">${fmtMoney(m.spent)}</b></div>
     <div class="pd-money-row"><span>نسبة الإشراف ${m.pct}٪ (على اللي اتصرف)</span><b class="gold">${fmtMoney(m.supervision)}</b></div>
-    <div class="pd-money-row big"><span>الفاضل الحقيقي للمشروع (بعد الإشراف)</span><b class="${m.left>=0 ? 'ok' : 'bad'}">${fmtMoney(m.left)}</b></div>
-    ${m.statementTotal ? `<div class="pd-money-row sub"><span>المستخلص كله (بالإشراف)</span><b>${fmtMoney(m.statementTotal)}</b></div>
-      ${m.statementLeft >= 0 ? `<div class="pd-money-row sub"><span>لسه على العميل في المستخلص</span><b>${fmtMoney(m.statementLeft)}</b></div>`
-        : `<div class="pd-money-row sub"><span>العميل دافع زيادة عن المستخلص (رصيد مقدم ليه)</span><b class="ok">${fmtMoney(-m.statementLeft)}</b></div>`}
-      ${Math.abs(m.spentCmp - m.statementWork) >= 1 ? `<div class="step-warn">${m.spentCmp > m.statementWork ? `⚠️ فيه ${fmtMoney(m.spentCmp - m.statementWork)} مصروفات${m.opening ? ' بعد الرصيد الافتتاحي' : ''} مش متسجلة في المستخلص` : `⚠️ المستخلص فيه ${fmtMoney(m.statementWork - m.spentCmp)} زيادة عن المصروفات المسجلة${m.opening ? ' بعد الرصيد الافتتاحي' : ''}`} — عشان كده "الفاضل" و"الرصيد" مش نفس الرقم.</div>` : ''}` : ''}
+    <div class="pd-money-row big"><span>${m.left >= 0 ? 'رصيد العميل معانا (بعد المصروف ونسبتنا)' : 'على العميل (المصروف ونسبتنا أكتر من اللي دفعه)'}</span><b class="${m.left>=0 ? 'ok' : 'bad'}">${fmtMoney(Math.abs(m.left))}</b></div>
     <div class="hint">النسبة بتتغير من <a href="#" onclick="event.preventDefault(); openEditProject();">✏️ تعديل بيانات المشروع</a> أو من 🧾 كشف حساب العميل.</div></div>`;
 }; }
 
